@@ -209,9 +209,10 @@ class PlayerViewModel(
                             "User-Agent" to "Mozilla/5.0 (Linux; Android 14)",
                             "Referer" to "https://api.cos-dkop.net/"
                         )
-                        val isMpvReady = moe.zako.viewer.core.player.MPVLib.isReady()
+                        val isMpv = player.state.value.engine == PlayerEngine.MPV ||
+                                (player.state.value.engine == PlayerEngine.AUTO && moe.zako.viewer.core.player.MPVLib.isReady())
 
-                        val streamUrl = if (isMpvReady) {
+                        val streamUrl = if (isMpv) {
                             ZakoLog.i(TAG, "libmpv is ready, directly streaming from CDN")
                             lines.first()
                         } else {
@@ -286,6 +287,7 @@ class PlayerViewModel(
 
     fun switchEngine(engine: PlayerEngine) {
         player.setEngine(engine)
+        showEngineDialog(false)
         viewModelScope.launch {
             val key = when (engine) {
                 PlayerEngine.MPV -> "mpv"
@@ -293,8 +295,36 @@ class PlayerViewModel(
                 PlayerEngine.AUTO -> "auto"
             }
             settingsRepository.setPlayerEngine(key)
+
+            val vid = _uiState.value.video ?: return@launch
+            val lines = vid.allVideoLines.ifEmpty { vid.allMp4Lines }
+            val isLocal = player.state.value.activeUrl.startsWith("/") || File(player.state.value.activeUrl).exists()
+            if (!isLocal && lines.isNotEmpty()) {
+                val isMpv = engine == PlayerEngine.MPV || (engine == PlayerEngine.AUTO && moe.zako.viewer.core.player.MPVLib.isReady())
+                val headers = mapOf(
+                    "User-Agent" to "Mozilla/5.0 (Linux; Android 14)",
+                    "Referer" to "https://api.cos-dkop.net/"
+                )
+                val streamUrl = if (isMpv) {
+                    lines.first()
+                } else {
+                    val streamBuffer = MultiNodeStreamBuffer.getInstance(player.context)
+                    streamBuffer.onBufferProgress = { bufferedMs, _, _ ->
+                        player.updateBufferedPosition(bufferedMs)
+                    }
+                    streamBuffer.startBuffering(
+                        videoId = vid.id,
+                        cdnUrls = lines,
+                        headers = headers
+                    )
+                }
+                player.loadVideo(
+                    url = streamUrl,
+                    title = vid.title,
+                    headers = headers
+                )
+            }
         }
-        showEngineDialog(false)
     }
 
     fun showHwDecDialog(show: Boolean) {

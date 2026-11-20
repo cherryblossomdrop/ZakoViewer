@@ -100,9 +100,14 @@ fun VideoDetailScreen(
         if (window != null && activity != null) {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
             if (state.isFullscreen) {
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                 insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 insetsController.hide(WindowInsetsCompat.Type.systemBars())
+                val isPortraitVideo = state.playerState.videoWidth > 0 && (state.playerState.videoHeight > state.playerState.videoWidth)
+                if (isPortraitVideo) {
+                    activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                } else {
+                    activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                }
             } else {
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 insetsController.show(WindowInsetsCompat.Type.systemBars())
@@ -131,7 +136,7 @@ fun VideoDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(if (state.isFullscreen) Color.Black else MaterialTheme.colorScheme.background)
     ) {
         if (state.isLoading) {
             Box(

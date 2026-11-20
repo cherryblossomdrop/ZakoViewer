@@ -121,7 +121,13 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
     private val mediaPlayerDispatcher = mediaPlayerExecutor.asCoroutineDispatcher()
     private val mediaPlayerScope = CoroutineScope(mediaPlayerDispatcher + SupervisorJob())
 
-    private fun isMpvActive(): Boolean = MPVLib.isReady()
+    private fun isMpvActive(): Boolean {
+        return when (_state.value.engine) {
+            PlayerEngine.MPV -> MPVLib.isReady()
+            PlayerEngine.SYSTEM -> false
+            PlayerEngine.AUTO -> MPVLib.isReady()
+        }
+    }
 
     private fun safeAsyncMediaPlayerOp(action: (MediaPlayer) -> Unit) {
         val player = mediaPlayer ?: return
@@ -239,6 +245,12 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
 
             if (isMpvActive()) {
                 try {
+                    if (!MPVLib.isReady() && MPVLib.isLoaded()) {
+                        MPVLib.create(context)
+                        configureMpvOptions(_state.value.hwDecMode)
+                        MPVLib.init()
+                        MPVLib.isInitialized = true
+                    }
                     ZakoLog.d(TAG, "attachSurface: binding surface to MPVLib")
                     MPVLib.attachSurface(surface)
                 } catch (e: Throwable) {
@@ -248,15 +260,12 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 // 严禁在 UI 主线程执行任何阻塞 IPC 操作，派发至后台单线程异步处理
                 safeAsyncMediaPlayerOp { mp ->
                     try {
-                        if (isMediaPlayerPrepared) {
-                            if (holder != null && holder.surface.isValid) {
-                                mp.setDisplay(holder)
-                            } else if (surface.isValid) {
-                                mp.setSurface(surface)
-                            }
-                            ZakoLog.d(TAG, "attachSurface: MediaPlayer display/surface bound successfully")
-                        } else {
-                            ZakoLog.d(TAG, "attachSurface: MediaPlayer not prepared yet, holding surface reference")
+                        if (holder != null && holder.surface.isValid) {
+                            mp.setDisplay(holder)
+                            ZakoLog.d(TAG, "attachSurface: MediaPlayer display bound successfully")
+                        } else if (surface.isValid) {
+                            mp.setSurface(surface)
+                            ZakoLog.d(TAG, "attachSurface: MediaPlayer surface bound successfully")
                         }
                     } catch (e: Throwable) {
                         ZakoLog.w(TAG, "attachSurface MediaPlayer error", e)
@@ -313,7 +322,7 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             currentPositionMs = resumePosition
         )
 
-        // 只要 libmpv 可用，强制全链路走 libmpv 渲染与播放，并且直接使用原始 URL 进行原生异步拉流
+        // 只要 libmpv 可用且选中 MPV/AUTO，全链路走 libmpv 渲染与播放，并且直接使用原始 URL 进行原生异步拉流
         val shouldUseMpv = isMpvActive()
 
         if (shouldUseMpv) {
@@ -321,6 +330,12 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             safeAsyncReleaseMediaPlayer()
 
             try {
+                if (!MPVLib.isReady() && MPVLib.isLoaded()) {
+                    MPVLib.create(context)
+                    configureMpvOptions(_state.value.hwDecMode)
+                    MPVLib.init()
+                    MPVLib.isInitialized = true
+                }
                 configureMpvOptions(_state.value.hwDecMode)
                 attachedSurface?.let { surf ->
                     if (surf.isValid) {
@@ -329,7 +344,8 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 }
                 if (headers.isNotEmpty()) {
                     val headerList = headers.entries.joinToString(",") { "${it.key}: ${it.value}" }
-                    MPVLib.setOptionString("http-header-fields", headerList)
+                    try { MPVLib.setOptionString("http-header-fields", headerList) } catch (_: Throwable) {}
+                    try { MPVLib.setPropertyString("http-header-fields", headerList) } catch (_: Throwable) {}
                 }
                 MPVLib.command(arrayOf("loadfile", url))
                 if (resumePosition > 0L) {
@@ -339,6 +355,7 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 ZakoLog.e(TAG, "MPV loadfile error", e)
             }
             play()
+            startProgressTicker()
         } else {
             // Stop MPV if running
             if (MPVLib.isReady()) {
@@ -498,8 +515,38 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         progressTickerJob?.cancel()
         progressTickerJob = scope.launch {
             while (isActive) {
-                delay(300)
-                if (isMediaPlayerPrepared) {
+                delay(250)
+                if (isMpvActive()) {
+                    try {
+                        val timePos = MPVLib.getPropertyDouble("time-pos")
+                        val duration = MPVLib.getPropertyDouble("duration")
+                        val paused = MPVLib.getPropertyBoolean("pause")
+                        val pausedForCache = MPVLib.getPropertyBoolean("paused-for-cache")
+                        val demuxCache = MPVLib.getPropertyDouble("demuxer-cache-time")
+                        val vw = MPVLib.getPropertyInt("video-params/w") ?: 0
+                        val vh = MPVLib.getPropertyInt("video-params/h") ?: 0
+                        val eof = MPVLib.getPropertyBoolean("eof-reached") ?: false
+
+                        if (timePos != null || duration != null) {
+                            val posMs = ((timePos ?: 0.0) * 1000.0).toLong().coerceAtLeast(0L)
+                            val durMs = ((duration ?: 0.0) * 1000.0).toLong().coerceAtLeast(0L)
+                            val isPlaying = paused == false && !eof
+                            val isBuffering = pausedForCache == true || (durMs == 0L && !eof)
+                            val cacheSec = demuxCache ?: 0.0
+                            val bufMs = if (durMs > 0L) (posMs + (cacheSec * 1000.0).toLong()).coerceIn(0L, durMs) else 0L
+
+                            _state.value = _state.value.copy(
+                                currentPositionMs = posMs,
+                                durationMs = if (durMs > 0L) durMs else _state.value.durationMs,
+                                isPlaying = isPlaying,
+                                isBuffering = isBuffering,
+                                bufferedPositionMs = maxOf(bufMs, _state.value.bufferedPositionMs),
+                                videoWidth = if (vw > 0) vw else _state.value.videoWidth,
+                                videoHeight = if (vh > 0) vh else _state.value.videoHeight
+                            )
+                        }
+                    } catch (_: Exception) {}
+                } else if (isMediaPlayerPrepared) {
                     mediaPlayer?.let { mp ->
                         try {
                             if (mp.isPlaying) {
@@ -523,6 +570,7 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         if (isMpvActive()) {
             try {
                 MPVLib.setPropertyBoolean("pause", false)
+                startProgressTicker()
             } catch (_: Throwable) {}
         } else {
             safeAsyncMediaPlayerOp { mp ->

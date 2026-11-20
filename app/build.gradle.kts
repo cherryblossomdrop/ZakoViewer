@@ -21,8 +21,8 @@ android {
         applicationId = "moe.zako.viewer"
         minSdk = 26
         targetSdk = 34
-        versionCode = 23
-        versionName = "1.2.19"
+        versionCode = 24
+        versionName = "1.2.20"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

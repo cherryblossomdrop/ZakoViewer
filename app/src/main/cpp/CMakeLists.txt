@@ -19,21 +19,14 @@ find_library(
 )
 
 set(JNILIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}")
-if(EXISTS "${JNILIBS_DIR}/libmpv.so")
-    add_library(mpv SHARED IMPORTED)
-    set_target_properties(mpv PROPERTIES IMPORTED_LOCATION "${JNILIBS_DIR}/libmpv.so")
-    target_link_libraries(
-        player
-        mpv
-        ${log-lib}
-        ${android-lib}
-        dl
-    )
-else()
-    target_link_libraries(
-        player
-        ${log-lib}
-        ${android-lib}
-        dl
-    )
-endif()
+
+add_library(mpv SHARED IMPORTED)
+set_target_properties(mpv PROPERTIES IMPORTED_LOCATION "${JNILIBS_DIR}/libmpv.so")
+
+target_link_libraries(
+    player
+    mpv
+    ${log-lib}
+    ${android-lib}
+    dl
+)

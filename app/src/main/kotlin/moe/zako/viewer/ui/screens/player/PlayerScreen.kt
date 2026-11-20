@@ -70,13 +70,12 @@ fun PlayerScreen(
         val window = activity?.window
         if (window != null && activity != null) {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+            insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
             if (state.isLandscape) {
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                insetsController.hide(WindowInsetsCompat.Type.systemBars())
             } else {
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                insetsController.show(WindowInsetsCompat.Type.systemBars())
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
             }
         }
     }
@@ -229,6 +228,7 @@ fun PlayerScreen(
                                 colors = listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent)
                             )
                         )
+                        .statusBarsPadding()
                         .padding(horizontal = 8.dp, vertical = 6.dp)
                 ) {
                     Row(

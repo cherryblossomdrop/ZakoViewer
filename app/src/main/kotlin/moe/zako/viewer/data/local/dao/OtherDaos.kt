@@ -2,6 +2,7 @@
 
 import androidx.room.*
 import moe.zako.viewer.data.local.entities.DownloadEntity
+import moe.zako.viewer.data.local.entities.SearchHistoryEntity
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
 import moe.zako.viewer.data.local.entities.WatchLaterEntity
 import kotlinx.coroutines.flow.Flow
@@ -80,6 +81,33 @@ interface DownloadDao {
     @Query("UPDATE downloads SET status = :status WHERE videoId = :videoId")
     suspend fun updateStatus(videoId: String, status: String)
 
+    @Query("UPDATE downloads SET savePath = :newSavePath WHERE videoId = :videoId")
+    suspend fun updateSavePath(videoId: String, newSavePath: String)
+
     @Query("DELETE FROM downloads WHERE videoId = :videoId")
     suspend fun deleteByVideoId(videoId: String)
+
+    @Query("DELETE FROM downloads WHERE videoId IN (:videoIds)")
+    suspend fun deleteByVideoIds(videoIds: List<String>)
+}
+
+@Dao
+interface SearchHistoryDao {
+    @Query("SELECT * FROM search_history ORDER BY searchedAt DESC LIMIT 50")
+    fun getAllFlow(): Flow<List<SearchHistoryEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdate(history: SearchHistoryEntity)
+
+    @Query("DELETE FROM search_history WHERE `query` = :query")
+    suspend fun delete(query: String)
+
+    @Query("DELETE FROM search_history WHERE `query` IN (:queries)")
+    suspend fun deleteByQueries(queries: List<String>)
+
+    @Query("DELETE FROM search_history")
+    suspend fun clearAll()
+
+    @Query("DELETE FROM search_history WHERE `query` NOT IN (SELECT `query` FROM search_history ORDER BY searchedAt DESC LIMIT 50)")
+    suspend fun trimToMax50()
 }

@@ -13,7 +13,7 @@ import moe.zako.viewer.R
 
 class DownloadService : Service() {
     companion object {
-        const val CHANNEL_ID = "neoviewer_downloads"
+        const val CHANNEL_ID = "zakoviewer_downloads"
         const val NOTIFICATION_ID = 1001
         const val ACTION_START_DOWNLOAD = "ACTION_START_DOWNLOAD"
     }

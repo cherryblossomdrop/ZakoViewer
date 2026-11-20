@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,7 +28,7 @@ fun LogViewerScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val logs by NeoLog.logsFlow.collectAsState()
+    val logs by ZakoLog.logsFlow.collectAsState()
 
     Scaffold(
         topBar = {
@@ -40,12 +40,12 @@ fun LogViewerScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { NeoLog.clear() }) {
+                    IconButton(onClick = { ZakoLog.clear() }) {
                         Icon(imageVector = Icons.Default.Delete, contentDescription = "清空日志")
                     }
                     IconButton(onClick = {
                         try {
-                            val logFile = NeoLog.exportToFile(context)
+                            val logFile = ZakoLog.exportToFile(context)
                             val uri = FileProvider.getUriForFile(
                                 context,
                                 "${context.packageName}.fileprovider",

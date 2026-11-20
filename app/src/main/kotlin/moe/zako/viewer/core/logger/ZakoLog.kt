@@ -1,4 +1,4 @@
-﻿package moe.zako.viewer.core.logger
+package moe.zako.viewer.core.logger
 
 import android.content.Context
 import android.util.Log
@@ -11,8 +11,8 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ConcurrentLinkedQueue
 
-object NeoLog {
-    private const val TAG = "NeoViewer"
+object ZakoLog {
+    private const val TAG = "ZakoViewer"
     private const val MAX_LOGS = 1000
     private val timeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
 
@@ -71,10 +71,10 @@ object NeoLog {
     fun exportToFile(context: Context): File {
         val exportDir = File(context.cacheDir, "logs")
         if (!exportDir.exists()) exportDir.mkdirs()
-        val fileName = "NeoViewer_log_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.txt"
+        val fileName = "ZakoViewer_log_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.txt"
         val logFile = File(exportDir, fileName)
         logFile.bufferedWriter().use { writer ->
-            writer.write("=== NeoViewer Execution Log Export ===\n")
+            writer.write("=== ZakoViewer Execution Log Export ===\n")
             writer.write("Exported At: ${timeFormat.format(Date())}\n")
             writer.write("Total Entries: ${logQueue.size}\n\n")
             for (entry in logQueue) {
@@ -86,5 +86,6 @@ object NeoLog {
     }
 }
 
-typealias NeoLogger = NeoLog
-
+typealias ZakoLogger = ZakoLog
+typealias NeoLog = ZakoLog
+typealias NeoLogger = ZakoLog

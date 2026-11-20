@@ -1,6 +1,6 @@
 ﻿package moe.zako.viewer.core.cdn
 
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +42,7 @@ class CdnSmartRouter(
         initializeNodes(urls)
         _isTesting.value = true
 
-        NeoLog.i(TAG, "Executing auto CDN speed-testing for ${urls.size} nodes")
+        ZakoLog.i(TAG, "Executing auto CDN speed-testing for ${urls.size} nodes")
         val testedList = speedTester.testAllNodes(urls) { testedNode ->
             // Update node in place as soon as test completes
             _nodesFlow.value = _nodesFlow.value.map {
@@ -56,7 +56,7 @@ class CdnSmartRouter(
         val bestNode = testedList.firstOrNull { it.testSuccess } ?: testedList.firstOrNull()
         if (bestNode != null) {
             _selectedNode.value = bestNode
-            NeoLog.i(TAG, "Auto-selected best CDN node: ${bestNode.name} (${bestNode.displayMetric})")
+            ZakoLog.i(TAG, "Auto-selected best CDN node: ${bestNode.name} (${bestNode.displayMetric})")
             return bestNode
         }
 
@@ -69,7 +69,7 @@ class CdnSmartRouter(
      * Select a specific CDN node manually
      */
     fun selectNode(node: CdnNode) {
-        NeoLog.i(TAG, "Manually selected CDN node: ${node.name}")
+        ZakoLog.i(TAG, "Manually selected CDN node: ${node.name}")
         _selectedNode.value = node
     }
 }

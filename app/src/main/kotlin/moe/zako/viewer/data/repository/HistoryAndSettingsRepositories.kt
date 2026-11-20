@@ -6,13 +6,17 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import moe.zako.viewer.data.local.dao.SearchHistoryDao
 import moe.zako.viewer.data.local.dao.WatchHistoryDao
 import moe.zako.viewer.data.local.dao.WatchLaterDao
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
+import moe.zako.viewer.data.local.entities.SearchHistoryEntity
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
 import moe.zako.viewer.data.local.entities.WatchLaterEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import moe.zako.viewer.ui.theme.ThemePreset
+import org.json.JSONArray
 
 class HistoryRepository(
     private val watchHistoryDao: WatchHistoryDao,
@@ -99,7 +103,53 @@ class HistoryRepository(
     fun isWatchLaterFlow(videoId: String): Flow<Boolean> = watchLaterDao.isWatchLaterFlow(videoId)
 }
 
-private val Context.dataStore by preferencesDataStore(name = "neoviewer_settings")
+class SearchHistoryRepository(
+    private val searchHistoryDao: SearchHistoryDao
+) {
+    val searchHistoryFlow: Flow<List<SearchHistoryEntity>> = searchHistoryDao.getAllFlow()
+
+    suspend fun saveSearchQuery(query: String) {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return
+        searchHistoryDao.insertOrUpdate(
+            SearchHistoryEntity(query = trimmed, searchedAt = System.currentTimeMillis())
+        )
+        searchHistoryDao.trimToMax50()
+    }
+
+    suspend fun deleteSearchQuery(query: String) {
+        searchHistoryDao.delete(query.trim())
+    }
+
+    suspend fun deleteSearchQueries(queries: List<String>) {
+        if (queries.isNotEmpty()) {
+            searchHistoryDao.deleteByQueries(queries.map { it.trim() })
+        }
+    }
+
+    suspend fun clearAll() {
+        searchHistoryDao.clearAll()
+    }
+}
+
+private fun migratePreferencesIfNeeded(context: Context) {
+    try {
+        val oldFile = java.io.File(context.filesDir, "datastore/neoviewer_settings.preferences_pb")
+        val newFile = java.io.File(context.filesDir, "datastore/zakoviewer_settings.preferences_pb")
+        if (oldFile.exists() && !newFile.exists()) {
+            newFile.parentFile?.mkdirs()
+            oldFile.copyTo(newFile, overwrite = true)
+        }
+    } catch (_: Exception) {}
+}
+
+private val Context.dataStore by preferencesDataStore(
+    name = "zakoviewer_settings",
+    produceMigrations = { context ->
+        migratePreferencesIfNeeded(context)
+        emptyList()
+    }
+)
 
 class SettingsRepository(private val context: Context) {
     companion object {
@@ -113,10 +163,16 @@ class SettingsRepository(private val context: Context) {
         val KEY_HWDEC_MODE = stringPreferencesKey("hwdec_mode")
         val KEY_MONET_DYNAMIC_COLOR = booleanPreferencesKey("monet_dynamic_color")
         val KEY_CUSTOM_THEME = stringPreferencesKey("custom_theme_color")
+        val KEY_SAVED_CUSTOM_THEMES = stringPreferencesKey("saved_custom_themes")
         val KEY_COVER_BLUR = booleanPreferencesKey("cover_blur_enabled")
         val KEY_APP_ICON_FOLLOW_THEME = booleanPreferencesKey("app_icon_follow_theme")
         val KEY_LONG_PRESS_SHARE_UNLOCKED = booleanPreferencesKey("long_press_share_unlocked")
         val KEY_LONG_PRESS_SHARE_ENABLED = booleanPreferencesKey("long_press_share_enabled")
+        val KEY_LAYOUT_MODE = stringPreferencesKey("layout_mode")
+    }
+
+    val layoutModeFlow: Flow<LayoutMode> = context.dataStore.data.map {
+        LayoutMode.fromKey(it[KEY_LAYOUT_MODE])
     }
 
     val dynamicColorFlow: Flow<Boolean> = context.dataStore.data.map {
@@ -124,7 +180,24 @@ class SettingsRepository(private val context: Context) {
     }
 
     val customThemeFlow: Flow<String> = context.dataStore.data.map {
-        it[KEY_CUSTOM_THEME] ?: "#5BB974" // 默认使用浅绿色
+        it[KEY_CUSTOM_THEME] ?: "#686BDD" // 默认使用堇紫色
+    }
+
+    val savedCustomThemesFlow: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        val jsonStr = prefs[KEY_SAVED_CUSTOM_THEMES] ?: "[]"
+        try {
+            val jsonArray = JSONArray(jsonStr)
+            val list = mutableListOf<String>()
+            for (i in 0 until jsonArray.length()) {
+                val hex = jsonArray.optString(i)?.trim()?.uppercase()
+                if (!hex.isNullOrEmpty() && hex.startsWith("#")) {
+                    list.add(hex)
+                }
+            }
+            list
+        } catch (_: Exception) {
+            emptyList()
+        }
     }
 
     val coverBlurFlow: Flow<Boolean> = context.dataStore.data.map {
@@ -215,6 +288,55 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it[KEY_CUSTOM_THEME] = theme }
     }
 
+    suspend fun addCustomTheme(hex: String) {
+        val cleanHex = if (hex.startsWith("#")) hex.uppercase() else "#${hex.uppercase()}"
+        context.dataStore.edit { prefs ->
+            val currentJson = prefs[KEY_SAVED_CUSTOM_THEMES] ?: "[]"
+            val list = mutableListOf<String>()
+            try {
+                val array = JSONArray(currentJson)
+                for (i in 0 until array.length()) {
+                    val item = array.optString(i)?.trim()?.uppercase()
+                    if (!item.isNullOrEmpty()) list.add(item)
+                }
+            } catch (_: Exception) {}
+            if (!list.contains(cleanHex)) {
+                list.add(cleanHex)
+            }
+            val outArray = JSONArray()
+            list.forEach { outArray.put(it) }
+            prefs[KEY_SAVED_CUSTOM_THEMES] = outArray.toString()
+            prefs[KEY_CUSTOM_THEME] = cleanHex
+        }
+    }
+
+    suspend fun removeCustomTheme(hex: String) {
+        val cleanHex = if (hex.startsWith("#")) hex.uppercase() else "#${hex.uppercase()}"
+        if (ThemePreset.isBuiltinPreset(cleanHex)) return
+
+        context.dataStore.edit { prefs ->
+            val currentJson = prefs[KEY_SAVED_CUSTOM_THEMES] ?: "[]"
+            val list = mutableListOf<String>()
+            try {
+                val array = JSONArray(currentJson)
+                for (i in 0 until array.length()) {
+                    val item = array.optString(i)?.trim()?.uppercase()
+                    if (!item.isNullOrEmpty() && item != cleanHex) {
+                        list.add(item)
+                    }
+                }
+            } catch (_: Exception) {}
+            val outArray = JSONArray()
+            list.forEach { outArray.put(it) }
+            prefs[KEY_SAVED_CUSTOM_THEMES] = outArray.toString()
+
+            val active = prefs[KEY_CUSTOM_THEME]?.trim()?.uppercase()
+            if (active == cleanHex) {
+                prefs[KEY_CUSTOM_THEME] = "#686BDD"
+            }
+        }
+    }
+
     suspend fun setCoverBlur(enabled: Boolean) {
         context.dataStore.edit { it[KEY_COVER_BLUR] = enabled }
     }
@@ -229,5 +351,27 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setLongPressShareEnabled(enabled: Boolean) {
         context.dataStore.edit { it[KEY_LONG_PRESS_SHARE_ENABLED] = enabled }
+    }
+
+    suspend fun setLayoutMode(mode: LayoutMode) {
+        context.dataStore.edit { it[KEY_LAYOUT_MODE] = mode.name }
+    }
+
+    suspend fun toggleLayoutMode() {
+        context.dataStore.edit {
+            val current = LayoutMode.fromKey(it[KEY_LAYOUT_MODE])
+            val next = if (current == LayoutMode.WATERFALL) LayoutMode.PAGINATED else LayoutMode.WATERFALL
+            it[KEY_LAYOUT_MODE] = next.name
+        }
+    }
+}
+
+enum class LayoutMode(val key: String) {
+    WATERFALL("WATERFALL"),
+    PAGINATED("PAGINATED");
+
+    companion object {
+        fun fromKey(key: String?): LayoutMode =
+            if (key == PAGINATED.name) PAGINATED else WATERFALL
     }
 }

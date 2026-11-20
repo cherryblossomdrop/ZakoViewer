@@ -1,5 +1,6 @@
 ﻿package moe.zako.viewer.ui.theme
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
@@ -12,23 +13,35 @@ val DarkSurfaceVariant = Color(0xFF1E1E1E)
 val PrimaryExpressive = Color(0xFF388E3C)
 val OverlayBlack = Color(0xB3000000)
 
+/**
+ * 7 款系统预置主题色（严格保持两个汉字命名，内置预置不可删除）
+ */
 enum class ThemePreset(
     val key: String,
     val displayName: String,
     val hexColor: String,
-    val primaryColor: Color
+    val primaryColor: Color,
+    val isPreset: Boolean = true
 ) {
-    PURPLE("#686BDD", "紫色", "#686BDD", Color(0xFF686BDD)),
-    LIGHT_GREEN("#5BB974", "浅绿色", "#5BB974", Color(0xFF5BB974)),
-    LIGHT_YELLOW("#E5C138", "淡黄色", "#E5C138", Color(0xFFE5C138));
+    PURPLE("#686BDD", "堇紫", "#686BDD", Color(0xFF686BDD)),
+    LIGHT_GREEN("#5BB974", "浅绿", "#5BB974", Color(0xFF5BB974)),
+    LIGHT_YELLOW("#E5C138", "淡黄", "#E5C138", Color(0xFFE5C138)),
+    SAKURA_PINK("#F06292", "樱粉", "#F06292", Color(0xFFF06292)),
+    SCALLION_GREEN("#2E9E5B", "葱绿", "#2E9E5B", Color(0xFF2E9E5B)),
+    SKY_BLUE("#38BDF8", "天蓝", "#38BDF8", Color(0xFF38BDF8)),
+    OCEAN_BLUE("#1D63B8", "海蓝", "#1D63B8", Color(0xFF1D63B8)),
+    AZURE_BLUE("#008BF3", "蔚蓝", "#008BF3", Color(0xFF008BF3));
 
     companion object {
-        fun fromKey(key: String): ThemePreset =
-            values().firstOrNull { it.key.equals(key, ignoreCase = true) || it.hexColor.equals(key, ignoreCase = true) } ?: PURPLE
+        fun fromKey(key: String): ThemePreset? =
+            values().firstOrNull { it.key.equals(key.trim(), ignoreCase = true) || it.hexColor.equals(key.trim(), ignoreCase = true) }
+
+        fun isBuiltinPreset(hex: String): Boolean =
+            values().any { it.hexColor.equals(hex.trim(), ignoreCase = true) }
     }
 }
 
-// 1. 紫色 (#686BDD)
+// 1. 堇紫 (#686BDD)
 val PurpleDarkColorScheme = darkColorScheme(
     primary = Color(0xFFC3C5FF),
     onPrimary = Color(0xFF26269A),
@@ -65,7 +78,7 @@ val PurpleLightColorScheme = lightColorScheme(
     onSurfaceVariant = Color(0xFF47464F)
 )
 
-// 2. 浅绿色 (#5BB974)
+// 2. 浅绿 (#5BB974)
 val GreenDarkColorScheme = darkColorScheme(
     primary = Color(0xFF89DA9C),
     onPrimary = Color(0xFF00391A),
@@ -102,7 +115,7 @@ val GreenLightColorScheme = lightColorScheme(
     onSurfaceVariant = Color(0xFF424941)
 )
 
-// 3. 淡黄色 (#E5C138)
+// 3. 淡黄 (#E5C138)
 val YellowDarkColorScheme = darkColorScheme(
     primary = Color(0xFFE7C43C),
     onPrimary = Color(0xFF3B2F00),
@@ -138,3 +151,290 @@ val YellowLightColorScheme = lightColorScheme(
     onSurface = Color(0xFF1E1B16),
     onSurfaceVariant = Color(0xFF4B4639)
 )
+
+// 4. 樱粉 (#F06292)
+val SakuraPinkDarkColorScheme = darkColorScheme(
+    primary = Color(0xFFFFB0C8),
+    onPrimary = Color(0xFF5E1133),
+    primaryContainer = Color(0xFF7B2949),
+    onPrimaryContainer = Color(0xFFFFD9E2),
+    secondary = Color(0xFFE2BDC6),
+    onSecondary = Color(0xFF422931),
+    secondaryContainer = Color(0xFF5B3F47),
+    onSecondaryContainer = Color(0xFFFFD9E2),
+    tertiary = Color(0xFFF1B7A2),
+    onTertiary = Color(0xFF4A2818),
+    background = Color(0xFF191113),
+    surface = Color(0xFF191113),
+    surfaceVariant = Color(0xFF2C2224),
+    onSurface = Color(0xFFECE0E2),
+    onSurfaceVariant = Color(0xFFD2C2C6)
+)
+
+val SakuraPinkLightColorScheme = lightColorScheme(
+    primary = Color(0xFFD81B60),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFD9E2),
+    onPrimaryContainer = Color(0xFF3E001D),
+    secondary = Color(0xFF74565F),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFFFD9E2),
+    onSecondaryContainer = Color(0xFF2B151C),
+    tertiary = Color(0xFF815340),
+    onTertiary = Color(0xFFFFFFFF),
+    background = Color(0xFFFFF8F8),
+    surface = Color(0xFFFFF8F8),
+    surfaceVariant = Color(0xFFF2DDE1),
+    onSurface = Color(0xFF201A1C),
+    onSurfaceVariant = Color(0xFF514347)
+)
+
+// 5. 葱绿 (#2E9E5B)
+val ScallionGreenDarkColorScheme = darkColorScheme(
+    primary = Color(0xFF8AD5A3),
+    onPrimary = Color(0xFF00391A),
+    primaryContainer = Color(0xFF005228),
+    onPrimaryContainer = Color(0xFFA5F2BE),
+    secondary = Color(0xFFB7CCB9),
+    onSecondary = Color(0xFF233527),
+    secondaryContainer = Color(0xFF394B3C),
+    onSecondaryContainer = Color(0xFFD3E8D4),
+    tertiary = Color(0xFFA2CED8),
+    onTertiary = Color(0xFF02363E),
+    background = Color(0xFF101411),
+    surface = Color(0xFF101411),
+    surfaceVariant = Color(0xFF222722),
+    onSurface = Color(0xFFE1E3DF),
+    onSurfaceVariant = Color(0xFFC1C9C0)
+)
+
+val ScallionGreenLightColorScheme = lightColorScheme(
+    primary = Color(0xFF1E8246),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFA5F2BE),
+    onPrimaryContainer = Color(0xFF00210D),
+    secondary = Color(0xFF506353),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFD3E8D4),
+    onSecondaryContainer = Color(0xFF0E1F13),
+    tertiary = Color(0xFF3A656E),
+    onTertiary = Color(0xFFFFFFFF),
+    background = Color(0xFFF7FCF5),
+    surface = Color(0xFFF7FCF5),
+    surfaceVariant = Color(0xFFDEE5DC),
+    onSurface = Color(0xFF181C19),
+    onSurfaceVariant = Color(0xFF424942)
+)
+
+// 6. 天蓝 (#38BDF8)
+val SkyBlueDarkColorScheme = darkColorScheme(
+    primary = Color(0xFF7DD3FC),
+    onPrimary = Color(0xFF00354F),
+    primaryContainer = Color(0xFF004D70),
+    onPrimaryContainer = Color(0xFFC7E7FF),
+    secondary = Color(0xFFB6C9D8),
+    onSecondary = Color(0xFF20333E),
+    secondaryContainer = Color(0xFF384955),
+    onSecondaryContainer = Color(0xFFD2E5F5),
+    tertiary = Color(0xFFCCC1E9),
+    onTertiary = Color(0xFF332B4C),
+    background = Color(0xFF0F1418),
+    surface = Color(0xFF0F1418),
+    surfaceVariant = Color(0xFF22272C),
+    onSurface = Color(0xFFDFE3E7),
+    onSurfaceVariant = Color(0xFFC1C8CF)
+)
+
+val SkyBlueLightColorScheme = lightColorScheme(
+    primary = Color(0xFF0284C7),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFC7E7FF),
+    onPrimaryContainer = Color(0xFF001E31),
+    secondary = Color(0xFF4F616E),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFD2E5F5),
+    onSecondaryContainer = Color(0xFF0B1D29),
+    tertiary = Color(0xFF63597C),
+    onTertiary = Color(0xFFFFFFFF),
+    background = Color(0xFFF8FAFC),
+    surface = Color(0xFFF8FAFC),
+    surfaceVariant = Color(0xFFDEE3EA),
+    onSurface = Color(0xFF171C20),
+    onSurfaceVariant = Color(0xFF42474E)
+)
+
+// 7. 海蓝 (#1D63B8)
+val OceanBlueDarkColorScheme = darkColorScheme(
+    primary = Color(0xFFAEC6FF),
+    onPrimary = Color(0xFF003062),
+    primaryContainer = Color(0xFF004689),
+    onPrimaryContainer = Color(0xFFD8E2FF),
+    secondary = Color(0xFFBFC6DC),
+    onSecondary = Color(0xFF293041),
+    secondaryContainer = Color(0xFF3F4759),
+    onSecondaryContainer = Color(0xFFDBE2F9),
+    tertiary = Color(0xFFDFBCDF),
+    onTertiary = Color(0xFF412743),
+    background = Color(0xFF121318),
+    surface = Color(0xFF121318),
+    surfaceVariant = Color(0xFF24252C),
+    onSurface = Color(0xFFE3E2E9),
+    onSurfaceVariant = Color(0xFFC4C6D0)
+)
+
+val OceanBlueLightColorScheme = lightColorScheme(
+    primary = Color(0xFF1D63B8),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFD8E2FF),
+    onPrimaryContainer = Color(0xFF001A41),
+    secondary = Color(0xFF565E71),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFDBE2F9),
+    onSecondaryContainer = Color(0xFF131B2C),
+    tertiary = Color(0xFF705574),
+    onTertiary = Color(0xFFFFFFFF),
+    background = Color(0xFFFBF8FD),
+    surface = Color(0xFFFBF8FD),
+    surfaceVariant = Color(0xFFE1E2EC),
+    onSurface = Color(0xFF1A1B21),
+    onSurfaceVariant = Color(0xFF45464F)
+)
+
+// 8. 蔚蓝 (#008BF3)
+val AzureBlueDarkColorScheme = darkColorScheme(
+    primary = Color(0xFF82CFFF),
+    onPrimary = Color(0xFF00345B),
+    primaryContainer = Color(0xFF004B80),
+    onPrimaryContainer = Color(0xFFC7E7FF),
+    secondary = Color(0xFFB9C8DA),
+    onSecondary = Color(0xFF233240),
+    secondaryContainer = Color(0xFF3A4857),
+    onSecondaryContainer = Color(0xFFD5E4F7),
+    tertiary = Color(0xFFD2BFE7),
+    onTertiary = Color(0xFF382A4A),
+    background = Color(0xFF101418),
+    surface = Color(0xFF101418),
+    surfaceVariant = Color(0xFF22262B),
+    onSurface = Color(0xFFE0E2E8),
+    onSurfaceVariant = Color(0xFFC2C7CF)
+)
+
+val AzureBlueLightColorScheme = lightColorScheme(
+    primary = Color(0xFF008BF3),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFC7E7FF),
+    onPrimaryContainer = Color(0xFF001E37),
+    secondary = Color(0xFF51606F),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFD5E4F7),
+    onSecondaryContainer = Color(0xFF0E1D2A),
+    tertiary = Color(0xFF67587A),
+    onTertiary = Color(0xFFFFFFFF),
+    background = Color(0xFFF7F9FD),
+    surface = Color(0xFFF7F9FD),
+    surfaceVariant = Color(0xFFDEE3EB),
+    onSurface = Color(0xFF181C20),
+    onSurfaceVariant = Color(0xFF42474E)
+)
+
+/**
+ * 解析 HEX 颜色代码（支持 #RRGGBB 或 RRGGBB）
+ */
+fun parseHexColor(hex: String): Color? {
+    val clean = hex.trim().removePrefix("#")
+    if (clean.length != 6) return null
+    return try {
+        val r = clean.substring(0, 2).toInt(16)
+        val g = clean.substring(2, 4).toInt(16)
+        val b = clean.substring(4, 6).toInt(16)
+        Color(r, g, b)
+    } catch (_: Exception) {
+        null
+    }
+}
+
+/**
+ * 基于任意种子颜色生成完整的 Material 3 明暗配色方案
+ */
+fun generateColorScheme(seed: Color, darkTheme: Boolean): ColorScheme {
+    val hsv = FloatArray(3)
+    android.graphics.Color.RGBToHSV(
+        (seed.red * 255).toInt(),
+        (seed.green * 255).toInt(),
+        (seed.blue * 255).toInt(),
+        hsv
+    )
+    val hue = hsv[0]
+    val sat = hsv[1]
+
+    fun hsvToColor(h: Float, s: Float, v: Float): Color {
+        val rgb = android.graphics.Color.HSVToColor(floatArrayOf((h % 360f + 360f) % 360f, s.coerceIn(0f, 1f), v.coerceIn(0f, 1f)))
+        return Color(rgb)
+    }
+
+    return if (darkTheme) {
+        darkColorScheme(
+            primary = hsvToColor(hue, (sat * 0.7f).coerceAtLeast(0.2f), 0.90f),
+            onPrimary = hsvToColor(hue, sat, 0.20f),
+            primaryContainer = hsvToColor(hue, sat, 0.40f),
+            onPrimaryContainer = hsvToColor(hue, (sat * 0.4f), 0.95f),
+            secondary = hsvToColor((hue + 15f) % 360f, sat * 0.4f, 0.80f),
+            onSecondary = hsvToColor(hue, sat * 0.5f, 0.20f),
+            secondaryContainer = hsvToColor((hue + 15f) % 360f, sat * 0.4f, 0.35f),
+            onSecondaryContainer = hsvToColor(hue, sat * 0.2f, 0.95f),
+            tertiary = hsvToColor((hue + 60f) % 360f, sat * 0.5f, 0.85f),
+            onTertiary = hsvToColor((hue + 60f) % 360f, sat, 0.20f),
+            background = Color(0xFF141218),
+            surface = Color(0xFF141218),
+            surfaceVariant = Color(0xFF26242B),
+            onBackground = Color(0xFFE6E1E5),
+            onSurface = Color(0xFFE6E1E5),
+            onSurfaceVariant = Color(0xFFCAC4D0)
+        )
+    } else {
+        lightColorScheme(
+            primary = seed,
+            onPrimary = Color.White,
+            primaryContainer = hsvToColor(hue, sat * 0.25f, 0.95f),
+            onPrimaryContainer = hsvToColor(hue, sat, 0.25f),
+            secondary = hsvToColor((hue + 15f) % 360f, sat * 0.4f, 0.50f),
+            onSecondary = Color.White,
+            secondaryContainer = hsvToColor((hue + 15f) % 360f, sat * 0.2f, 0.92f),
+            onSecondaryContainer = hsvToColor(hue, sat * 0.6f, 0.20f),
+            tertiary = hsvToColor((hue + 60f) % 360f, sat * 0.5f, 0.50f),
+            onTertiary = Color.White,
+            background = Color(0xFFFAF9FD),
+            surface = Color(0xFFFAF9FD),
+            surfaceVariant = Color(0xFFE5E1EA),
+            onBackground = Color(0xFF1C1B1F),
+            onSurface = Color(0xFF1C1B1F),
+            onSurfaceVariant = Color(0xFF49454E)
+        )
+    }
+}
+
+/**
+ * 根据主题键值（预置枚举或 HEX 码）获取对应的明暗配色方案
+ */
+fun getColorSchemeForTheme(themeKey: String, darkTheme: Boolean): ColorScheme {
+    val preset = ThemePreset.fromKey(themeKey)
+    if (preset != null) {
+        return when (preset) {
+            ThemePreset.PURPLE -> if (darkTheme) PurpleDarkColorScheme else PurpleLightColorScheme
+            ThemePreset.LIGHT_GREEN -> if (darkTheme) GreenDarkColorScheme else GreenLightColorScheme
+            ThemePreset.LIGHT_YELLOW -> if (darkTheme) YellowDarkColorScheme else YellowLightColorScheme
+            ThemePreset.SAKURA_PINK -> if (darkTheme) SakuraPinkDarkColorScheme else SakuraPinkLightColorScheme
+            ThemePreset.SCALLION_GREEN -> if (darkTheme) ScallionGreenDarkColorScheme else ScallionGreenLightColorScheme
+            ThemePreset.SKY_BLUE -> if (darkTheme) SkyBlueDarkColorScheme else SkyBlueLightColorScheme
+            ThemePreset.OCEAN_BLUE -> if (darkTheme) OceanBlueDarkColorScheme else OceanBlueLightColorScheme
+            ThemePreset.AZURE_BLUE -> if (darkTheme) AzureBlueDarkColorScheme else AzureBlueLightColorScheme
+        }
+    }
+
+    val parsedColor = parseHexColor(themeKey)
+    return if (parsedColor != null) {
+        generateColorScheme(parsedColor, darkTheme)
+    } else {
+        if (darkTheme) PurpleDarkColorScheme else PurpleLightColorScheme
+    }
+}

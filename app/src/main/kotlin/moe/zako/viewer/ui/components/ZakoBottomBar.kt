@@ -7,7 +7,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import moe.zako.viewer.ui.navigation.Screen
 
 @Composable
-fun NeoBottomBar(navController: NavController) {
+fun ZakoBottomBar(navController: NavController) {
     val items = listOf(
         Screen.Home,
         Screen.Favorites,
@@ -18,7 +18,8 @@ fun NeoBottomBar(navController: NavController) {
 
     NavigationBar {
         items.forEach { screen ->
-            val isSelected = currentRoute == screen.route
+            val isSelected = currentRoute == screen.route ||
+                    (screen == Screen.Home && currentRoute?.startsWith("home") == true)
             NavigationBarItem(
                 icon = {
                     screen.icon?.let {
@@ -28,8 +29,9 @@ fun NeoBottomBar(navController: NavController) {
                 label = { Text(screen.title) },
                 selected = isSelected,
                 onClick = {
-                    if (currentRoute != screen.route) {
-                        navController.navigate(screen.route) {
+                    if (!isSelected) {
+                        val destination = if (screen == Screen.Home) Screen.Home.createRoute() else screen.route
+                        navController.navigate(destination) {
                             popUpTo(Screen.Home.route) {
                                 saveState = true
                             }
@@ -42,3 +44,6 @@ fun NeoBottomBar(navController: NavController) {
         }
     }
 }
+
+@Composable
+fun NeoBottomBar(navController: NavController) = ZakoBottomBar(navController)

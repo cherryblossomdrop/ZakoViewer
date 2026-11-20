@@ -1,10 +1,10 @@
-package moe.zako.viewer.core.icon
+﻿package moe.zako.viewer.core.icon
 
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import kotlinx.coroutines.flow.first
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.data.repository.SettingsRepository
 
 object AppIconManager {
@@ -15,13 +15,15 @@ object AppIconManager {
     const val ALIAS_PURPLE = "moe.zako.viewer.MainActivityAliasPurple"
     const val ALIAS_GREEN = "moe.zako.viewer.MainActivityAliasGreen"
     const val ALIAS_YELLOW = "moe.zako.viewer.MainActivityAliasYellow"
+    const val ALIAS_BLUE = "moe.zako.viewer.MainActivityAliasBlue"
 
     val ALL_ALIASES = listOf(
         ALIAS_DEFAULT,
         ALIAS_MONET,
         ALIAS_PURPLE,
         ALIAS_GREEN,
-        ALIAS_YELLOW
+        ALIAS_YELLOW,
+        ALIAS_BLUE
     )
 
     fun getTargetAlias(followTheme: Boolean, dynamicColor: Boolean, customTheme: String): String {
@@ -35,6 +37,7 @@ object AppIconManager {
             "#686BDD" -> ALIAS_PURPLE
             "#5BB974" -> ALIAS_GREEN
             "#E5C138" -> ALIAS_YELLOW
+            "#008BF3" -> ALIAS_BLUE
             else -> ALIAS_DEFAULT
         }
     }
@@ -65,11 +68,11 @@ object AppIconManager {
         val currentActiveAlias = ALL_ALIASES.firstOrNull { isAliasEnabled(it) } ?: ALIAS_DEFAULT
 
         if (currentActiveAlias == targetAlias) {
-            NeoLog.d(TAG, "Current app icon alias is already $targetAlias, skipping update")
+            ZakoLog.d(TAG, "Current app icon alias is already $targetAlias, skipping update")
             return
         }
 
-        NeoLog.i(TAG, "Switching app icon alias from $currentActiveAlias to $targetAlias")
+        ZakoLog.i(TAG, "Switching app icon alias from $currentActiveAlias to $targetAlias")
 
         // 1. Enable target alias first
         pm.setComponentEnabledSetting(

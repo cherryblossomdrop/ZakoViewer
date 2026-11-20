@@ -256,7 +256,7 @@ fun FolderBrowserDialog(
                         createError = null
                     },
                     label = { Text("文件夹名称") },
-                    placeholder = { Text("例如: NeoDownloads") },
+                    placeholder = { Text("例如: ZakoDownloads") },
                     isError = createError != null,
                     supportingText = {
                         createError?.let { Text(it, color = MaterialTheme.colorScheme.error) }

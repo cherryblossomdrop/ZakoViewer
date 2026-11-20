@@ -14,10 +14,11 @@ import androidx.compose.ui.platform.LocalContext
 val LocalCoverBlurEnabled = compositionLocalOf { true }
 
 @Composable
-fun NeoViewerTheme(
+fun ZakoViewerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true, // 莫奈动态取色开关
     themePreset: ThemePreset = ThemePreset.PURPLE,
+    themeKey: String = themePreset.hexColor,
     coverBlurEnabled: Boolean = true, // 视频封面默认模糊 (默认开启)
     content: @Composable () -> Unit
 ) {
@@ -26,13 +27,7 @@ fun NeoViewerTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        else -> {
-            when (themePreset) {
-                ThemePreset.PURPLE -> if (darkTheme) PurpleDarkColorScheme else PurpleLightColorScheme
-                ThemePreset.LIGHT_GREEN -> if (darkTheme) GreenDarkColorScheme else GreenLightColorScheme
-                ThemePreset.LIGHT_YELLOW -> if (darkTheme) YellowDarkColorScheme else YellowLightColorScheme
-            }
-        }
+        else -> getColorSchemeForTheme(themeKey, darkTheme)
     }
 
     CompositionLocalProvider(LocalCoverBlurEnabled provides coverBlurEnabled) {
@@ -43,3 +38,13 @@ fun NeoViewerTheme(
         )
     }
 }
+
+@Composable
+fun NeoViewerTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = true,
+    themePreset: ThemePreset = ThemePreset.PURPLE,
+    themeKey: String = themePreset.hexColor,
+    coverBlurEnabled: Boolean = true,
+    content: @Composable () -> Unit
+) = ZakoViewerTheme(darkTheme, dynamicColor, themePreset, themeKey, coverBlurEnabled, content)

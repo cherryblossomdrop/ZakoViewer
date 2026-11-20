@@ -31,11 +31,7 @@ fun AboutScreen(
     val isUnlocked by settingsRepository.longPressShareUnlockedFlow.collectAsState(initial = false)
 
     val versionName = remember {
-        try {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.1.1"
-        } catch (_: Exception) {
-            "1.1.1"
-        }
+        moe.zako.viewer.BuildConfig.VERSION_NAME
     }
 
     var clickCount by remember { mutableStateOf(0) }

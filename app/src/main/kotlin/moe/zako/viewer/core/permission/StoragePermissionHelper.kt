@@ -6,7 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 
 object StoragePermissionHelper {
     private const val TAG = "StoragePermissionHelper"
@@ -19,7 +19,7 @@ object StoragePermissionHelper {
             try {
                 Environment.isExternalStorageManager()
             } catch (e: Exception) {
-                NeoLog.e(TAG, "Error checking isExternalStorageManager", e)
+                ZakoLog.e(TAG, "Error checking isExternalStorageManager", e)
                 false
             }
         } else {
@@ -39,14 +39,14 @@ object StoragePermissionHelper {
                 }
                 context.startActivity(intent)
             } catch (e: Exception) {
-                NeoLog.w(TAG, "Failed to launch app specific manage all files permission: ${e.message}, trying generic")
+                ZakoLog.w(TAG, "Failed to launch app specific manage all files permission: ${e.message}, trying generic")
                 try {
                     val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     context.startActivity(intent)
                 } catch (e2: Exception) {
-                    NeoLog.e(TAG, "Failed to launch manage all files permission settings", e2)
+                    ZakoLog.e(TAG, "Failed to launch manage all files permission settings", e2)
                 }
             }
         }

@@ -2,7 +2,10 @@
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
+import moe.zako.viewer.core.search.SearchQueryParser
+import moe.zako.viewer.data.repository.LayoutMode
+import moe.zako.viewer.data.repository.SearchHistoryRepository
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.data.source.cosav.CosApiClient
 import moe.zako.viewer.data.source.cosav.CosVideoItem
@@ -42,12 +45,17 @@ data class HomeUiState(
     val includeVip: Boolean = true, // 包含VIP抢先看视频 (默认包含)
     val page: Int = 0,
     val hasMore: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val layoutMode: LayoutMode = LayoutMode.WATERFALL,
+    val searchHistory: List<String> = emptyList(),
+    val isHistoryMultiSelect: Boolean = false,
+    val selectedHistoryQueries: Set<String> = emptySet()
 )
 
 class HomeViewModel(
     private val apiClient: CosApiClient = CosApiClient.instance,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val searchHistoryRepository: SearchHistoryRepository? = null
 ) : ViewModel() {
     companion object {
         private const val TAG = "HomeViewModel"
@@ -70,6 +78,22 @@ class HomeViewModel(
                 _uiState.update { it.copy(includeVip = include) }
             }
         }
+        viewModelScope.launch {
+            settingsRepository.layoutModeFlow.collect { mode ->
+                val prevMode = _uiState.value.layoutMode
+                _uiState.update { it.copy(layoutMode = mode) }
+                if (prevMode != mode && _uiState.value.videos.isNotEmpty()) {
+                    loadVideos(refresh = true, targetPage = 0)
+                }
+            }
+        }
+        searchHistoryRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.searchHistoryFlow.collect { list ->
+                    _uiState.update { it.copy(searchHistory = list.map { item -> item.query }) }
+                }
+            }
+        }
         loadVideos(refresh = true)
     }
 
@@ -78,11 +102,125 @@ class HomeViewModel(
     }
 
     fun submitSearch() {
+        val q = _uiState.value.searchQuery.trim()
+        if (q.isNotEmpty()) {
+            viewModelScope.launch {
+                searchHistoryRepository?.saveSearchQuery(q)
+            }
+        }
+        loadVideos(refresh = true)
+    }
+
+    // --- 搜索历史管理 ---
+    fun deleteSearchHistoryItem(query: String) {
+        viewModelScope.launch {
+            searchHistoryRepository?.deleteSearchQuery(query)
+        }
+    }
+
+    fun enterHistoryMultiSelect(initialQuery: String? = null) {
+        _uiState.update {
+            it.copy(
+                isHistoryMultiSelect = true,
+                selectedHistoryQueries = if (initialQuery != null) setOf(initialQuery) else emptySet()
+            )
+        }
+    }
+
+    fun exitHistoryMultiSelect() {
+        _uiState.update {
+            it.copy(
+                isHistoryMultiSelect = false,
+                selectedHistoryQueries = emptySet()
+            )
+        }
+    }
+
+    fun toggleHistorySelection(query: String) {
+        _uiState.update {
+            val newSet = it.selectedHistoryQueries.toMutableSet()
+            if (newSet.contains(query)) {
+                newSet.remove(query)
+            } else {
+                newSet.add(query)
+            }
+            it.copy(selectedHistoryQueries = newSet)
+        }
+    }
+
+    fun toggleSelectAllHistory() {
+        _uiState.update {
+            val allQueries = it.searchHistory.toSet()
+            val allSelected = it.selectedHistoryQueries.containsAll(allQueries)
+            it.copy(selectedHistoryQueries = if (allSelected) emptySet() else allQueries)
+        }
+    }
+
+    fun deleteSelectedHistory() {
+        val selected = _uiState.value.selectedHistoryQueries.toList()
+        if (selected.isNotEmpty()) {
+            viewModelScope.launch {
+                searchHistoryRepository?.deleteSearchQueries(selected)
+                exitHistoryMultiSelect()
+            }
+        }
+    }
+
+    fun clearAllHistory() {
+        viewModelScope.launch {
+            searchHistoryRepository?.clearAll()
+            exitHistoryMultiSelect()
+        }
+    }
+
+    fun appendTagToSearch(tag: String) {
+        val current = _uiState.value.searchQuery.trim()
+        val newQuery = if (current.isEmpty()) {
+            tag
+        } else {
+            val tokens = current.split(Regex("\\s+"))
+            if (tokens.contains(tag) || tokens.contains("+$tag") || tokens.contains("-$tag")) {
+                current
+            } else {
+                "$current $tag"
+            }
+        }
+        _uiState.update { it.copy(searchQuery = newQuery, selectedCategory = "全部") }
+        loadVideos(refresh = true)
+    }
+
+    fun toggleLayoutMode() {
+        viewModelScope.launch {
+            settingsRepository.toggleLayoutMode()
+        }
+    }
+
+    fun nextPage() {
+        if (_uiState.value.hasMore && !_uiState.value.isLoading) {
+            loadVideos(refresh = false, targetPage = _uiState.value.page + 1)
+        }
+    }
+
+    fun previousPage() {
+        if (_uiState.value.page > 0 && !_uiState.value.isLoading) {
+            loadVideos(refresh = false, targetPage = _uiState.value.page - 1)
+        }
+    }
+
+    fun filterSearchByTag(tag: String) {
+        val target = if (tag in listOf("全部", "推荐")) "" else tag
+        val current = _uiState.value.selectedTag
+        val newTag = if (current.equals(target, ignoreCase = true)) "" else target
+        _uiState.update { it.copy(selectedTag = newTag) }
         loadVideos(refresh = true)
     }
 
     fun selectCategory(category: String) {
-        if (_uiState.value.selectedCategory != category || _uiState.value.searchQuery.isNotEmpty()) {
+        if (_uiState.value.searchQuery.isNotEmpty()) {
+            filterSearchByTag(category)
+            return
+        }
+        if (_uiState.value.selectedCategory != category) {
             _uiState.update {
                 it.copy(
                     selectedCategory = category,
@@ -102,8 +240,7 @@ class HomeViewModel(
                     selectedCategory = category,
                     selectedTag = tag,
                     selectedTimeRange = timeRange,
-                    includeVip = includeVip,
-                    searchQuery = ""
+                    includeVip = includeVip
                 )
             }
             loadVideos(refresh = true)
@@ -133,14 +270,16 @@ class HomeViewModel(
     }
 
     fun loadMore() {
-        if (!_uiState.value.isLoading && _uiState.value.hasMore) {
+        if (!_uiState.value.isLoading && _uiState.value.hasMore && _uiState.value.layoutMode == LayoutMode.WATERFALL) {
             loadVideos(refresh = false)
         }
     }
 
-    private fun loadVideos(refresh: Boolean) {
+    private fun loadVideos(refresh: Boolean, targetPage: Int? = null) {
         viewModelScope.launch {
-            val currentPage = if (refresh) 0 else _uiState.value.page + 1
+            val isPaginated = _uiState.value.layoutMode == LayoutMode.PAGINATED
+            val currentPage = targetPage ?: if (refresh) 0 else _uiState.value.page + 1
+
             _uiState.update {
                 it.copy(
                     isLoading = !refresh,
@@ -154,23 +293,87 @@ class HomeViewModel(
                 val orderParam = _uiState.value.sortDimension.apiOrder
 
                 if (query.isNotEmpty()) {
+                    val parsed = SearchQueryParser.parse(query)
+                    val apiKw = parsed.mainKeyword.ifEmpty { query }
                     val apiOrder = if (_uiState.value.selectedTimeRange != TimeRange.ALL) "mr" else orderParam
-                    val response = apiClient.getVideoLists(
-                        page = currentPage,
-                        keyword = query,
-                        order = apiOrder,
-                        limit = 20
-                    )
-                    val newItems = response.items
-                    _uiState.update { current ->
-                        val combined = if (refresh) newItems else current.videos + newItems
-                        current.copy(
-                            videos = combined,
+                    val searchTag = _uiState.value.selectedTag
+                    val isCompound = parsed.isCompound || searchTag.isNotEmpty()
+
+                    fun filterItem(item: CosVideoItem): Boolean {
+                        if (!parsed.matches(item)) return false
+                        if (searchTag.isNotEmpty()) {
+                            val searchable = "${item.title} ${item.barcode ?: ""} ${item.tagList.joinToString(" ")} ${item.channelName ?: ""} ${item.company ?: ""} ${item.series ?: ""} ${item.cosRole ?: ""} ${item.cosWorks ?: ""}"
+                            if (!searchable.contains(searchTag, ignoreCase = true)) return false
+                        }
+                        return true
+                    }
+
+                    if (isPaginated) {
+                        // Paginated mode: request specific page
+                        val response = apiClient.getVideoLists(
                             page = currentPage,
-                            hasMore = newItems.isNotEmpty() && combined.size < response.totalCount,
-                            isLoading = false,
-                            isRefreshing = false
+                            keyword = apiKw,
+                            tags = searchTag,
+                            order = apiOrder,
+                            limit = 20
                         )
+                        val filtered = response.items.filter { filterItem(it) }
+                        _uiState.update { current ->
+                            current.copy(
+                                videos = filtered,
+                                page = currentPage,
+                                hasMore = response.items.isNotEmpty() && (currentPage + 1) * 20 < response.totalCount,
+                                isLoading = false,
+                                isRefreshing = false
+                            )
+                        }
+                    } else {
+                        // Waterfall mode: multi-page prefetch on initial refresh for compound/tag filtering
+                        if (refresh && isCompound) {
+                            val collected = mutableListOf<CosVideoItem>()
+                            var totalCount = 0
+                            for (p in 0..2) {
+                                val resp = apiClient.getVideoLists(
+                                    page = p,
+                                    keyword = apiKw,
+                                    tags = searchTag,
+                                    order = apiOrder,
+                                    limit = 20
+                                )
+                                totalCount = resp.totalCount
+                                collected.addAll(resp.items)
+                                if (resp.items.size < 20 || collected.size >= totalCount) break
+                            }
+                            val filtered = collected.distinctBy { it.id }.filter { filterItem(it) }
+                            _uiState.update { current ->
+                                current.copy(
+                                    videos = filtered,
+                                    page = 2,
+                                    hasMore = collected.size < totalCount,
+                                    isLoading = false,
+                                    isRefreshing = false
+                                )
+                            }
+                        } else {
+                            val response = apiClient.getVideoLists(
+                                page = currentPage,
+                                keyword = apiKw,
+                                tags = searchTag,
+                                order = apiOrder,
+                                limit = 20
+                            )
+                            val filtered = response.items.filter { filterItem(it) }
+                            _uiState.update { current ->
+                                val combined = if (refresh) filtered else (current.videos + filtered).distinctBy { it.id }
+                                current.copy(
+                                    videos = combined,
+                                    page = currentPage,
+                                    hasMore = response.items.isNotEmpty() && combined.size < response.totalCount,
+                                    isLoading = false,
+                                    isRefreshing = false
+                                )
+                            }
+                        }
                     }
                 } else {
                     val cat = _uiState.value.selectedCategory
@@ -178,39 +381,56 @@ class HomeViewModel(
                     val timeRange = _uiState.value.selectedTimeRange
 
                     if (cat == "推荐" && tag.isEmpty() && timeRange == TimeRange.ALL) {
-                        // 仅当推荐分类且无标签、无时间筛选时使用固定推荐流 /video/recommend
-                        if (refresh || currentPage == 0) {
-                            val recommendItems = apiClient.getVideoRecommend()
+                        if (isPaginated) {
+                            val items = if (currentPage == 0) {
+                                apiClient.getVideoRecommend()
+                            } else {
+                                apiClient.getVideoLists(page = currentPage, order = "mv", limit = 20).items
+                            }
                             _uiState.update { current ->
                                 current.copy(
-                                    videos = recommendItems,
-                                    page = 0,
-                                    hasMore = true,
+                                    videos = items,
+                                    page = currentPage,
+                                    hasMore = items.isNotEmpty(),
                                     isLoading = false,
                                     isRefreshing = false
                                 )
                             }
                         } else {
-                            val moreRecs = apiClient.getVideoRecommend()
-                            _uiState.update { current ->
-                                val existingIds = current.videos.map { it.id }.toSet()
-                                val filteredNew = moreRecs.filter { it.id !in existingIds }
-                                val combined = current.videos + filteredNew
-                                current.copy(
-                                    videos = combined,
-                                    page = currentPage,
-                                    hasMore = true,
-                                    isLoading = false,
-                                    isRefreshing = false
-                                )
+                            // Fixed / continuous recommendation flow for Waterfall
+                            if (refresh || currentPage == 0) {
+                                val recommendItems = apiClient.getVideoRecommend()
+                                _uiState.update { current ->
+                                    current.copy(
+                                        videos = recommendItems,
+                                        page = 0,
+                                        hasMore = true,
+                                        isLoading = false,
+                                        isRefreshing = false
+                                    )
+                                }
+                            } else {
+                                val moreRecs = apiClient.getVideoRecommend()
+                                _uiState.update { current ->
+                                    val existingIds = current.videos.map { it.id }.toSet()
+                                    val filteredNew = moreRecs.filter { it.id !in existingIds }
+                                    val combined = current.videos + filteredNew
+                                    current.copy(
+                                        videos = combined,
+                                        page = currentPage,
+                                        hasMore = true,
+                                        isLoading = false,
+                                        isRefreshing = false
+                                    )
+                                }
                             }
                         }
                     } else {
-                        // 分类 / 标签 / 时间筛选 / 排序请求 -> 调用 /video/lists
+                        // Category / Tag / Time filter
                         val apiOrder = when {
                             cat == "热门" && timeRange == TimeRange.ALL -> "mv"
                             cat == "最新" -> "mr"
-                            timeRange != TimeRange.ALL -> "mr" // 时间筛选必须从最新视频流拉取，才能包含本月/本周/今日的最新视频
+                            timeRange != TimeRange.ALL -> "mr"
                             else -> orderParam
                         }
                         val apiTags = when {
@@ -228,11 +448,11 @@ class HomeViewModel(
                         )
                         val newItems = response.items
                         _uiState.update { current ->
-                            val combined = if (refresh) newItems else current.videos + newItems
+                            val combined = if (refresh || isPaginated) newItems else (current.videos + newItems).distinctBy { it.id }
                             current.copy(
                                 videos = combined,
                                 page = currentPage,
-                                hasMore = newItems.isNotEmpty() && combined.size < response.totalCount,
+                                hasMore = newItems.isNotEmpty() && (if (isPaginated) (currentPage + 1) * 20 < response.totalCount else combined.size < response.totalCount),
                                 isLoading = false,
                                 isRefreshing = false
                             )
@@ -240,7 +460,7 @@ class HomeViewModel(
                     }
                 }
             } catch (e: Exception) {
-                NeoLog.e(TAG, "Failed to load videos", e)
+                ZakoLog.e(TAG, "Failed to load videos", e)
                 _uiState.update {
                     it.copy(
                         isLoading = false,

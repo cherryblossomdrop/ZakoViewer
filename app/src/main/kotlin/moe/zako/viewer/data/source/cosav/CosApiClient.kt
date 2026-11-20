@@ -3,8 +3,8 @@
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
-import moe.zako.viewer.core.logger.NeoLog
-import moe.zako.viewer.core.logger.NeoLogger
+import moe.zako.viewer.core.logger.ZakoLog
+import moe.zako.viewer.core.logger.ZakoLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -56,7 +56,7 @@ class CosApiClient(
     suspend fun getBaseUrl(): String = withContext(Dispatchers.IO) {
         resolvedBaseUrl?.let { return@withContext it }
         try {
-            NeoLog.d(TAG, "Resolving API base URL from cloud server: $API_CLOUD_SERVER")
+            ZakoLog.d(TAG, "Resolving API base URL from cloud server: $API_CLOUD_SERVER")
             val request = Request.Builder()
                 .url(API_CLOUD_SERVER)
                 .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
@@ -68,14 +68,14 @@ class CosApiClient(
                 if (encryptedText.isNotEmpty()) {
                     val decryptedUrl = CosCrypto.decrypt(encryptedText).trim()
                     if (decryptedUrl.startsWith("http://") || decryptedUrl.startsWith("https://")) {
-                        NeoLog.i(TAG, "Successfully resolved API URL from cloud: $decryptedUrl")
+                        ZakoLog.i(TAG, "Successfully resolved API URL from cloud: $decryptedUrl")
                         resolvedBaseUrl = decryptedUrl
                         return@withContext decryptedUrl
                     }
                 }
             }
         } catch (e: Exception) {
-            NeoLog.w(TAG, "Failed to resolve API URL from cloud, using fallback: ${e.message}")
+            ZakoLog.w(TAG, "Failed to resolve API URL from cloud, using fallback: ${e.message}")
         }
         resolvedBaseUrl = DEFAULT_API_URL
         DEFAULT_API_URL
@@ -88,7 +88,7 @@ class CosApiClient(
         val baseUrl = getBaseUrl()
         val fullUrl = if (pathWithQuery.startsWith("http")) pathWithQuery else "$baseUrl$pathWithQuery"
         
-        NeoLog.d(TAG, "GET: $fullUrl")
+        ZakoLog.d(TAG, "GET: $fullUrl")
         val request = Request.Builder()
             .url(fullUrl)
             .header("Content-Type", "application/json")
@@ -99,7 +99,7 @@ class CosApiClient(
             .build()
 
         val response = client.newCall(request).execute()
-        NeoLog.d(TAG, "Response code: ${response.code} for $fullUrl")
+        ZakoLog.d(TAG, "Response code: ${response.code} for $fullUrl")
         if (!response.isSuccessful) {
             throw IllegalStateException("API error: HTTP ${response.code}")
         }
@@ -110,7 +110,7 @@ class CosApiClient(
         val encryptedData = apiResponse.data ?: return@withContext rawBody
         val decryptedData = CosCrypto.decrypt(encryptedData)
         if (decryptedData.isEmpty()) {
-            NeoLog.w(TAG, "Decrypted data was empty, fallback to raw")
+            ZakoLog.w(TAG, "Decrypted data was empty, fallback to raw")
             return@withContext rawBody
         }
         decryptedData
@@ -146,7 +146,7 @@ class CosApiClient(
         val queryString = "/video/lists?" + params.joinToString("&")
         val json = executeGet(queryString)
         val parsed = gson.fromJson(json, CosVideoListResponse::class.java) ?: CosVideoListResponse()
-        NeoLog.i(TAG, "getVideoLists ($queryString) returned ${parsed.items.size} items (total: ${parsed.totalCount})")
+        ZakoLog.i(TAG, "getVideoLists ($queryString) returned ${parsed.items.size} items (total: ${parsed.totalCount})")
         parsed
     }
 
@@ -164,10 +164,10 @@ class CosApiClient(
                 val listResponse = gson.fromJson(json, CosVideoListResponse::class.java)
                 listResponse?.items ?: emptyList()
             }
-            NeoLog.i(TAG, "getVideoRecommend returned ${list.size} items")
+            ZakoLog.i(TAG, "getVideoRecommend returned ${list.size} items")
             list
         } catch (e: Exception) {
-            NeoLog.e(TAG, "getVideoRecommend error", e)
+            ZakoLog.e(TAG, "getVideoRecommend error", e)
             emptyList()
         }
     }
@@ -181,7 +181,7 @@ class CosApiClient(
             json = executeGet("/video/videoinfo?id=$id")
             gson.fromJson(json, CosVideoItem::class.java)
         } catch (e: Exception) {
-            NeoLogger.e(TAG, "Failed to parse video detail for ID $id. Raw response body:\n$json", e)
+            ZakoLogger.e(TAG, "Failed to parse video detail for ID $id. Raw response body:\n$json", e)
             null
         }
     }

@@ -2,7 +2,7 @@
 
 import android.content.Context
 import android.view.Surface
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 
 /**
  * Native JNI bridge for libmpv, designed following NextPlayerCloud / NeoPlayer architecture.
@@ -10,20 +10,25 @@ import moe.zako.viewer.core.logger.NeoLog
 object MPVLib {
     private const val TAG = "MPVLib"
     private var isNativeLoaded = false
+    @Volatile var isInitialized = false
 
     init {
         try {
             System.loadLibrary("mpv")
             System.loadLibrary("player")
             isNativeLoaded = true
-            NeoLog.i(TAG, "libmpv and native player libraries loaded successfully")
+            ZakoLog.i(TAG, "libmpv and native player libraries loaded successfully")
         } catch (e: UnsatisfiedLinkError) {
             isNativeLoaded = false
-            NeoLog.w(TAG, "libmpv native library not present in this runtime, using simulated/fallback bridge: ${e.message}")
+            ZakoLog.w(TAG, "libmpv native library not present in this runtime, using simulated/fallback bridge: ${e.message}")
+        } catch (t: Throwable) {
+            isNativeLoaded = false
+            ZakoLog.e(TAG, "libmpv native library load error: ${t.message}", t)
         }
     }
 
     fun isLoaded(): Boolean = isNativeLoaded
+    fun isReady(): Boolean = isNativeLoaded && isInitialized
 
     // Native declarations
     external fun create(ctx: Context)

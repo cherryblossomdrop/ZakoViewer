@@ -53,7 +53,7 @@ data class VideoPlayerState(
     val activeUrl: String = "",
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
-    val engine: PlayerEngine = PlayerEngine.SYSTEM,
+    val engine: PlayerEngine = PlayerEngine.AUTO,
     val hwDecMode: HwDecMode = HwDecMode.MEDIACODEC
 ) {
     val progress: Float
@@ -207,23 +207,14 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
 
             if (isMpv) {
                 try {
-                    ZakoLog.d(TAG, "attachSurface: binding wid and surface to MPVLib")
+                    ZakoLog.d(TAG, "attachSurface: binding surface to MPVLib")
                     MPVLib.attachSurface(surface)
-                    val wid = surface.hashCode().toString()
-                    MPVLib.setOptionString("wid", wid)
-                    MPVLib.setPropertyString("wid", wid)
-                    MPVLib.setOptionString("vo", "gpu")
-                    MPVLib.setPropertyString("vo", "gpu")
-                    MPVLib.setOptionString("gpu-context", "android")
-                    MPVLib.setPropertyString("gpu-context", "android")
-                    MPVLib.setOptionString("ao", "audiotrack,opensles")
-                    MPVLib.setPropertyString("ao", "audiotrack,opensles")
                 } catch (e: Throwable) {
                     ZakoLog.e(TAG, "attachSurface MPVLib error", e)
                 }
             } else {
                 // 当实际运行在 MediaPlayer 兜底模式时，严禁调用任何 MPV wid 相关方法；
-                // 在 attachSurface 时先校验 surface.isValid 且播放器处于 Prepared / Started / Paused 合法状态后再绑定 setDisplay(holder)，并用 try-catch (IllegalStateException) 完整包裹
+                // 在 attachSurface 时先校验 surface.isValid 且播放器处于 Prepared / Started / Paused 合法状态后再绑定 setDisplay(holder)，并用 try-catch 完整包裹
                 try {
                     if (isMediaPlayerPrepared && mediaPlayer != null) {
                         if (holder != null) {
@@ -235,10 +226,8 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                     } else {
                         ZakoLog.d(TAG, "attachSurface: MediaPlayer not prepared yet, holding surface reference")
                     }
-                } catch (e: IllegalStateException) {
-                    ZakoLog.w(TAG, "attachSurface MediaPlayer IllegalStateException caught", e)
-                } catch (e: Exception) {
-                    ZakoLog.e(TAG, "attachSurface MediaPlayer error", e)
+                } catch (e: Throwable) {
+                    ZakoLog.w(TAG, "attachSurface MediaPlayer error", e)
                 }
             }
         }
@@ -257,29 +246,21 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             }
 
             if (isMpv) {
-                // 当运行在 libmpv 模式时，确保 detachSurface 与 attachSurface 在同一把互斥锁下执行，解绑前先设置 vo=null 再重置 wid=0，重新绑定有效 Surface 后再恢复 vo=gpu
                 try {
-                    MPVLib.setPropertyBoolean("pause", true)
-                    MPVLib.setPropertyString("vo", "null")
-                    MPVLib.setPropertyString("wid", "0")
                     MPVLib.detachSurface()
                 } catch (e: Throwable) {
                     ZakoLog.e(TAG, "detachSurface MPVLib error", e)
                 }
             } else {
-                // 当实际运行在 MediaPlayer 兜底模式时，严禁调用任何 MPV wid 相关方法；在 detachSurface 时加锁并先安全暂停播放再调用 mediaPlayer.setDisplay(null)
+                // 当实际运行在 MediaPlayer 兜底模式时：严禁在 surfaceDestroyed 中调用 mediaPlayer.setDisplay(null) 或 setSurface(null)，
+                // 否则底层 Surface 正在析构时断开连接会触发系统底层 libmediaplayer.so SIGSEGV 崩溃。
+                // 此处仅安全暂停播放并清除引用，待新的 Surface 出现时由 attachSurface 直接换绑即可。
                 try {
                     if (_state.value.isPlaying) {
                         pause()
                     }
-                    if (isMediaPlayerPrepared && mediaPlayer != null) {
-                        mediaPlayer?.setDisplay(null)
-                        ZakoLog.d(TAG, "detachSurface: MediaPlayer display set to null")
-                    }
-                } catch (e: IllegalStateException) {
-                    ZakoLog.w(TAG, "detachSurface MediaPlayer IllegalStateException caught", e)
-                } catch (e: Exception) {
-                    ZakoLog.e(TAG, "detachSurface MediaPlayer error", e)
+                } catch (e: Throwable) {
+                    ZakoLog.w(TAG, "detachSurface MediaPlayer pause error", e)
                 }
             }
         }
@@ -326,7 +307,6 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 attachedSurface?.let { surf ->
                     if (surf.isValid) {
                         MPVLib.attachSurface(surf)
-                        MPVLib.setOptionString("wid", surf.hashCode().toString())
                     }
                 }
                 if (headers.isNotEmpty()) {

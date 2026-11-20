@@ -187,6 +187,28 @@ class VideoDetailViewModel(
                 _uiState.update { it.copy(externalPlayerPkg = pkg) }
             }
         }
+        viewModelScope.launch {
+            settingsRepository.playerEngineFlow.collect { engStr ->
+                val engine = when (engStr.lowercase()) {
+                    "mpv" -> PlayerEngine.MPV
+                    "system" -> PlayerEngine.SYSTEM
+                    else -> PlayerEngine.AUTO
+                }
+                player.setEngine(engine)
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.hwDecModeFlow.collect { hwStr ->
+                val mode = when (hwStr.lowercase()) {
+                    "mediacodec" -> HwDecMode.MEDIACODEC
+                    "mediacodec-copy" -> HwDecMode.MEDIACODEC_COPY
+                    "auto" -> HwDecMode.AUTO
+                    "no" -> HwDecMode.OFF
+                    else -> HwDecMode.MEDIACODEC
+                }
+                player.setHwDecMode(mode)
+            }
+        }
     }
 
     private fun observePlayer() {

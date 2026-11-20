@@ -104,5 +104,6 @@ keyPassword=your_key_password
 
 ## 开源许可
 
-本项目基于 [MIT License](LICENSE) 协议开源。
+本项目核心播放模块及底层 JNI 架构衍生自 GPLv3 开源项目（NextPlayerCloud / NeoPlayer），根据 GNU 强互惠（Copyleft）许可证要求，本项目整体遵循 [GNU General Public License v3.0 (GPLv3)](LICENSE) 协议开源。
+
 

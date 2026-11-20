@@ -12,22 +12,42 @@ object MPVLib {
     private var isNativeLoaded = false
     @Volatile var isInitialized = false
 
+    private val FFMPEG_DEPENDENCIES = listOf(
+        "avutil",
+        "swresample",
+        "swscale",
+        "avcodec",
+        "avformat",
+        "avfilter",
+        "mpv",
+        "player"
+    )
+
     init {
-        try {
+        var mpvLoaded = false
+        var playerLoaded = false
+
+        for (lib in FFMPEG_DEPENDENCIES) {
             try {
-                System.loadLibrary("mpv")
+                System.loadLibrary(lib)
+                ZakoLog.i(TAG, "Native library loaded: lib$lib.so")
+                if (lib == "mpv") mpvLoaded = true
+                if (lib == "player") playerLoaded = true
             } catch (e: UnsatisfiedLinkError) {
-                ZakoLog.w(TAG, "libmpv.so not found, will rely on dynamic symbol lookup: ${e.message}")
+                if (lib == "mpv" || lib == "player") {
+                    ZakoLog.w(TAG, "Native library lib$lib.so not found: ${e.message}")
+                }
+            } catch (t: Throwable) {
+                ZakoLog.e(TAG, "Error loading native library lib$lib.so: ${t.message}", t)
             }
-            System.loadLibrary("player")
-            isNativeLoaded = true
-            ZakoLog.i(TAG, "Native player library loaded successfully")
-        } catch (e: UnsatisfiedLinkError) {
-            isNativeLoaded = false
-            ZakoLog.w(TAG, "Native player library not present in this runtime, using simulated/fallback bridge: ${e.message}")
-        } catch (t: Throwable) {
-            isNativeLoaded = false
-            ZakoLog.e(TAG, "Native player library load error: ${t.message}", t)
+        }
+
+        // Only mark native MPV available if both libmpv and player bridge were loaded successfully
+        isNativeLoaded = mpvLoaded && playerLoaded
+        if (isNativeLoaded) {
+            ZakoLog.i(TAG, "libmpv and native player libraries loaded successfully")
+        } else {
+            ZakoLog.w(TAG, "libmpv native runtime unavailable (mpv=$mpvLoaded, player=$playerLoaded), will fallback to MediaPlayer")
         }
     }
 

@@ -1,0 +1,4 @@
+# Pre-built native libraries (e.g., libmpv.so, FFmpeg libraries) should be placed in the respective ABI directories:
+# arm64-v8a/
+# armeabi-v7a/
+# x86_64/

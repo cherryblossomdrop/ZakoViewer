@@ -99,7 +99,17 @@ class MultiNodeStreamBuffer(
             if (parts.size < 2) return
             val path = parts[1]
 
-            // Format: /video/{videoId}/index.m3u8 or /video/{videoId}/seg_{index}.ts
+            // Parse headers, specifically Range header
+            var rangeHeader: String? = null
+            var headerLine: String?
+            while (input.readLine().also { headerLine = it } != null) {
+                if (headerLine.isNullOrBlank()) break
+                if (headerLine!!.startsWith("Range:", ignoreCase = true)) {
+                    rangeHeader = headerLine!!.substringAfter(':').trim()
+                }
+            }
+
+            // Format: /video/{videoId}/index.m3u8 or /video/{videoId}/seg_{index}.ts or /video/{videoId}/xxx.mp4
             val segments = path.trim('/').split('/')
             if (segments.size >= 3 && segments[0] == "video") {
                 val videoId = segments[1]
@@ -122,13 +132,20 @@ class MultiNodeStreamBuffer(
                             waitedMs += 100
                         }
                     }
-                    serveMediaFile(targetFile, output, "video/mp2t")
+                    serveMediaFile(targetFile, output, "video/mp2t", rangeHeader)
                 } else {
-                    serveMediaFile(targetFile, output, "video/mp4")
+                    serveMediaFile(targetFile, output, "video/mp4", rangeHeader)
                 }
             }
+        } catch (_: java.net.SocketException) {
+            // Client closed connection during seek or cancel - completely normal
         } catch (e: Exception) {
-            // Socket closed or client disconnected
+            if (e is IOException && (e.message?.contains("Broken pipe", ignoreCase = true) == true ||
+                                    e.message?.contains("Connection reset", ignoreCase = true) == true)) {
+                // Client closed socket normally
+            } else {
+                ZakoLog.d(TAG, "Client socket handled: ${e.message}")
+            }
         } finally {
             try { socket.close() } catch (_: Exception) {}
         }
@@ -152,7 +169,7 @@ class MultiNodeStreamBuffer(
         output.flush()
     }
 
-    private fun serveMediaFile(file: File, output: OutputStream, mimeType: String) {
+    private fun serveMediaFile(file: File, output: OutputStream, mimeType: String, rangeHeader: String? = null) {
         if (!file.exists()) {
             val response = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
             output.write(response.toByteArray())
@@ -160,22 +177,69 @@ class MultiNodeStreamBuffer(
             return
         }
         val fileLength = file.length()
-        val header = "HTTP/1.1 200 OK\r\n" +
-                "Content-Type: $mimeType\r\n" +
-                "Content-Length: $fileLength\r\n" +
-                "Access-Control-Allow-Origin: *\r\n" +
-                "Accept-Ranges: bytes\r\n" +
-                "Connection: close\r\n\r\n"
-        output.write(header.toByteArray())
+        var start = 0L
+        var end = fileLength - 1L
+        var isRange = false
 
-        FileInputStream(file).use { fis ->
-            val buf = ByteArray(32768)
-            var bytesRead: Int
-            while (fis.read(buf).also { bytesRead = it } != -1) {
-                output.write(buf, 0, bytesRead)
+        if (!rangeHeader.isNullOrBlank() && rangeHeader.startsWith("bytes=", ignoreCase = true)) {
+            val rangeSpec = rangeHeader.substringAfter("bytes=").trim()
+            val rangeParts = rangeSpec.split("-")
+            val rangeStart = rangeParts.getOrNull(0)?.toLongOrNull()
+            val rangeEnd = rangeParts.getOrNull(1)?.toLongOrNull()
+
+            if (rangeStart != null) {
+                start = rangeStart.coerceIn(0L, fileLength - 1L)
+                if (rangeEnd != null && rangeEnd >= start) {
+                    end = rangeEnd.coerceIn(start, fileLength - 1L)
+                }
+                isRange = true
             }
         }
-        output.flush()
+
+        val contentLength = end - start + 1L
+
+        val headers = if (isRange) {
+            "HTTP/1.1 206 Partial Content\r\n" +
+                    "Content-Type: $mimeType\r\n" +
+                    "Content-Length: $contentLength\r\n" +
+                    "Content-Range: bytes $start-$end/$fileLength\r\n" +
+                    "Access-Control-Allow-Origin: *\r\n" +
+                    "Accept-Ranges: bytes\r\n" +
+                    "Connection: close\r\n\r\n"
+        } else {
+            "HTTP/1.1 200 OK\r\n" +
+                    "Content-Type: $mimeType\r\n" +
+                    "Content-Length: $fileLength\r\n" +
+                    "Access-Control-Allow-Origin: *\r\n" +
+                    "Accept-Ranges: bytes\r\n" +
+                    "Connection: close\r\n\r\n"
+        }
+
+        try {
+            output.write(headers.toByteArray(Charsets.UTF_8))
+            output.flush()
+
+            RandomAccessFile(file, "r").use { raf ->
+                raf.seek(start)
+                val buf = ByteArray(32768)
+                var remaining = contentLength
+                while (remaining > 0L) {
+                    val toRead = minOf(remaining, buf.size.toLong()).toInt()
+                    val bytesRead = raf.read(buf, 0, toRead)
+                    if (bytesRead == -1) break
+                    output.write(buf, 0, bytesRead)
+                    remaining -= bytesRead
+                }
+            }
+            output.flush()
+        } catch (_: java.net.SocketException) {
+            // Client seeked away or cancelled stream
+        } catch (e: IOException) {
+            if (e.message?.contains("Broken pipe", ignoreCase = true) != true &&
+                e.message?.contains("Connection reset", ignoreCase = true) != true) {
+                ZakoLog.w(TAG, "serveMediaFile IOException: ${e.message}")
+            }
+        }
     }
 
     data class HlsSegment(
@@ -193,7 +257,9 @@ class MultiNodeStreamBuffer(
         cdnUrls: List<String>,
         headers: Map<String, String> = emptyMap()
     ): String = withContext(Dispatchers.IO) {
-        stopBuffering()
+        if (activeVideoId != null && activeVideoId != videoId) {
+            stopBuffering(activeVideoId)
+        }
         activeVideoId = videoId
         activeSegments.clear()
         prioritySegment.set(-1)
@@ -395,8 +461,9 @@ class MultiNodeStreamBuffer(
      * Stops and cancels all background buffering jobs for the current video.
      */
     fun stopBuffering(videoId: String? = null) {
-        if (videoId == null || videoId == activeVideoId) {
-            ZakoLog.i(TAG, "Stopping multi-node buffer for $activeVideoId")
+        val target = activeVideoId ?: return
+        if (videoId == null || videoId == target) {
+            ZakoLog.i(TAG, "Stopping multi-node buffer for $target")
             activeJob?.cancel()
             activeJob = null
             activeVideoId = null

@@ -117,24 +117,6 @@ class MPVView @JvmOverloads constructor(
         ZakoLog.d(TAG, "surfaceCreated: surface isValid=${holder.surface.isValid}")
         if (holder.surface.isValid) {
             isSurfaceCreated = true
-            if (MPVLib.isReady()) {
-                try {
-                    // Bind wid and attach valid surface
-                    MPVLib.attachSurface(holder.surface)
-                    val wid = holder.surface.hashCode().toString()
-                    MPVLib.setOptionString("wid", wid)
-                    MPVLib.setPropertyString("wid", wid)
-                    // Initialize vo=gpu, gpu-context=android, ao=audiotrack,opensles
-                    MPVLib.setOptionString("vo", "gpu")
-                    MPVLib.setPropertyString("vo", "gpu")
-                    MPVLib.setOptionString("gpu-context", "android")
-                    MPVLib.setPropertyString("gpu-context", "android")
-                    MPVLib.setOptionString("ao", "audiotrack,opensles")
-                    MPVLib.setPropertyString("ao", "audiotrack,opensles")
-                } catch (e: Throwable) {
-                    ZakoLog.e(TAG, "Error in surfaceCreated MPV setup", e)
-                }
-            }
             onSurfaceCreatedListener?.invoke(holder)
         }
     }
@@ -153,17 +135,8 @@ class MPVView @JvmOverloads constructor(
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
-        ZakoLog.d(TAG, "surfaceDestroyed: detaching surface and resetting wid")
+        ZakoLog.d(TAG, "surfaceDestroyed: surface destroyed")
         isSurfaceCreated = false
-        if (MPVLib.isReady()) {
-            try {
-                MPVLib.setPropertyBoolean("pause", true)
-                MPVLib.setPropertyString("wid", "0")
-                MPVLib.detachSurface()
-            } catch (e: Throwable) {
-                ZakoLog.e(TAG, "Error detaching surface from MPVLib", e)
-            }
-        }
         onSurfaceDestroyedListener?.invoke(holder)
     }
 }

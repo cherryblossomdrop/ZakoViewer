@@ -57,9 +57,9 @@ data class ZakoToastData(
 )
 
 /**
- * Global singleton manager for Material 3 Expressive (MD3E) pure text in-app toasts.
+ * Global singleton manager for Material 3 Expressive (MD3E) theme-aware in-app toasts.
  * Replaces system toasts (which show app launcher icons on Android 12+) with
- * a refined, icon-free, floating pill interface adhering to MD3 Expressive standards.
+ * a refined, floating capsule pill adhering to MD3 Expressive standards and dynamic color schemes.
  */
 object ZakoToast {
     private val _currentToast = MutableStateFlow<ZakoToastData?>(null)
@@ -69,7 +69,7 @@ object ZakoToast {
     private var dismissJob: Job? = null
 
     /**
-     * Show a Material 3 Expressive pure-text toast.
+     * Show a Material 3 Expressive theme-aware toast.
      *
      * @param message Text to display
      * @param isLong Whether to display for an extended duration (3500ms vs 2000ms)
@@ -110,8 +110,9 @@ object ZakoToast {
 }
 
 /**
- * Material 3 Expressive (MD3E) Toast Host Composable.
- * Renders the floating pure-text toast pill with smooth spring & fade motion.
+ * Material 3 Expressive (MD3E) Theme-Aware Toast Host Composable.
+ * Renders the floating capsule pill with smooth spring & fade motion.
+ * Positioned cleanly above bottom navigation without intercepting underlying screen touches.
  */
 @Composable
 fun ZakoToastHost(
@@ -157,12 +158,11 @@ fun ZakoToastHost(
 }
 
 /**
- * Material 3 Expressive Pill Component:
- * - Pure text (strictly no icons / no launcher icon)
- * - Inverse surface container with expressive tonal depth & smooth shadow
- * - Pill-shaped (CircleShape)
- * - Subtle outline border for crisp contrast
- * - High-contrast inverseOnSurface typography
+ * Material 3 Expressive Theme-Aware Capsule Pill:
+ * - Dynamic color binding: secondaryContainer background, onSecondaryContainer content, primary accent outline
+ * - Seamless adaptation to Monet dynamic theming and user custom HEX color schemes
+ * - Capsule floating elevation with subtle shadow
+ * - Dismissible via gentle tap
  */
 @Composable
 fun ZakoToastPill(
@@ -170,6 +170,10 @@ fun ZakoToastPill(
     onDismiss: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.95f)
+    val contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+    val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.60f)
+
     Surface(
         modifier = modifier
             .padding(horizontal = 24.dp)
@@ -177,12 +181,12 @@ fun ZakoToastPill(
                 elevation = 6.dp,
                 shape = CircleShape,
                 clip = false,
-                ambientColor = Color.Black.copy(alpha = 0.25f),
+                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
                 spotColor = Color.Black.copy(alpha = 0.35f)
             )
             .border(
-                width = 0.75.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                width = 1.dp,
+                color = borderColor,
                 shape = CircleShape
             )
             .clickable(
@@ -191,8 +195,8 @@ fun ZakoToastPill(
                 onClick = onDismiss
             ),
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.96f),
-        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+        color = containerColor,
+        contentColor = contentColor,
         tonalElevation = 6.dp
     ) {
         Box(
@@ -204,11 +208,11 @@ fun ZakoToastPill(
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.2.sp,
                     lineHeight = 19.sp
                 ),
-                color = MaterialTheme.colorScheme.inverseOnSurface,
+                color = contentColor,
                 textAlign = TextAlign.Center,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis

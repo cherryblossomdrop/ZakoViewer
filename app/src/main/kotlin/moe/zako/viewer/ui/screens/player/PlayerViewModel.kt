@@ -205,21 +205,31 @@ class PlayerViewModel(
                 detail?.let { vid ->
                     val lines = vid.allVideoLines.ifEmpty { vid.allMp4Lines }
                     if (lines.isNotEmpty()) {
-                        ZakoLog.i(TAG, "Initializing multi-node streaming buffer on ${lines.size} CDN nodes")
-                        val streamBuffer = MultiNodeStreamBuffer.getInstance(player.context)
-                        streamBuffer.onBufferProgress = { bufferedMs, _, _ ->
-                            player.updateBufferedPosition(bufferedMs)
+                        val headers = mapOf(
+                            "User-Agent" to "Mozilla/5.0 (Linux; Android 14)",
+                            "Referer" to "https://api.cos-dkop.net/"
+                        )
+                        val isMpvReady = when (player.state.value.engine) {
+                            moe.zako.viewer.core.player.PlayerEngine.MPV -> moe.zako.viewer.core.player.MPVLib.isReady()
+                            moe.zako.viewer.core.player.PlayerEngine.AUTO -> moe.zako.viewer.core.player.MPVLib.isReady()
+                            moe.zako.viewer.core.player.PlayerEngine.SYSTEM -> false
                         }
 
-                        // Start continuous multi-node background buffering to video end
-                        val streamUrl = streamBuffer.startBuffering(
-                            videoId = vid.id,
-                            cdnUrls = lines,
-                            headers = mapOf(
-                                "User-Agent" to "Mozilla/5.0 (Linux; Android 14)",
-                                "Referer" to "https://api.cos-dkop.net/"
+                        val streamUrl = if (isMpvReady) {
+                            ZakoLog.i(TAG, "libmpv is ready, directly streaming from CDN")
+                            lines.first()
+                        } else {
+                            ZakoLog.i(TAG, "Initializing multi-node streaming buffer on ${lines.size} CDN nodes")
+                            val streamBuffer = MultiNodeStreamBuffer.getInstance(player.context)
+                            streamBuffer.onBufferProgress = { bufferedMs, _, _ ->
+                                player.updateBufferedPosition(bufferedMs)
+                            }
+                            streamBuffer.startBuffering(
+                                videoId = vid.id,
+                                cdnUrls = lines,
+                                headers = headers
                             )
-                        )
+                        }
 
                         // Select best node for fallback / display metadata
                         cdnSmartRouter.autoSelectFastestNode(lines)
@@ -227,10 +237,7 @@ class PlayerViewModel(
                         player.loadVideo(
                             url = streamUrl,
                             title = vid.title,
-                            headers = mapOf(
-                                "User-Agent" to "Mozilla/5.0 (Linux; Android 14)",
-                                "Referer" to "https://api.cos-dkop.net/"
-                            )
+                            headers = headers
                         )
                     }
                 }

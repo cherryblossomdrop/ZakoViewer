@@ -158,13 +158,13 @@ fun PlayerScreen(
                     MPVView(ctx).apply {
                         setZOrderMediaOverlay(true)
                         onSurfaceCreatedListener = { holder ->
-                            viewModel.player.attachSurface(holder.surface)
+                            viewModel.player.attachSurface(holder.surface, holder)
                         }
                         onSurfaceDestroyedListener = {
                             viewModel.player.detachSurface()
                         }
                         if (holder.surface.isValid) {
-                            viewModel.player.attachSurface(holder.surface)
+                            viewModel.player.attachSurface(holder.surface, holder)
                         }
                     }
                 },

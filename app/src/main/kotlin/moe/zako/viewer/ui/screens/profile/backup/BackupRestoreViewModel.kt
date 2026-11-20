@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import moe.zako.viewer.data.backup.BackupRestoreManager
+import moe.zako.viewer.ui.components.ZakoToast
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,8 +51,13 @@ class BackupRestoreViewModel(
             _uiState.update {
                 it.copy(
                     isRestoring = false,
-                    restoreStatusMessage = if (ok) "数据恢复成功！" else "恢复失败，文件损坏或格式不兼容"
+                    restoreStatusMessage = if (ok) "数据恢复成功！" else "恢复失败，文件损坏或未找到有效备份数据"
                 )
+            }
+            if (ok) {
+                ZakoToast.show("数据备份已成功恢复")
+            } else {
+                ZakoToast.show("恢复失败，未找到有效备份数据")
             }
         }
     }

@@ -161,7 +161,14 @@ class BackupRestoreManager(
             if (isZipArchive(backupFile)) {
                 val downloadManager = DownloadManager.getInstance(context)
                 val downloadsDir = downloadManager.getDownloadDir()
-                if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                if (!downloadsDir.exists()) {
+                    try { downloadsDir.mkdirs() } catch (_: Exception) {}
+                }
+
+                val fallbackDir = File(context.getExternalFilesDir(null), "downloads")
+                if (!fallbackDir.exists()) {
+                    try { fallbackDir.mkdirs() } catch (_: Exception) {}
+                }
 
                 val buffer = ByteArray(BUFFER_SIZE)
                 ZipInputStream(BufferedInputStream(FileInputStream(backupFile))).use { zis ->
@@ -185,15 +192,49 @@ class BackupRestoreManager(
                         } else if (entryName.endsWith(".mp4", ignoreCase = true)) {
                             val fileName = File(entryName).name
                             if (fileName.isNotEmpty()) {
-                                val outFile = File(downloadsDir, fileName)
-                                FileOutputStream(outFile).use { fos ->
-                                    var bytesRead: Int
-                                    while (zis.read(buffer).also { bytesRead = it } != -1) {
-                                        fos.write(buffer, 0, bytesRead)
+                                var targetFile = File(downloadsDir, fileName)
+                                var writeSucceeded = false
+
+                                // 1. 优先尝试写入选定的下载目录
+                                try {
+                                    if (targetFile.exists()) {
+                                        try { targetFile.delete() } catch (_: Exception) {}
                                     }
-                                    fos.flush()
+                                    FileOutputStream(targetFile).use { fos ->
+                                        var bytesRead: Int
+                                        while (zis.read(buffer).also { bytesRead = it } != -1) {
+                                            fos.write(buffer, 0, bytesRead)
+                                        }
+                                        fos.flush()
+                                    }
+                                    writeSucceeded = true
+                                    ZakoLog.i(TAG, "Restored video to primary download dir: ${targetFile.absolutePath}")
+                                } catch (e: Exception) {
+                                    ZakoLog.w(TAG, "Writing to primary download dir ($targetFile) failed: ${e.message}, falling back to app external files sandbox")
+                                    // 2. 若因权限限制 (EACCES) 或目录不可写失败，自动降级写入无需权限的应用专属外部沙盒目录
+                                    val sandboxFile = File(fallbackDir, fileName)
+                                    try {
+                                        if (sandboxFile.exists()) {
+                                            try { sandboxFile.delete() } catch (_: Exception) {}
+                                        }
+                                        FileOutputStream(sandboxFile).use { fos ->
+                                            var bytesRead: Int
+                                            while (zis.read(buffer).also { bytesRead = it } != -1) {
+                                                fos.write(buffer, 0, bytesRead)
+                                            }
+                                            fos.flush()
+                                        }
+                                        targetFile = sandboxFile
+                                        writeSucceeded = true
+                                        ZakoLog.i(TAG, "Restored video to sandbox download dir: ${sandboxFile.absolutePath}")
+                                    } catch (e2: Exception) {
+                                        ZakoLog.e(TAG, "Writing to sandbox fallback ($sandboxFile) failed: ${e2.message}", e2)
+                                    }
                                 }
-                                restoredVideos.add(outFile)
+
+                                if (writeSucceeded) {
+                                    restoredVideos.add(targetFile)
+                                }
                             }
                             zis.closeEntry()
                         } else {

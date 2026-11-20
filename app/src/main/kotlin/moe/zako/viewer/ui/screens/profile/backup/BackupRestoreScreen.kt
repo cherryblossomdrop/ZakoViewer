@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import moe.zako.viewer.core.permission.StoragePermissionHelper
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +66,46 @@ fun BackupRestoreScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            val hasStoragePermission = StoragePermissionHelper.hasAllFilesAccess()
+            if (!hasStoragePermission) {
+                item {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "存储权限提示",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "未获得「所有文件访问权限」。备份与恢复已自动启用应用专属沙盒保护；若需将视频直接导出或恢复至公共 Download 目录，建议授予该权限。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            OutlinedButton(
+                                onClick = { StoragePermissionHelper.requestAllFilesAccess(context) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("前往授予所有文件访问权限")
+                            }
+                        }
+                    }
+                }
+            }
+
             // Section 1: 导出备份
             item {
                 Card(

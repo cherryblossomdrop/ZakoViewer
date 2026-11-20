@@ -101,3 +101,8 @@ keyPassword=your_key_password
 # 编译 Release APK (需先配置 keystore.properties)
 ./gradlew assembleRelease
 ```
+
+## 开源许可
+
+本项目基于 [MIT License](LICENSE) 协议开源。
+

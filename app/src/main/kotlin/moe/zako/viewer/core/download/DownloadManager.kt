@@ -3,6 +3,7 @@
 import android.content.Context
 import android.content.Intent
 import moe.zako.viewer.core.logger.ZakoLog
+import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.ZakoDatabase
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.repository.SettingsRepository
@@ -259,6 +260,7 @@ class DownloadManager private constructor(private val context: Context) {
     }
 
     fun getDownloadDir(): File {
+        val hasPermission = StoragePermissionHelper.hasAllFilesAccess()
         val customPath = runBlocking {
             try {
                 settingsRepository.downloadPathFlow.first()
@@ -266,19 +268,36 @@ class DownloadManager private constructor(private val context: Context) {
                 ""
             }
         }
-        if (customPath.isNotBlank()) {
+        if (hasPermission && customPath.isNotBlank()) {
             val customDir = File(customPath)
-            if (customDir.exists() || customDir.mkdirs()) {
+            if (canWriteToDir(customDir)) {
                 return customDir
             }
         }
         val defaultDir = File("/storage/emulated/0/Download/ZakoViewer")
-        if (defaultDir.parentFile?.exists() == true && (defaultDir.exists() || defaultDir.mkdirs())) {
-            return defaultDir
+        if (hasPermission && defaultDir.parentFile?.exists() == true) {
+            if (canWriteToDir(defaultDir)) {
+                return defaultDir
+            }
         }
         val dir = File(context.getExternalFilesDir(null), "downloads")
         if (!dir.exists()) dir.mkdirs()
         return dir
+    }
+
+    private fun canWriteToDir(dir: File): Boolean {
+        return try {
+            if (!dir.exists() && !dir.mkdirs()) return false
+            val testFile = File(dir, ".test_write_${System.currentTimeMillis()}")
+            if (testFile.createNewFile()) {
+                testFile.delete()
+                true
+            } else {
+                false
+            }
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /**

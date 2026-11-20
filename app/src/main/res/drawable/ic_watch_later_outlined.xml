@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Clockwise Circular Arc -->
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M 17.5,18.5 A 8.5,8.5 0 1,1 20.5,11.3" />
+    <!-- Downward Arrow Head -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M 18.2,11.3 L 22.8,11.3 L 20.5,15.2 Z" />
+    <!-- Hollow Play Triangle -->
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M 10.2,9.2 L 15.2,12 L 10.2,14.8 Z" />
+</vector>

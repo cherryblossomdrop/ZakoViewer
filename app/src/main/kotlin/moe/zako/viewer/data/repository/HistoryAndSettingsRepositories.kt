@@ -217,7 +217,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     val playerEngineFlow: Flow<String> = context.dataStore.data.map {
-        it[KEY_PLAYER_ENGINE] ?: "system"
+        it[KEY_PLAYER_ENGINE] ?: "mpv"
     }
 
     val hwDecModeFlow: Flow<String> = context.dataStore.data.map {

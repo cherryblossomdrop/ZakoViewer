@@ -53,7 +53,7 @@ data class VideoPlayerState(
     val activeUrl: String = "",
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
-    val engine: PlayerEngine = PlayerEngine.AUTO,
+    val engine: PlayerEngine = PlayerEngine.MPV,
     val hwDecMode: HwDecMode = HwDecMode.MEDIACODEC
 ) {
     val progress: Float
@@ -113,6 +113,44 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
     }
     private val seekDispatcher = seekExecutor.asCoroutineDispatcher()
     private val seekScope = CoroutineScope(seekDispatcher + SupervisorJob())
+
+    // 独立单线程执行器，专门派发跨进程 MediaPlayer IPC 调用，严禁在 UI 主线程执行阻塞操作
+    private val mediaPlayerExecutor = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "ZakoPlayer-MediaPlayer-IPC").apply { isDaemon = true }
+    }
+    private val mediaPlayerDispatcher = mediaPlayerExecutor.asCoroutineDispatcher()
+    private val mediaPlayerScope = CoroutineScope(mediaPlayerDispatcher + SupervisorJob())
+
+    private fun isMpvActive(): Boolean = MPVLib.isReady()
+
+    private fun safeAsyncMediaPlayerOp(action: (MediaPlayer) -> Unit) {
+        val player = mediaPlayer ?: return
+        mediaPlayerScope.launch {
+            try {
+                action(player)
+            } catch (e: Throwable) {
+                ZakoLog.w(TAG, "Async MediaPlayer operation failed", e)
+            }
+        }
+    }
+
+    private fun safeAsyncReleaseMediaPlayer() {
+        val player = mediaPlayer
+        mediaPlayer = null
+        isMediaPlayerPrepared = false
+        if (player != null) {
+            mediaPlayerScope.launch {
+                try {
+                    try { player.stop() } catch (_: Throwable) {}
+                    try { player.reset() } catch (_: Throwable) {}
+                    try { player.release() } catch (_: Throwable) {}
+                    ZakoLog.d(TAG, "MediaPlayer released asynchronously in background thread")
+                } catch (e: Throwable) {
+                    ZakoLog.w(TAG, "Async release MediaPlayer error", e)
+                }
+            }
+        }
+    }
 
     init {
         if (MPVLib.isLoaded()) {
@@ -199,13 +237,7 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             attachedHolder = holder
             ZakoLog.d(TAG, "attachSurface: surface isValid=true")
 
-            val isMpv = when (_state.value.engine) {
-                PlayerEngine.MPV -> MPVLib.isReady()
-                PlayerEngine.AUTO -> MPVLib.isReady()
-                PlayerEngine.SYSTEM -> false
-            }
-
-            if (isMpv) {
+            if (isMpvActive()) {
                 try {
                     ZakoLog.d(TAG, "attachSurface: binding surface to MPVLib")
                     MPVLib.attachSurface(surface)
@@ -213,21 +245,22 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                     ZakoLog.e(TAG, "attachSurface MPVLib error", e)
                 }
             } else {
-                // 当实际运行在 MediaPlayer 兜底模式时，严禁调用任何 MPV wid 相关方法；
-                // 在 attachSurface 时先校验 surface.isValid 且播放器处于 Prepared / Started / Paused 合法状态后再绑定 setDisplay(holder)，并用 try-catch 完整包裹
-                try {
-                    if (isMediaPlayerPrepared && mediaPlayer != null) {
-                        if (holder != null) {
-                            mediaPlayer?.setDisplay(holder)
+                // 严禁在 UI 主线程执行任何阻塞 IPC 操作，派发至后台单线程异步处理
+                safeAsyncMediaPlayerOp { mp ->
+                    try {
+                        if (isMediaPlayerPrepared) {
+                            if (holder != null && holder.surface.isValid) {
+                                mp.setDisplay(holder)
+                            } else if (surface.isValid) {
+                                mp.setSurface(surface)
+                            }
+                            ZakoLog.d(TAG, "attachSurface: MediaPlayer display/surface bound successfully")
                         } else {
-                            mediaPlayer?.setSurface(surface)
+                            ZakoLog.d(TAG, "attachSurface: MediaPlayer not prepared yet, holding surface reference")
                         }
-                        ZakoLog.d(TAG, "attachSurface: MediaPlayer display/surface bound successfully")
-                    } else {
-                        ZakoLog.d(TAG, "attachSurface: MediaPlayer not prepared yet, holding surface reference")
+                    } catch (e: Throwable) {
+                        ZakoLog.w(TAG, "attachSurface MediaPlayer error", e)
                     }
-                } catch (e: Throwable) {
-                    ZakoLog.w(TAG, "attachSurface MediaPlayer error", e)
                 }
             }
         }
@@ -239,28 +272,23 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             attachedHolder = null
             ZakoLog.d(TAG, "detachSurface: detaching surface")
 
-            val isMpv = when (_state.value.engine) {
-                PlayerEngine.MPV -> MPVLib.isReady()
-                PlayerEngine.AUTO -> MPVLib.isReady()
-                PlayerEngine.SYSTEM -> false
-            }
-
-            if (isMpv) {
+            if (isMpvActive()) {
                 try {
                     MPVLib.detachSurface()
                 } catch (e: Throwable) {
                     ZakoLog.e(TAG, "detachSurface MPVLib error", e)
                 }
             } else {
-                // 当实际运行在 MediaPlayer 兜底模式时：严禁在 surfaceDestroyed 中调用 mediaPlayer.setDisplay(null) 或 setSurface(null)，
-                // 否则底层 Surface 正在析构时断开连接会触发系统底层 libmediaplayer.so SIGSEGV 崩溃。
-                // 此处仅安全暂停播放并清除引用，待新的 Surface 出现时由 attachSurface 直接换绑即可。
-                try {
-                    if (_state.value.isPlaying) {
-                        pause()
+                // 严禁在 UI 主线程直接调用 mediaPlayer.setDisplay(null) 或持锁等待 mediaPlayer 状态！
+                // 派发到独立的后台单线程执行器进行非阻塞处理，彻底消除 surfaceDestroyed 卡死主线程
+                safeAsyncMediaPlayerOp { mp ->
+                    try {
+                        if (mp.isPlaying) {
+                            mp.pause()
+                        }
+                    } catch (e: Throwable) {
+                        ZakoLog.w(TAG, "detachSurface MediaPlayer pause error", e)
                     }
-                } catch (e: Throwable) {
-                    ZakoLog.w(TAG, "detachSurface MediaPlayer pause error", e)
                 }
             }
         }
@@ -285,22 +313,12 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             currentPositionMs = resumePosition
         )
 
-        val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isReady()
-            PlayerEngine.AUTO -> MPVLib.isReady()
-            PlayerEngine.SYSTEM -> false
-        }
+        // 只要 libmpv 可用，强制全链路走 libmpv 渲染与播放，并且直接使用原始 URL 进行原生异步拉流
+        val shouldUseMpv = isMpvActive()
 
         if (shouldUseMpv) {
-            // Stop and release previous MediaPlayer
-            try {
-                mediaPlayer?.apply {
-                    try { stop() } catch (_: Exception) {}
-                    reset()
-                    release()
-                }
-                mediaPlayer = null
-            } catch (_: Exception) {}
+            // Stop and release previous MediaPlayer asynchronously in background
+            safeAsyncReleaseMediaPlayer()
 
             try {
                 configureMpvOptions(_state.value.hwDecMode)
@@ -337,147 +355,142 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         progressTickerJob?.cancel()
         isMediaPlayerPrepared = false
         pendingResumePositionMs = resumePositionMs
-        try {
-            mediaPlayer?.apply {
-                try { stop() } catch (_: Exception) {}
-                reset()
-                release()
-            }
-            mediaPlayer = null
-        } catch (e: Exception) {
-            ZakoLog.w(TAG, "Error cleaning previous MediaPlayer", e)
-        }
+        safeAsyncReleaseMediaPlayer()
 
-        try {
-            val player = MediaPlayer().apply {
-                setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK)
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build()
-                )
+        mediaPlayerScope.launch {
+            try {
+                val player = MediaPlayer().apply {
+                    setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK)
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .build()
+                    )
 
-                attachedSurface?.let { surf ->
-                    if (surf.isValid) {
-                        setSurface(surf)
+                    synchronized(surfaceLock) {
+                        attachedSurface?.let { surf ->
+                            if (surf.isValid) {
+                                try { setSurface(surf) } catch (_: Throwable) {}
+                            }
+                        }
                     }
-                }
 
-                if (url.startsWith("/") || File(url).exists()) {
-                    setDataSource(url)
-                } else {
-                    val uri = Uri.parse(url)
-                    if (headers.isNotEmpty()) {
-                        setDataSource(context, uri, headers)
+                    if (url.startsWith("/") || File(url).exists()) {
+                        setDataSource(url)
                     } else {
-                        setDataSource(context, uri)
+                        val uri = Uri.parse(url)
+                        if (headers.isNotEmpty()) {
+                            setDataSource(context, uri, headers)
+                        } else {
+                            setDataSource(context, uri)
+                        }
                     }
-                }
 
-                setOnVideoSizeChangedListener { _, width, height ->
-                    ZakoLog.d(TAG, "MediaPlayer video size changed: ${width}x$height")
-                    if (width > 0 && height > 0) {
+                    setOnVideoSizeChangedListener { _, width, height ->
+                        ZakoLog.d(TAG, "MediaPlayer video size changed: ${width}x$height")
+                        if (width > 0 && height > 0) {
+                            _state.value = _state.value.copy(
+                                videoWidth = width,
+                                videoHeight = height
+                            )
+                        }
+                    }
+
+                    setOnPreparedListener { mp ->
+                        isMediaPlayerPrepared = true
+                        synchronized(surfaceLock) {
+                            try {
+                                attachedHolder?.let { h ->
+                                    if (h.surface.isValid) mp.setDisplay(h)
+                                } ?: attachedSurface?.let { s ->
+                                    if (s.isValid) mp.setSurface(s)
+                                }
+                            } catch (e: Exception) {
+                                ZakoLog.w(TAG, "setOnPreparedListener binding surface error", e)
+                            }
+                        }
+                        val dur = mp.duration.toLong().coerceAtLeast(0L)
+                        val seekPos = pendingResumePositionMs
+                        ZakoLog.i(TAG, "MediaPlayer prepared, duration: ${dur}ms, resumePosition: ${seekPos}ms")
                         _state.value = _state.value.copy(
-                            videoWidth = width,
-                            videoHeight = height
+                            durationMs = dur,
+                            isBuffering = false,
+                            isPlaying = true
+                        )
+                        if (seekPos > 0L && seekPos < dur) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                mp.seekTo(seekPos, MediaPlayer.SEEK_CLOSEST)
+                            } else {
+                                mp.seekTo(seekPos.toInt())
+                            }
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            try {
+                                val params = mp.playbackParams
+                                params.speed = _state.value.currentSpeed
+                                mp.playbackParams = params
+                            } catch (e: Exception) {
+                                ZakoLog.w(TAG, "Failed to set playback params speed", e)
+                            }
+                        }
+                        mp.start()
+                        startProgressTicker()
+                    }
+
+                    setOnBufferingUpdateListener { _, percent ->
+                        val dur = _state.value.durationMs
+                        if (dur > 0L && percent > 0) {
+                            val bufMs = (dur * (percent / 100f)).toLong().coerceIn(0L, dur)
+                            val currentBuf = _state.value.bufferedPositionMs
+                            if (bufMs > currentBuf) {
+                                _state.value = _state.value.copy(bufferedPositionMs = bufMs)
+                            }
+                        }
+                    }
+
+                    setOnInfoListener { _, what, _ ->
+                        when (what) {
+                            MediaPlayer.MEDIA_INFO_BUFFERING_START -> {
+                                _state.value = _state.value.copy(isBuffering = true)
+                            }
+                            MediaPlayer.MEDIA_INFO_BUFFERING_END,
+                            MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
+                                _state.value = _state.value.copy(isBuffering = false)
+                            }
+                        }
+                        true
+                    }
+
+                    setOnCompletionListener {
+                        ZakoLog.i(TAG, "MediaPlayer playback completed")
+                        _state.value = _state.value.copy(
+                            isPlaying = false,
+                            currentPositionMs = _state.value.durationMs
                         )
                     }
-                }
 
-                setOnPreparedListener { mp ->
-                    isMediaPlayerPrepared = true
-                    synchronized(surfaceLock) {
-                        try {
-                            attachedHolder?.let { h ->
-                                if (h.surface.isValid) mp.setDisplay(h)
-                            } ?: attachedSurface?.let { s ->
-                                if (s.isValid) mp.setSurface(s)
-                            }
-                        } catch (e: Exception) {
-                            ZakoLog.w(TAG, "setOnPreparedListener binding surface error", e)
+                    setOnErrorListener { _, what, extra ->
+                        ZakoLog.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                        if (what == -38) {
+                            return@setOnErrorListener true
                         }
+                        isMediaPlayerPrepared = false
+                        _state.value = _state.value.copy(
+                            isBuffering = false,
+                            isPlaying = false
+                        )
+                        true
                     }
-                    val dur = mp.duration.toLong().coerceAtLeast(0L)
-                    val seekPos = pendingResumePositionMs
-                    ZakoLog.i(TAG, "MediaPlayer prepared, duration: ${dur}ms, resumePosition: ${seekPos}ms")
-                    _state.value = _state.value.copy(
-                        durationMs = dur,
-                        isBuffering = false,
-                        isPlaying = true
-                    )
-                    if (seekPos > 0L && seekPos < dur) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            mp.seekTo(seekPos, MediaPlayer.SEEK_CLOSEST)
-                        } else {
-                            mp.seekTo(seekPos.toInt())
-                        }
-                    }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        try {
-                            val params = mp.playbackParams
-                            params.speed = _state.value.currentSpeed
-                            mp.playbackParams = params
-                        } catch (e: Exception) {
-                            ZakoLog.w(TAG, "Failed to set playback params speed", e)
-                        }
-                    }
-                    mp.start()
-                    startProgressTicker()
-                }
 
-                setOnBufferingUpdateListener { _, percent ->
-                    val dur = _state.value.durationMs
-                    if (dur > 0L && percent > 0) {
-                        val bufMs = (dur * (percent / 100f)).toLong().coerceIn(0L, dur)
-                        val currentBuf = _state.value.bufferedPositionMs
-                        if (bufMs > currentBuf) {
-                            _state.value = _state.value.copy(bufferedPositionMs = bufMs)
-                        }
-                    }
+                    prepareAsync()
                 }
-
-                setOnInfoListener { _, what, _ ->
-                    when (what) {
-                        MediaPlayer.MEDIA_INFO_BUFFERING_START -> {
-                            _state.value = _state.value.copy(isBuffering = true)
-                        }
-                        MediaPlayer.MEDIA_INFO_BUFFERING_END,
-                        MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
-                            _state.value = _state.value.copy(isBuffering = false)
-                        }
-                    }
-                    true
-                }
-
-                setOnCompletionListener {
-                    ZakoLog.i(TAG, "MediaPlayer playback completed")
-                    _state.value = _state.value.copy(
-                        isPlaying = false,
-                        currentPositionMs = _state.value.durationMs
-                    )
-                }
-
-                setOnErrorListener { _, what, extra ->
-                    ZakoLog.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
-                    if (what == -38) {
-                        return@setOnErrorListener true
-                    }
-                    isMediaPlayerPrepared = false
-                    _state.value = _state.value.copy(
-                        isBuffering = false,
-                        isPlaying = false
-                    )
-                    true
-                }
-
-                prepareAsync()
+                this@ZakoPlayer.mediaPlayer = player
+            } catch (e: Exception) {
+                isMediaPlayerPrepared = false
+                ZakoLog.e(TAG, "Failed to initialize MediaPlayer for $url", e)
+                _state.value = _state.value.copy(isBuffering = false)
             }
-            this.mediaPlayer = player
-        } catch (e: Exception) {
-            isMediaPlayerPrepared = false
-            ZakoLog.e(TAG, "Failed to initialize MediaPlayer for $url", e)
-            _state.value = _state.value.copy(isBuffering = false)
         }
     }
 
@@ -507,22 +520,19 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
 
     fun play() {
         _state.value = _state.value.copy(isPlaying = true)
-        val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isReady()
-            PlayerEngine.AUTO -> MPVLib.isReady()
-            PlayerEngine.SYSTEM -> false
-        }
-        if (shouldUseMpv) {
+        if (isMpvActive()) {
             try {
                 MPVLib.setPropertyBoolean("pause", false)
             } catch (_: Throwable) {}
         } else {
-            if (isMediaPlayerPrepared) {
-                try {
-                    mediaPlayer?.start()
-                    startProgressTicker()
-                } catch (e: Exception) {
-                    ZakoLog.e(TAG, "play error", e)
+            safeAsyncMediaPlayerOp { mp ->
+                if (isMediaPlayerPrepared) {
+                    try {
+                        mp.start()
+                        startProgressTicker()
+                    } catch (e: Exception) {
+                        ZakoLog.e(TAG, "play error", e)
+                    }
                 }
             }
         }
@@ -530,21 +540,18 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
 
     fun pause() {
         _state.value = _state.value.copy(isPlaying = false)
-        val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isReady()
-            PlayerEngine.AUTO -> MPVLib.isReady()
-            PlayerEngine.SYSTEM -> false
-        }
-        if (shouldUseMpv) {
+        if (isMpvActive()) {
             try {
                 MPVLib.setPropertyBoolean("pause", true)
             } catch (_: Throwable) {}
         } else {
-            if (isMediaPlayerPrepared) {
-                try {
-                    mediaPlayer?.pause()
-                } catch (e: Exception) {
-                    ZakoLog.e(TAG, "pause error", e)
+            safeAsyncMediaPlayerOp { mp ->
+                if (isMediaPlayerPrepared) {
+                    try {
+                        mp.pause()
+                    } catch (e: Exception) {
+                        ZakoLog.e(TAG, "pause error", e)
+                    }
                 }
             }
         }
@@ -557,11 +564,7 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
     fun seekTo(positionMs: Long) {
         val durMs = _state.value.durationMs
         val durSec = durMs / 1000.0
-        val isReady = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isReady()
-            PlayerEngine.AUTO -> MPVLib.isReady() || isMediaPlayerPrepared
-            PlayerEngine.SYSTEM -> isMediaPlayerPrepared
-        }
+        val isReady = isMpvActive() || isMediaPlayerPrepared
 
         // 起播未就绪保护与参数校验：必须确认 duration > 0（总时长已解析完成且非 NaN / Infinite）且播放器处于就绪可播状态
         if (durMs <= 0L || durSec.isNaN() || durSec.isInfinite() || !isReady) {
@@ -588,11 +591,7 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             bufferedPositionMs = maxOf(_state.value.bufferedPositionMs, targetMs)
         )
 
-        val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isReady()
-            PlayerEngine.AUTO -> MPVLib.isReady()
-            PlayerEngine.SYSTEM -> false
-        }
+        val shouldUseMpv = isMpvActive()
 
         seekScope.launch {
             if (shouldUseMpv) {
@@ -603,20 +602,20 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                     ZakoLog.e(TAG, "MPV seek error", e)
                 }
             } else {
-                if (isMediaPlayerPrepared) {
-                    try {
-                        mediaPlayer?.let { mp ->
+                safeAsyncMediaPlayerOp { mp ->
+                    if (isMediaPlayerPrepared) {
+                        try {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                 mp.seekTo(targetMs, MediaPlayer.SEEK_CLOSEST)
                             } else {
                                 mp.seekTo(targetMs.toInt())
                             }
+                        } catch (e: Exception) {
+                            ZakoLog.e(TAG, "MediaPlayer seek error", e)
                         }
-                    } catch (e: Exception) {
-                        ZakoLog.e(TAG, "MediaPlayer seek error", e)
+                    } else {
+                        pendingResumePositionMs = targetMs
                     }
-                } else {
-                    pendingResumePositionMs = targetMs
                 }
             }
         }
@@ -637,7 +636,7 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
 
     fun setAspectRatio(mode: AspectRatioMode) {
         _state.value = _state.value.copy(aspectRatio = mode)
-        if (MPVLib.isReady()) {
+        if (isMpvActive()) {
             try {
                 val ratio = when (mode) {
                     AspectRatioMode.FIT -> "-1"
@@ -660,25 +659,20 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             isSpeedBoosted = boosted,
             currentSpeed = targetSpeed
         )
-        val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isReady()
-            PlayerEngine.AUTO -> MPVLib.isReady()
-            PlayerEngine.SYSTEM -> false
-        }
-        if (shouldUseMpv) {
+        if (isMpvActive()) {
             try {
                 MPVLib.setPropertyDouble("speed", targetSpeed.toDouble())
             } catch (_: Throwable) {}
         } else {
-            if (isMediaPlayerPrepared && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                try {
-                    mediaPlayer?.let { mp ->
+            safeAsyncMediaPlayerOp { mp ->
+                if (isMediaPlayerPrepared && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    try {
                         val params = mp.playbackParams
                         params.speed = targetSpeed
                         mp.playbackParams = params
+                    } catch (e: Exception) {
+                        ZakoLog.w(TAG, "setSpeedBoost MediaPlayer error", e)
                     }
-                } catch (e: Exception) {
-                    ZakoLog.w(TAG, "setSpeedBoost MediaPlayer error", e)
                 }
             }
         }
@@ -689,26 +683,21 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             normalSpeed = speed,
             currentSpeed = if (_state.value.isSpeedBoosted) _state.value.boostSpeed else speed
         )
-        val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isReady()
-            PlayerEngine.AUTO -> MPVLib.isReady()
-            PlayerEngine.SYSTEM -> false
-        }
         val targetSpeed = _state.value.currentSpeed
-        if (shouldUseMpv) {
+        if (isMpvActive()) {
             try {
                 MPVLib.setPropertyDouble("speed", targetSpeed.toDouble())
             } catch (_: Throwable) {}
         } else {
-            if (isMediaPlayerPrepared && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                try {
-                    mediaPlayer?.let { mp ->
+            safeAsyncMediaPlayerOp { mp ->
+                if (isMediaPlayerPrepared && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    try {
                         val params = mp.playbackParams
                         params.speed = targetSpeed
                         mp.playbackParams = params
+                    } catch (e: Exception) {
+                        ZakoLog.w(TAG, "setPlaybackSpeed MediaPlayer error", e)
                     }
-                } catch (e: Exception) {
-                    ZakoLog.w(TAG, "setPlaybackSpeed MediaPlayer error", e)
                 }
             }
         }
@@ -777,7 +766,12 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         try {
             seekExecutor.shutdown()
         } catch (_: Exception) {}
+        safeAsyncReleaseMediaPlayer()
+        try {
+            mediaPlayerExecutor.shutdown()
+        } catch (_: Exception) {}
         attachedSurface = null
+        attachedHolder = null
         if (MPVLib.isReady()) {
             try {
                 MPVLib.removeObserver(this)
@@ -786,16 +780,6 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             } catch (e: Throwable) {
                 ZakoLog.e(TAG, "release MPV error", e)
             }
-        }
-        try {
-            mediaPlayer?.apply {
-                try { stop() } catch (_: Exception) {}
-                reset()
-                release()
-            }
-            mediaPlayer = null
-        } catch (e: Exception) {
-            ZakoLog.w(TAG, "release MediaPlayer error", e)
         }
     }
 }

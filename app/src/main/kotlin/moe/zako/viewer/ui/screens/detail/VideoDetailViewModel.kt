@@ -363,11 +363,7 @@ class VideoDetailViewModel(
                     "User-Agent" to "Mozilla/5.0 (Linux; Android 14)",
                     "Referer" to "https://api.cos-dkop.net/"
                 )
-                val isMpvReady = when (player.state.value.engine) {
-                    moe.zako.viewer.core.player.PlayerEngine.MPV -> moe.zako.viewer.core.player.MPVLib.isReady()
-                    moe.zako.viewer.core.player.PlayerEngine.AUTO -> moe.zako.viewer.core.player.MPVLib.isReady()
-                    moe.zako.viewer.core.player.PlayerEngine.SYSTEM -> false
-                }
+                val isMpvReady = moe.zako.viewer.core.player.MPVLib.isReady()
                 val streamUrl = if (isMpvReady) {
                     lines.first()
                 } else {
@@ -450,8 +446,14 @@ class VideoDetailViewModel(
         }
         showEngineDialog(false)
         val current = _uiState.value.video ?: return
-        val currentUrl = _uiState.value.playerState.activeUrl.ifEmpty {
-            current.allMp4Lines.firstOrNull() ?: current.allVideoLines.firstOrNull() ?: ""
+        val lines = current.allVideoLines.ifEmpty { current.allMp4Lines }
+        val isMpvReady = moe.zako.viewer.core.player.MPVLib.isReady()
+        val currentUrl = if (isMpvReady) {
+            lines.firstOrNull() ?: ""
+        } else {
+            _uiState.value.playerState.activeUrl.ifEmpty {
+                lines.firstOrNull() ?: ""
+            }
         }
         if (currentUrl.isNotEmpty()) {
             player.loadVideo(

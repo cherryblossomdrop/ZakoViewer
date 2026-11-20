@@ -128,30 +128,10 @@ fun VideoDetailScreen(
         }
     }
 
-    // If currently in Fullscreen mode, render fullscreen player covering the entire screen
-    if (state.isFullscreen && video != null) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-        ) {
-            DetailEmbeddedPlayer(
-                viewModel = viewModel,
-                video = video,
-                isFullscreen = true,
-                onToggleFullscreen = { viewModel.setFullscreen(false) },
-                onNavigateBack = onNavigateBack,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-        return
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
+            .background(Color.Black)
     ) {
         if (state.isLoading) {
             Box(
@@ -170,13 +150,31 @@ fun VideoDetailScreen(
                 )
             }
         } else {
+            if (state.isFullscreen) {
+                BackHandler {
+                    viewModel.setFullscreen(false)
+                }
+            }
             val relatedList = video.relatedVideos ?: emptyList()
 
             if (isTabletLandscape) {
-                // 平板横屏左右双栏自适应排版 (左栏 58%, 右栏 42%)
-                Row(
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                if (state.isFullscreen) {
+                    DetailEmbeddedPlayer(
+                        viewModel = viewModel,
+                        video = video,
+                        isFullscreen = true,
+                        onToggleFullscreen = { viewModel.setFullscreen(false) },
+                        onNavigateBack = onNavigateBack,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    // 平板横屏左右双栏自适应排版 (左栏 58%, 右栏 42%)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .statusBarsPadding()
+                            .navigationBarsPadding()
+                    ) {
                     // 左栏 (58% 宽度): 16:9 内嵌播放器 + 标题、番号、可点击复制元数据 + 留言区
                     Column(
                         modifier = Modifier
@@ -275,22 +273,39 @@ fun VideoDetailScreen(
                         }
                     }
                 }
-            } else {
-                // 手机端与竖屏模式：单列纵向滚动
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // 1. 16:9 原位内嵌播放器 / 封面
-                    item {
-                        DetailEmbeddedPlayer(
-                            viewModel = viewModel,
-                            video = video,
-                            isFullscreen = false,
-                            onToggleFullscreen = { viewModel.setFullscreen(true) },
-                            onNavigateBack = onNavigateBack,
-                            modifier = Modifier.fillMaxWidth()
+            }
+        } else {
+                // 手机端与竖屏模式：
+                // 保持播放器在单一稳定的组合节点中（避免在 LazyColumn 滚动复用或全屏切换时被销毁并触发 surfaceDestroyed）
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (!state.isFullscreen) Modifier.statusBarsPadding().navigationBarsPadding()
+                            else Modifier
                         )
-                    }
+                ) {
+                    DetailEmbeddedPlayer(
+                        viewModel = viewModel,
+                        video = video,
+                        isFullscreen = state.isFullscreen,
+                        onToggleFullscreen = { viewModel.setFullscreen(!state.isFullscreen) },
+                        onNavigateBack = {
+                            if (state.isFullscreen) {
+                                viewModel.setFullscreen(false)
+                            } else {
+                                onNavigateBack()
+                            }
+                        },
+                        modifier = if (state.isFullscreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
+                    )
+
+                    if (!state.isFullscreen) {
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                        ) {
 
                     // 2. 标题与信息头部 (包裹 SelectionContainer 支持复制)
                     item {
@@ -379,6 +394,8 @@ fun VideoDetailScreen(
             }
         }
     }
+    }
+}
 
     // 收藏夹层级树选择弹窗
     if (state.showFolderSelector) {
@@ -455,174 +472,182 @@ fun DetailEmbeddedPlayer(
     val context = LocalContext.current
     val activity = context as? Activity
 
-    if (!state.isInlinePlaying) {
-        // 未播放状态：展示 16:9 封面图与播放图标
-        Box(
-            modifier = modifier
-                .aspectRatio(16f / 9f)
-                .background(Color.Black)
-                .clickable {
-                    if (video.allVideoLines.isEmpty() && video.allMp4Lines.isEmpty()) {
-                        val tip = video.canPlayMsg?.takeIf { it.isNotBlank() } ?: "VIP抢先看视频，暂无有效播放源"
-                        ZakoToast.show(tip)
-                    } else {
-                        viewModel.startInlinePlayback()
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
+
+    // 播放期间保持屏幕常亮
+    DisposableEffect(state.isInlinePlaying) {
+        if (state.isInlinePlaying) {
+            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .then(if (isFullscreen) Modifier.fillMaxSize() else Modifier.aspectRatio(16f / 9f))
+            .background(Color.Black)
+            .then(
+                if (state.isInlinePlaying) {
+                    Modifier.playerGestureDetector(
+                        isLocked = playerState.isLocked,
+                        onSingleTap = { viewModel.toggleControls() },
+                        onDoubleTapLeft = { viewModel.onDoubleTapLeft() },
+                        onDoubleTapCenter = { viewModel.onDoubleTapCenter() },
+                        onDoubleTapRight = { viewModel.onDoubleTapRight() },
+                        onLongPressStart = { viewModel.onLongPressStart() },
+                        onLongPressEnd = { viewModel.onLongPressEnd() },
+                        onSeekDrag = { deltaMs -> viewModel.onSeekGesture(deltaMs) },
+                        onSeekDragEnd = { viewModel.onSeekGestureEnd() },
+                        onBrightnessDrag = { percent -> viewModel.onBrightnessGesture(percent) },
+                        onBrightnessDragEnd = { viewModel.onBrightnessGestureEnd() },
+                        onVolumeDrag = { percent -> viewModel.onVolumeGesture(percent) },
+                        onVolumeDragEnd = { viewModel.onVolumeGestureEnd() },
+                        currentBrightness = activity?.window?.attributes?.screenBrightness ?: -1f,
+                        currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat(),
+                        maxVolume = maxVolume,
+                        setBrightness = { newB ->
+                            activity?.let { act ->
+                                val lp = act.window.attributes
+                                lp.screenBrightness = newB
+                                act.window.attributes = lp
+                            }
+                        },
+                        setVolume = { newVol ->
+                            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+                        }
+                    )
+                } else {
+                    Modifier
+                }
+            )
+    ) {
+        // 1. MPV SurfaceView: 保持在稳定的组合树最底层节点中，绝不被条件分支卸载或替换
+        AndroidView(
+            factory = { ctx ->
+                MPVView(ctx).apply {
+                    setZOrderMediaOverlay(true)
+                    onSurfaceCreatedListener = { holder ->
+                        viewModel.player.attachSurface(holder.surface, holder)
+                    }
+                    onSurfaceDestroyedListener = {
+                        viewModel.player.detachSurface()
+                    }
+                    if (holder.surface.isValid) {
+                        viewModel.player.attachSurface(holder.surface, holder)
                     }
                 }
-        ) {
-            val isCoverBlurEnabled = LocalCoverBlurEnabled.current
-            AsyncImage(
-                model = video.displayCover,
-                contentDescription = video.title,
+            },
+            update = { view ->
+                view.aspectRatioMode = playerState.aspectRatio
+                view.videoWidth = playerState.videoWidth
+                view.videoHeight = playerState.videoHeight
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // 2. 未播放封面图覆盖层 (Overlay): 覆盖在 AndroidView 上方，点击直接起播，不卸载底层播放器
+        if (!state.isInlinePlaying) {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(
-                        if (isCoverBlurEnabled) Modifier.blur(18.dp).clipToBounds() else Modifier
-                    ),
-                contentScale = ContentScale.Crop
-            )
-
-            // 顶部返回按钮
-            IconButton(
-                onClick = onNavigateBack,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.5f),
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    .background(Color.Black)
+                    .clickable {
+                        if (video.allVideoLines.isEmpty() && video.allMp4Lines.isEmpty()) {
+                            val tip = video.canPlayMsg?.takeIf { it.isNotBlank() } ?: "VIP抢先看视频，暂无有效播放源"
+                            ZakoToast.show(tip)
+                        } else {
+                            viewModel.startInlinePlayback()
+                        }
                     }
-                }
-            }
-
-            // 播放图标背景与矢量图标
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.65f),
-                    modifier = Modifier.size(64.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "播放",
-                            tint = Color.White,
-                            modifier = Modifier.size(40.dp)
-                        )
-                    }
-                }
-            }
-
-            // VIP 抢先看徽章
-            if (video.isVipEarlyAccess) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFFFD54F),
+                val isCoverBlurEnabled = LocalCoverBlurEnabled.current
+                AsyncImage(
+                    model = video.displayCover,
+                    contentDescription = video.title,
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(12.dp)
+                        .fillMaxSize()
+                        .then(
+                            if (isCoverBlurEnabled) Modifier.blur(18.dp).clipToBounds() else Modifier
+                        ),
+                    contentScale = ContentScale.Crop
+                )
+
+                // 顶部返回按钮
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
-                                )
-                            )
-                            .padding(6.dp)
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.5f),
+                        modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.WorkspacePremium,
-                            contentDescription = "VIP抢先看",
-                            tint = Color(0xFF2E1C00),
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "返回",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+
+                // 播放图标背景与矢量图标
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.65f),
+                        modifier = Modifier.size(64.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "播放",
+                                tint = Color.White,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                    }
+                }
+
+                // VIP 抢先看徽章
+                if (video.isVipEarlyAccess) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFFD54F),
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                    )
+                                )
+                                .padding(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.WorkspacePremium,
+                                contentDescription = "VIP抢先看",
+                                tint = Color(0xFF2E1C00),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
-        }
-    } else {
-        // 播放状态：内嵌 MPV 渲染 Surface 与全套手势与控制栏
-        val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
-        val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
-
-        // Keep screen on during playback
-        DisposableEffect(Unit) {
-            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            onDispose {
-                activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            }
-        }
-
-        Box(
-            modifier = modifier
-                .then(if (isFullscreen) Modifier.fillMaxSize() else Modifier.aspectRatio(16f / 9f))
-                .background(Color.Black)
-                .playerGestureDetector(
-                    isLocked = playerState.isLocked,
-                    onSingleTap = { viewModel.toggleControls() },
-                    onDoubleTapLeft = { viewModel.onDoubleTapLeft() },
-                    onDoubleTapCenter = { viewModel.onDoubleTapCenter() },
-                    onDoubleTapRight = { viewModel.onDoubleTapRight() },
-                    onLongPressStart = { viewModel.onLongPressStart() },
-                    onLongPressEnd = { viewModel.onLongPressEnd() },
-                    onSeekDrag = { deltaMs -> viewModel.onSeekGesture(deltaMs) },
-                    onSeekDragEnd = { viewModel.onSeekGestureEnd() },
-                    onBrightnessDrag = { percent -> viewModel.onBrightnessGesture(percent) },
-                    onBrightnessDragEnd = { viewModel.onBrightnessGestureEnd() },
-                    onVolumeDrag = { percent -> viewModel.onVolumeGesture(percent) },
-                    onVolumeDragEnd = { viewModel.onVolumeGestureEnd() },
-                    currentBrightness = activity?.window?.attributes?.screenBrightness ?: -1f,
-                    currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat(),
-                    maxVolume = maxVolume,
-                    setBrightness = { newB ->
-                        activity?.let { act ->
-                            val lp = act.window.attributes
-                            lp.screenBrightness = newB
-                            act.window.attributes = lp
-                        }
-                    },
-                    setVolume = { newVol ->
-                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                    }
-                )
-        ) {
-            // 1. MPV SurfaceView
-            AndroidView(
-                factory = { ctx ->
-                    MPVView(ctx).apply {
-                        setZOrderMediaOverlay(true)
-                        onSurfaceCreatedListener = { holder ->
-                            viewModel.player.attachSurface(holder.surface, holder)
-                        }
-                        onSurfaceDestroyedListener = {
-                            viewModel.player.detachSurface()
-                        }
-                        if (holder.surface.isValid) {
-                            viewModel.player.attachSurface(holder.surface, holder)
-                        }
-                    }
-                },
-                update = { view ->
-                    view.aspectRatioMode = playerState.aspectRatio
-                    view.videoWidth = playerState.videoWidth
-                    view.videoHeight = playerState.videoHeight
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+        } else {
 
             // 2. 缓冲指示器
             if (playerState.isBuffering) {

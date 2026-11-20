@@ -17,7 +17,7 @@ data class SettingsUiState(
     val externalPlayerPkg: String = "",
     val externalDownloaderPkg: String = "",
     val downloadPath: String = "",
-    val playerEngine: String = "system",
+    val playerEngine: String = "mpv",
     val hwDecMode: String = "mediacodec",
     val dynamicColor: Boolean = true,
     val customTheme: String = "#686BDD",

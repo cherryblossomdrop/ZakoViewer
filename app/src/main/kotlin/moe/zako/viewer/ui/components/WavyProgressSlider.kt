@@ -23,15 +23,17 @@ import kotlin.math.sin
 /**
  * Material Design 3 Expressive (MD3e) Animated Wavy Progress Bar with Buffer Highlighting.
  * Features an undulating fluid wave during active playback, flat line when paused/seeking,
- * buffered range visualization, and touch scrubber thumb.
+ * buffered range visualization, preview-scrubbing isolation, and touch scrubber thumb.
  */
 @Composable
 fun WavyProgressSlider(
     progress: Float,
     bufferedProgress: Float,
-    onSeek: (Float) -> Unit,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
+    onValueChange: ((Float) -> Unit)? = null,
+    onValueChangeFinished: ((Float) -> Unit)? = null,
+    onSeek: ((Float) -> Unit)? = null,
     waveAmplitude: Dp = 3.5.dp,
     waveLength: Dp = 32.dp,
     trackThickness: Dp = 4.dp,
@@ -78,18 +80,28 @@ fun WavyProgressSlider(
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     val targetProgress = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
-                    onSeek(targetProgress)
+                    if (onValueChangeFinished != null) {
+                        onValueChangeFinished(targetProgress)
+                    } else {
+                        onSeek?.invoke(targetProgress)
+                    }
                 }
             }
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { offset ->
                         isDragging = true
-                        dragProgress = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        val startProgress = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        dragProgress = startProgress
+                        onValueChange?.invoke(startProgress)
                     },
                     onDragEnd = {
                         isDragging = false
-                        onSeek(dragProgress)
+                        if (onValueChangeFinished != null) {
+                            onValueChangeFinished(dragProgress)
+                        } else {
+                            onSeek?.invoke(dragProgress)
+                        }
                     },
                     onDragCancel = {
                         isDragging = false
@@ -98,6 +110,8 @@ fun WavyProgressSlider(
                         change.consume()
                         val newProgress = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
                         dragProgress = newProgress
+                        // Only update preview progress, do NOT seek directly
+                        onValueChange?.invoke(newProgress)
                     }
                 )
             }

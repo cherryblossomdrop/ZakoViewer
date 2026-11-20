@@ -46,6 +46,7 @@ class ZakoApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        ZakoLog.init(this)
         setupCrashHandler()
         ZakoLog.i(TAG, "ZakoViewer Application started")
         // 同步应用图标别名（重启冷启动时生效）
@@ -103,6 +104,9 @@ class ZakoApplication : Application(), ImageLoaderFactory {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
+                // 崩溃前同步落盘：在当前线程以同步方式将 [FATAL] 时间戳与完整堆栈追加写入 zako_persistent.log 并 flush()
+                ZakoLog.logFatalSync("CrashHandler", throwable)
+
                 val logsDir = getExternalFilesDir("logs") ?: File(filesDir, "logs")
                 if (!logsDir.exists()) {
                     logsDir.mkdirs()

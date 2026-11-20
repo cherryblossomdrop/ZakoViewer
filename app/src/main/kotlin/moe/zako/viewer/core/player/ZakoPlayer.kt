@@ -12,6 +12,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.Executors
 
 import java.io.File
 
@@ -102,6 +103,14 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
     private var isMediaPlayerPrepared = false
     private var pendingResumePositionMs = 0L
 
+    private var lastSeekTimestamp = 0L
+    private var lastBufferingToastTimestamp = 0L
+    private val seekExecutor = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "ZakoPlayer-Seek").apply { isDaemon = true }
+    }
+    private val seekDispatcher = seekExecutor.asCoroutineDispatcher()
+    private val seekScope = CoroutineScope(seekDispatcher + SupervisorJob())
+
     init {
         if (MPVLib.isLoaded()) {
             try {
@@ -143,6 +152,8 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             MPVLib.setOptionString("demuxer-readahead-secs", "30")
             MPVLib.setOptionString("network-timeout", "15")
             MPVLib.setOptionString("force-seekable", "yes")
+            MPVLib.setOptionString("hr-seek", "default")
+            MPVLib.setOptionString("stream-lavf-o", "reconnect=1,reconnect_streamed=1,reconnect_delay_max=2")
             MPVLib.setOptionString("audio-pitch-correction", "yes")
             MPVLib.setOptionString("keep-open", "yes")
             MPVLib.setOptionString("tls-verify", "no")
@@ -515,35 +526,81 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
     }
 
     fun seekTo(positionMs: Long) {
-        val target = positionMs.coerceIn(0L, _state.value.durationMs.coerceAtLeast(0L))
+        val durMs = _state.value.durationMs
+        val durSec = durMs / 1000.0
+        val isReady = when (_state.value.engine) {
+            PlayerEngine.MPV -> MPVLib.isReady()
+            PlayerEngine.AUTO -> MPVLib.isReady() || isMediaPlayerPrepared
+            PlayerEngine.SYSTEM -> isMediaPlayerPrepared
+        }
+
+        // 起播未就绪保护与参数校验：必须确认 duration > 0（总时长已解析完成且非 NaN / Infinite）且播放器处于就绪可播状态
+        if (durMs <= 0L || durSec.isNaN() || durSec.isInfinite() || !isReady) {
+            ZakoLog.w(TAG, "Seek ignored: video buffering or duration unready (durationMs=$durMs, isReady=$isReady)")
+            showBufferingToast()
+            return
+        }
+
+        // 150ms 防抖保护，防止单次点击连续触发多次重叠 Seek
+        val now = System.currentTimeMillis()
+        if (now - lastSeekTimestamp < 150L) {
+            ZakoLog.d(TAG, "Seek debounced (call interval < 150ms)")
+            return
+        }
+        lastSeekTimestamp = now
+
+        // 将目标跳转秒数限制在 [0.0, duration - 0.5] 合法范围内
+        val maxTargetSec = (durSec - 0.5).coerceAtLeast(0.0)
+        val targetSec = (positionMs / 1000.0).coerceIn(0.0, maxTargetSec)
+        val targetMs = (targetSec * 1000.0).toLong()
+
         _state.value = _state.value.copy(
-            currentPositionMs = target,
-            bufferedPositionMs = maxOf(_state.value.bufferedPositionMs, target)
+            currentPositionMs = targetMs,
+            bufferedPositionMs = maxOf(_state.value.bufferedPositionMs, targetMs)
         )
+
         val shouldUseMpv = when (_state.value.engine) {
             PlayerEngine.MPV -> MPVLib.isReady()
             PlayerEngine.AUTO -> MPVLib.isReady()
             PlayerEngine.SYSTEM -> false
         }
-        if (shouldUseMpv) {
-            try {
-                MPVLib.command(arrayOf("seek", (target / 1000.0).toString(), "absolute"))
-            } catch (_: Throwable) {}
-        } else {
-            if (isMediaPlayerPrepared) {
+
+        seekScope.launch {
+            if (shouldUseMpv) {
                 try {
-                    mediaPlayer?.let { mp ->
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            mp.seekTo(target, MediaPlayer.SEEK_CLOSEST)
-                        } else {
-                            mp.seekTo(target.toInt())
-                        }
-                    }
-                } catch (e: Exception) {
-                    ZakoLog.e(TAG, "seek error", e)
+                    // 严禁在 Android UI 主线程执行同步网络 Seek：统一改用 mpv_command_async (seek, targetSeconds, absolute+keyframes)
+                    MPVLib.commandAsync(arrayOf("seek", targetSec.toString(), "absolute+keyframes"))
+                } catch (e: Throwable) {
+                    ZakoLog.e(TAG, "MPV seek error", e)
                 }
             } else {
-                pendingResumePositionMs = target
+                if (isMediaPlayerPrepared) {
+                    try {
+                        mediaPlayer?.let { mp ->
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                mp.seekTo(targetMs, MediaPlayer.SEEK_CLOSEST)
+                            } else {
+                                mp.seekTo(targetMs.toInt())
+                            }
+                        }
+                    } catch (e: Exception) {
+                        ZakoLog.e(TAG, "MediaPlayer seek error", e)
+                    }
+                } else {
+                    pendingResumePositionMs = targetMs
+                }
+            }
+        }
+    }
+
+    private fun showBufferingToast() {
+        val now = System.currentTimeMillis()
+        if (now - lastBufferingToastTimestamp > 1500L) {
+            lastBufferingToastTimestamp = now
+            scope.launch(Dispatchers.Main) {
+                try {
+                    android.widget.Toast.makeText(context, "视频缓冲中", android.widget.Toast.LENGTH_SHORT).show()
+                } catch (_: Exception) {}
             }
         }
     }
@@ -654,7 +711,9 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 }
                 "duration" -> {
                     val dur = (value as? String)?.toDoubleOrNull() ?: 0.0
-                    _state.value = _state.value.copy(durationMs = (dur * 1000).toLong())
+                    if (!dur.isNaN() && !dur.isInfinite() && dur > 0.0) {
+                        _state.value = _state.value.copy(durationMs = (dur * 1000).toLong())
+                    }
                 }
                 "pause" -> {
                     val isPaused = (value as? String) == "yes"
@@ -689,6 +748,10 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
     fun release() {
         isMediaPlayerPrepared = false
         progressTickerJob?.cancel()
+        seekScope.cancel()
+        try {
+            seekExecutor.shutdown()
+        } catch (_: Exception) {}
         attachedSurface = null
         if (MPVLib.isReady()) {
             try {

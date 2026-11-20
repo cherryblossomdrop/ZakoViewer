@@ -22,4 +22,5 @@ target_link_libraries(
     player
     ${log-lib}
     ${android-lib}
+    dl
 )

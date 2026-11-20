@@ -389,14 +389,27 @@ fun PlayerScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Column {
+                        var isScrubbing by remember { mutableStateOf(false) }
+                        var scrubProgress by remember { mutableFloatStateOf(0f) }
+                        var lastSeekTriggerTime by remember { mutableLongStateOf(0L) }
+
                         // MD3e 可动波浪进度条 (遵循 Material Design 3 Expressive 规范，含高亮缓冲指示)
                         WavyProgressSlider(
-                            progress = state.playerState.progress,
+                            progress = if (isScrubbing) scrubProgress else state.playerState.progress,
                             bufferedProgress = state.playerState.bufferedProgress,
                             isPlaying = state.playerState.isPlaying,
-                            onSeek = { percent ->
-                                val targetMs = (percent * state.playerState.durationMs).toLong()
-                                viewModel.player.seekTo(targetMs)
+                            onValueChange = { percent ->
+                                isScrubbing = true
+                                scrubProgress = percent
+                            },
+                            onValueChangeFinished = { percent ->
+                                isScrubbing = false
+                                val now = System.currentTimeMillis()
+                                if (now - lastSeekTriggerTime >= 150L) {
+                                    lastSeekTriggerTime = now
+                                    val targetMs = (percent * state.playerState.durationMs).toLong()
+                                    viewModel.player.seekTo(targetMs)
+                                }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -420,8 +433,10 @@ fun PlayerScreen(
 
                                 Spacer(modifier = Modifier.width(8.dp))
 
+                                val displayPosMs = if (isScrubbing) (scrubProgress * state.playerState.durationMs).toLong() else state.playerState.currentPositionMs
+                                val displayPosFormatted = moe.zako.viewer.core.player.VideoPlayerState.formatTime(displayPosMs)
                                 Text(
-                                    text = "${state.playerState.positionFormatted} / ${state.playerState.durationFormatted}",
+                                    text = "$displayPosFormatted / ${state.playerState.durationFormatted}",
                                     color = Color.White,
                                     fontSize = 13.sp
                                 )

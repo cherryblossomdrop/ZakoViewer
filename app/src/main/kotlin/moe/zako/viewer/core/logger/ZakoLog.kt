@@ -6,14 +6,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
+import java.io.FileOutputStream
+import java.io.RandomAccessFile
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
 
 object ZakoLog {
     private const val TAG = "ZakoViewer"
     private const val MAX_LOGS = 1000
+    const val MAX_LOG_SIZE_BYTES = 5L * 1024 * 1024 // 5 MB 体积上限
+    private const val LOG_FILE_NAME = "zako_persistent.log"
+
     private val timeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
 
     data class LogEntry(
@@ -32,6 +38,124 @@ object ZakoLog {
     private val _logsFlow = MutableStateFlow<List<LogEntry>>(emptyList())
     val logsFlow: StateFlow<List<LogEntry>> = _logsFlow.asStateFlow()
 
+    @Volatile
+    private var appContext: Context? = null
+    private val writeLock = Any()
+    private val writeExecutor = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "ZakoLog-Writer").apply { isDaemon = true }
+    }
+
+    /**
+     * 初始化日志系统，恢复历史日志，绝不在启动时覆盖或清空历史文件。
+     */
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        loadRecentHistoryAsync()
+    }
+
+    private fun getPersistentLogFile(): File? {
+        val ctx = appContext ?: return null
+        val logsDir = File(ctx.filesDir, "logs")
+        if (!logsDir.exists()) {
+            logsDir.mkdirs()
+        }
+        return File(logsDir, LOG_FILE_NAME)
+    }
+
+    /**
+     * 异步预热加载历史持久化日志尾部内容到内存队列，使界面可查阅先前运行状态。
+     */
+    private fun loadRecentHistoryAsync() {
+        writeExecutor.execute {
+            try {
+                val file = getPersistentLogFile() ?: return@execute
+                if (!file.exists() || file.length() == 0L) return@execute
+                synchronized(writeLock) {
+                    val length = file.length()
+                    val readBytes = minOf(length, 256 * 1024L).toInt() // 读取尾部最多 256KB
+                    val buffer = ByteArray(readBytes)
+                    RandomAccessFile(file, "r").use { raf ->
+                        raf.seek(length - readBytes)
+                        raf.readFully(buffer)
+                    }
+                    val text = String(buffer, Charsets.UTF_8)
+                    val lines = text.lines()
+                    // 过滤掉第一行可能被阶段性截断的内容
+                    val validLines = if (lines.size > 1) lines.drop(1) else lines
+                    val recentEntries = mutableListOf<LogEntry>()
+                    for (line in validLines) {
+                        val trimmed = line.trim()
+                        if (trimmed.isEmpty()) continue
+                        // 解析格式: [yyyy-MM-dd HH:mm:ss.SSS] [LEVEL] TAG: Message
+                        if (trimmed.startsWith("[") && trimmed.contains("] [")) {
+                            val levelStart = trimmed.indexOf("] [") + 3
+                            val levelEnd = trimmed.indexOf("]", levelStart)
+                            if (levelEnd > levelStart) {
+                                val level = trimmed.substring(levelStart, levelEnd)
+                                val tagStart = levelEnd + 2
+                                val colonIdx = trimmed.indexOf(":", tagStart)
+                                if (colonIdx > tagStart) {
+                                    val tag = trimmed.substring(tagStart, colonIdx).trim()
+                                    val msg = trimmed.substring(colonIdx + 1).trim()
+                                    recentEntries.add(LogEntry(System.currentTimeMillis(), level, tag, msg))
+                                    continue
+                                }
+                            }
+                        }
+                        recentEntries.add(LogEntry(System.currentTimeMillis(), "INFO", "History", trimmed))
+                    }
+                    if (recentEntries.isNotEmpty()) {
+                        val takeCount = minOf(recentEntries.size, MAX_LOGS)
+                        val subList = recentEntries.takeLast(takeCount)
+                        logQueue.clear()
+                        logQueue.addAll(subList)
+                        _logsFlow.value = logQueue.toList()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to load recent history log", e)
+            }
+        }
+    }
+
+    /**
+     * 检查日志文件是否超过 5 MB 阈值，超过时保留最新一半（约 2.5 MB）并按换行符对齐。
+     */
+    private fun checkAndTrimLogFile(file: File) {
+        if (!file.exists() || file.length() <= MAX_LOG_SIZE_BYTES) return
+        try {
+            val length = file.length()
+            val targetKeepBytes = (MAX_LOG_SIZE_BYTES / 2).toInt() // 约 2.5 MB
+            val startOffset = length - targetKeepBytes
+            if (startOffset <= 0) return
+
+            val bytesToRead = (length - startOffset).toInt()
+            val buffer = ByteArray(bytesToRead)
+            RandomAccessFile(file, "r").use { raf ->
+                raf.seek(startOffset)
+                raf.readFully(buffer)
+            }
+
+            // 对齐到下一个完整换行符开头
+            var newlineIdx = 0
+            while (newlineIdx < buffer.size && buffer[newlineIdx] != '\n'.code.toByte()) {
+                newlineIdx++
+            }
+            val validStart = if (newlineIdx < buffer.size) newlineIdx + 1 else 0
+
+            // 覆盖写回最新的一半日志
+            FileOutputStream(file, false).use { fos ->
+                if (validStart < buffer.size) {
+                    fos.write(buffer, validStart, buffer.size - validStart)
+                }
+                fos.flush()
+            }
+            Log.i(TAG, "Trimmed log file: reduced from $length to ${file.length()} bytes")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error trimming log file", e)
+        }
+    }
+
     private fun addLog(level: String, tag: String, message: String) {
         val entry = LogEntry(System.currentTimeMillis(), level, tag, message)
         logQueue.add(entry)
@@ -39,6 +163,22 @@ object ZakoLog {
             logQueue.poll()
         }
         _logsFlow.value = logQueue.toList()
+
+        val formattedLine = entry.formatted() + "\n"
+        writeExecutor.execute {
+            val file = getPersistentLogFile() ?: return@execute
+            synchronized(writeLock) {
+                try {
+                    checkAndTrimLogFile(file)
+                    FileOutputStream(file, true).use { fos ->
+                        fos.write(formattedLine.toByteArray(Charsets.UTF_8))
+                        fos.flush()
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error writing persistent log", e)
+                }
+            }
+        }
     }
 
     fun d(tag: String = TAG, message: String) {
@@ -63,26 +203,71 @@ object ZakoLog {
         addLog("ERROR", tag, msg)
     }
 
+    /**
+     * 崩溃发生时在当前调用线程以同步方式落盘 [FATAL] 堆栈信息并立刻 flush()
+     */
+    fun logFatalSync(tag: String, throwable: Throwable) {
+        val time = timeFormat.format(Date())
+        val stackTrace = Log.getStackTraceString(throwable)
+        val fatalMsg = "Uncaught Exception\n$stackTrace"
+        val entry = LogEntry(System.currentTimeMillis(), "FATAL", tag, fatalMsg)
+
+        logQueue.add(entry)
+        while (logQueue.size > MAX_LOGS) {
+            logQueue.poll()
+        }
+        _logsFlow.value = logQueue.toList()
+
+        val fatalLine = "[$time] [FATAL] $tag: $fatalMsg\n"
+        val file = getPersistentLogFile() ?: return
+        synchronized(writeLock) {
+            try {
+                checkAndTrimLogFile(file)
+                FileOutputStream(file, true).use { fos ->
+                    fos.write(fatalLine.toByteArray(Charsets.UTF_8))
+                    fos.flush()
+                    fos.fd.sync()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error writing fatal persistent log synchronously", e)
+            }
+        }
+    }
+
     fun clear() {
+        // 仅清空当前内存日志展示队列，不破坏持久化日志文件
         logQueue.clear()
         _logsFlow.value = emptyList()
     }
 
+    /**
+     * 直接读取 zako_persistent.log 完整内容导出为 ZakoViewer_log_YYYYMMDD_HHmmss.txt，
+     * 导出后保留原持久化日志文件不清空。
+     */
     fun exportToFile(context: Context): File {
         val exportDir = File(context.cacheDir, "logs")
         if (!exportDir.exists()) exportDir.mkdirs()
-        val fileName = "ZakoViewer_log_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.txt"
-        val logFile = File(exportDir, fileName)
-        logFile.bufferedWriter().use { writer ->
-            writer.write("=== ZakoViewer Execution Log Export ===\n")
-            writer.write("Exported At: ${timeFormat.format(Date())}\n")
-            writer.write("Total Entries: ${logQueue.size}\n\n")
-            for (entry in logQueue) {
-                writer.write(entry.formatted())
-                writer.newLine()
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "ZakoViewer_log_${timeStamp}.txt"
+        val exportFile = File(exportDir, fileName)
+
+        val persistentFile = File(File(context.filesDir, "logs"), LOG_FILE_NAME)
+        if (persistentFile.exists()) {
+            synchronized(writeLock) {
+                persistentFile.copyTo(exportFile, overwrite = true)
+            }
+        } else {
+            exportFile.bufferedWriter().use { writer ->
+                writer.write("=== ZakoViewer Execution Log Export ===\n")
+                writer.write("Exported At: ${timeFormat.format(Date())}\n")
+                writer.write("Total Entries: ${logQueue.size}\n\n")
+                for (entry in logQueue) {
+                    writer.write(entry.formatted())
+                    writer.newLine()
+                }
             }
         }
-        return logFile
+        return exportFile
     }
 }
 

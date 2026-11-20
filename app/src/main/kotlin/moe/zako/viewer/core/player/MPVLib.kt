@@ -14,16 +14,20 @@ object MPVLib {
 
     init {
         try {
-            System.loadLibrary("mpv")
+            try {
+                System.loadLibrary("mpv")
+            } catch (e: UnsatisfiedLinkError) {
+                ZakoLog.w(TAG, "libmpv.so not found, will rely on dynamic symbol lookup: ${e.message}")
+            }
             System.loadLibrary("player")
             isNativeLoaded = true
-            ZakoLog.i(TAG, "libmpv and native player libraries loaded successfully")
+            ZakoLog.i(TAG, "Native player library loaded successfully")
         } catch (e: UnsatisfiedLinkError) {
             isNativeLoaded = false
-            ZakoLog.w(TAG, "libmpv native library not present in this runtime, using simulated/fallback bridge: ${e.message}")
+            ZakoLog.w(TAG, "Native player library not present in this runtime, using simulated/fallback bridge: ${e.message}")
         } catch (t: Throwable) {
             isNativeLoaded = false
-            ZakoLog.e(TAG, "libmpv native library load error: ${t.message}", t)
+            ZakoLog.e(TAG, "Native player library load error: ${t.message}", t)
         }
     }
 
@@ -37,6 +41,7 @@ object MPVLib {
     external fun attachSurface(surface: Surface)
     external fun detachSurface()
     external fun command(cmd: Array<String>)
+    external fun commandAsync(cmd: Array<String>, replyUserdata: Long = 0L)
     external fun setOptionString(name: String, value: String): Int
     external fun getPropertyString(property: String): String?
     external fun setPropertyString(property: String, value: String): Int

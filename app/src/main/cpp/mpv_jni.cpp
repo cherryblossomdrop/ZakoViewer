@@ -79,6 +79,8 @@ static void ensure_libmpv_symbols() {
     }
 }
 
+static ANativeWindow* g_native_window = nullptr;
+
 extern "C" {
 
 JNIEXPORT void JNICALL
@@ -120,18 +122,40 @@ Java_moe_zako_viewer_core_player_MPVLib_destroy(JNIEnv *env, jobject thiz) {
         }
         g_mpv = nullptr;
     }
+    if (g_native_window) {
+        ANativeWindow_release(g_native_window);
+        g_native_window = nullptr;
+    }
 }
 
 JNIEXPORT void JNICALL
 Java_moe_zako_viewer_core_player_MPVLib_attachSurface(JNIEnv *env, jobject thiz, jobject surface) {
     std::lock_guard<std::mutex> lock(g_mpv_mutex);
     LOGI("MPVLib native attachSurface invoked");
+    if (!surface) return;
+    if (g_native_window) {
+        ANativeWindow_release(g_native_window);
+        g_native_window = nullptr;
+    }
+    g_native_window = ANativeWindow_fromSurface(env, surface);
+    if (g_mpv && g_native_window && fn_mpv_set_property) {
+        int64_t wid = reinterpret_cast<int64_t>(g_native_window);
+        fn_mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &wid);
+    }
 }
 
 JNIEXPORT void JNICALL
 Java_moe_zako_viewer_core_player_MPVLib_detachSurface(JNIEnv *env, jobject thiz) {
     std::lock_guard<std::mutex> lock(g_mpv_mutex);
     LOGI("MPVLib native detachSurface invoked");
+    if (g_mpv && fn_mpv_set_property) {
+        int64_t wid = 0;
+        fn_mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &wid);
+    }
+    if (g_native_window) {
+        ANativeWindow_release(g_native_window);
+        g_native_window = nullptr;
+    }
 }
 
 JNIEXPORT void JNICALL

@@ -24,6 +24,7 @@ app/build/
 # Package outputs & Archives
 *.apk
 *.aab
+*.aar
 *.7z
 *.zip
 extracted/

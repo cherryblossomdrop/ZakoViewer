@@ -13,12 +13,14 @@ object MPVLib {
     @Volatile var isInitialized = false
 
     private val FFMPEG_DEPENDENCIES = listOf(
+        "c++_shared",
         "avutil",
         "swresample",
         "swscale",
         "avcodec",
         "avformat",
         "avfilter",
+        "avdevice",
         "mpv",
         "player"
     )

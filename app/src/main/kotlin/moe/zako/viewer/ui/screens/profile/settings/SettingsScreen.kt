@@ -34,8 +34,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import moe.zako.viewer.core.external.AppPickerHelper
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.ui.components.AppPickerDialog
+import moe.zako.viewer.ui.components.CustomColorDialog
 import moe.zako.viewer.ui.components.FolderBrowserDialog
 import moe.zako.viewer.ui.theme.ThemePreset
+import moe.zako.viewer.ui.theme.parseHexColor
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.DeleteOutline
 import java.io.File
 
 // ==========================================
@@ -44,6 +48,7 @@ import java.io.File
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    viewModel: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     onNavigateToAppearance: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
     onNavigateToShare: () -> Unit,
@@ -51,6 +56,14 @@ fun SettingsScreen(
     onNavigateToDownload: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val state by viewModel.uiState.collectAsState()
+    var showClearCacheConfirmDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.calculateCacheSize(context)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -111,7 +124,50 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            // 分组 3: 存储与临时缓存管理
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    SettingsCategoryItem(
+                        icon = Icons.Default.CleaningServices,
+                        title = "清理应用缓存",
+                        subtitle = "图片加载、流媒体及网络临时文件",
+                        trailingText = state.cacheSizeFormatted,
+                        shape = RoundedCornerShape(16.dp),
+                        onClick = { showClearCacheConfirmDialog = true }
+                    )
+                }
+            }
         }
+    }
+
+    if (showClearCacheConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheConfirmDialog = false },
+            icon = { Icon(Icons.Default.CleaningServices, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text("清理应用缓存") },
+            text = {
+                Text(
+                    text = "确定要彻底清理图片缓存、播放器临时流媒体缓存及网络缓存吗？\n\n当前缓存大小: ${state.cacheSizeFormatted}\n\n（个人偏好设置、收藏夹与已下载的本地视频不会被删除）",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearCacheConfirmDialog = false
+                        viewModel.clearAppCache(context)
+                    }
+                ) {
+                    Text("彻底清理")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCacheConfirmDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 }
 
@@ -119,6 +175,8 @@ fun SettingsScreen(
 fun SettingsCategoryItem(
     icon: ImageVector,
     title: String,
+    subtitle: String? = null,
+    trailingText: String? = null,
     shape: RoundedCornerShape,
     onClick: () -> Unit
 ) {
@@ -153,12 +211,31 @@ fun SettingsCategoryItem(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                if (!subtitle.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (!trailingText.isNullOrEmpty()) {
+                Text(
+                    text = trailingText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
 
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
@@ -171,7 +248,7 @@ fun SettingsCategoryItem(
 }
 
 // ==========================================
-// 2. 外观设置子页面 (莫奈动态取色 + 自定义三色)
+// 2. 外观设置子页面 (莫奈动态取色 + 主题色系统)
 // ==========================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -180,6 +257,9 @@ fun SettingsAppearanceScreen(
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    var showCustomColorDialog by remember { mutableStateOf(false) }
+    var themeToDelete by remember { mutableStateOf<String?>(null) }
+
     val showRestartToast = {
         ZakoToast.show("图标设置已保存，重启应用后生效")
     }
@@ -279,7 +359,7 @@ fun SettingsAppearanceScreen(
                 }
             }
 
-            // 自定义三色选择器 (当莫奈取色关闭后展示)
+            // 主题色选择器 (当莫奈取色关闭后展示)
             item {
                 AnimatedVisibility(visible = !state.dynamicColor) {
                     Card(
@@ -288,34 +368,32 @@ fun SettingsAppearanceScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "自定义应用主题色",
+                                text = "应用主题色",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "选择固定主题色，即时生效并持久化保存：",
+                                text = "选择预置主题色或添加自定义颜色，即时生效并持久化保存：",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            val themes = listOf(
-                                ThemePreset.PURPLE,
-                                ThemePreset.LIGHT_GREEN,
-                                ThemePreset.LIGHT_YELLOW
-                            )
+                            val presets = ThemePreset.values()
 
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                themes.forEach { theme ->
-                                    val isSelected = state.customTheme.equals(theme.key, ignoreCase = true)
+                                // 1. 系统预置 7 款颜色（严格二字命名，不可删除）
+                                presets.forEach { theme ->
+                                    val isSelected = state.customTheme.equals(theme.hexColor, ignoreCase = true) ||
+                                            state.customTheme.equals(theme.key, ignoreCase = true)
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
                                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.surface,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
-                                                viewModel.setCustomTheme(theme.key)
+                                                viewModel.setCustomTheme(theme.hexColor)
                                                 if (state.appIconFollowTheme) {
                                                     showRestartToast()
                                                 }
@@ -342,7 +420,7 @@ fun SettingsAppearanceScreen(
                                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                                 )
                                                 Text(
-                                                    text = theme.hexColor,
+                                                    text = "${theme.hexColor} (内置预置)",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
@@ -357,12 +435,167 @@ fun SettingsAppearanceScreen(
                                         }
                                     }
                                 }
+
+                                // 2. 用户保存的自定义颜色（支持删除）
+                                val customList = state.savedCustomThemes.filter { !ThemePreset.isBuiltinPreset(it) }
+                                customList.forEach { customHex ->
+                                    val isSelected = state.customTheme.equals(customHex, ignoreCase = true)
+                                    val color = parseHexColor(customHex) ?: MaterialTheme.colorScheme.primary
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.surface,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                viewModel.setCustomTheme(customHex)
+                                                if (state.appIconFollowTheme) {
+                                                    showRestartToast()
+                                                }
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(28.dp)
+                                                    .clip(CircleShape)
+                                                    .background(color)
+                                                    .border(2.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+                                            )
+                                            Spacer(modifier = Modifier.width(14.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "自定义颜色",
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                                Text(
+                                                    text = customHex,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            if (isSelected) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = "已选择",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                            }
+                                            IconButton(
+                                                onClick = { themeToDelete = customHex },
+                                                modifier = Modifier.size(36.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.DeleteOutline,
+                                                    contentDescription = "删除该自定义颜色",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 3. “自定义颜色” (+) 按钮入口
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { showCustomColorDialog = true }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Add,
+                                                contentDescription = "添加",
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(14.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "自定义主题色",
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = "HEX 输入或可视化调色板选色",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    if (showCustomColorDialog) {
+        CustomColorDialog(
+            initialColorHex = state.customTheme,
+            onDismiss = { showCustomColorDialog = false },
+            onSaveAndApply = { newHex ->
+                viewModel.addCustomTheme(newHex)
+                if (state.appIconFollowTheme) {
+                    showRestartToast()
+                }
+            }
+        )
+    }
+
+    if (themeToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { themeToDelete = null },
+            title = { Text("删除自定义主题色") },
+            text = { Text("确定要删除自定义主题色 $themeToDelete 吗？若当前正使用该颜色，将自动回退至默认主题色。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val hex = themeToDelete
+                        themeToDelete = null
+                        if (hex != null) {
+                            viewModel.removeCustomTheme(hex)
+                        }
+                    }
+                ) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { themeToDelete = null }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 }
 
@@ -794,7 +1027,7 @@ fun SettingsDownloadScreen(
     }
 
     val defaultDownloadPath = remember {
-        val emulated = File("/storage/emulated/0/Download/NeoViewer")
+        val emulated = File("/storage/emulated/0/Download/ZakoViewer")
         if (emulated.parentFile?.exists() == true) emulated.absolutePath
         else File(context.getExternalFilesDir(null), "downloads").absolutePath
     }
@@ -1112,7 +1345,71 @@ fun SettingsDownloadScreen(
             initialPath = currentDisplayDownloadPath,
             onDismiss = { showFolderBrowserDialog = false },
             onFolderSelected = { selectedPath ->
-                viewModel.setDownloadPath(selectedPath)
+                viewModel.requestChangeDownloadPath(selectedPath, defaultDownloadPath)
+            }
+        )
+    }
+
+    // Migration Confirmation & Progress Dialog
+    if (state.showMigrationDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!state.isMigrating) {
+                    viewModel.dismissMigrationDialog()
+                }
+            },
+            title = { Text(if (state.isMigrating) "正在迁移文件" else "迁移已下载文件") },
+            text = {
+                if (state.isMigrating) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp)
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(36.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = state.migrationProgressText,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "检测到原下载目录存在 ${state.filesToMigrateCount} 个已下载视频文件。",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "是否将已下载视频完整移动至新目录，并同步更新本地记录？",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "新目录: ${state.pendingNewDownloadPath}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (!state.isMigrating) {
+                    Button(onClick = { viewModel.confirmMigration() }) {
+                        Text("迁移并更新")
+                    }
+                }
+            },
+            dismissButton = {
+                if (!state.isMigrating) {
+                    Row {
+                        TextButton(onClick = { viewModel.skipMigrationAndSetPath() }) {
+                            Text("仅更改路径")
+                        }
+                        TextButton(onClick = { viewModel.dismissMigrationDialog() }) {
+                            Text("取消")
+                        }
+                    }
+                }
             }
         )
     }

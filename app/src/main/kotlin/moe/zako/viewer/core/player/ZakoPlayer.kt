@@ -7,11 +7,13 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.view.Surface
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+
+import java.io.File
 
 enum class AspectRatioMode(val label: String) {
     FIT("适应屏幕"),
@@ -83,9 +85,9 @@ data class VideoPlayerState(
     }
 }
 
-class NeoPlayer(val context: Context) : MPVLib.EventObserver {
+class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
     companion object {
-        private const val TAG = "NeoPlayer"
+        private const val TAG = "ZakoPlayer"
     }
 
     private val _state = MutableStateFlow(VideoPlayerState())
@@ -97,6 +99,8 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
     private var attachedSurface: Surface? = null
     private var mediaPlayer: MediaPlayer? = null
     private var activeHeaders: Map<String, String> = emptyMap()
+    private var isMediaPlayerPrepared = false
+    private var pendingResumePositionMs = 0L
 
     init {
         if (MPVLib.isLoaded()) {
@@ -104,9 +108,11 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                 MPVLib.create(context)
                 configureMpvOptions(_state.value.hwDecMode)
                 MPVLib.init()
+                MPVLib.isInitialized = true
                 MPVLib.addObserver(this)
-            } catch (e: Exception) {
-                NeoLog.e(TAG, "Failed to initialize MPVLib", e)
+            } catch (e: Throwable) {
+                MPVLib.isInitialized = false
+                ZakoLog.e(TAG, "Failed to initialize MPVLib", e)
             }
         }
     }
@@ -142,13 +148,13 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
             MPVLib.setOptionString("tls-verify", "no")
             MPVLib.setOptionString("ytdl", "no")
         } catch (e: Exception) {
-            NeoLog.e(TAG, "configureMpvOptions error", e)
+            ZakoLog.e(TAG, "configureMpvOptions error", e)
         }
     }
 
     fun setEngine(engine: PlayerEngine) {
         if (_state.value.engine == engine) return
-        NeoLog.i(TAG, "Switching player engine to: ${engine.name}")
+        ZakoLog.i(TAG, "Switching player engine to: ${engine.name}")
         _state.value = _state.value.copy(engine = engine)
         val curPos = _state.value.currentPositionMs
         val curUrl = _state.value.activeUrl
@@ -164,7 +170,7 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                 MPVLib.setOptionString("hwdec", mode.code)
                 MPVLib.setPropertyString("hwdec", mode.code)
             } catch (e: Exception) {
-                NeoLog.e(TAG, "Failed to set hwdec mode", e)
+                ZakoLog.e(TAG, "Failed to set hwdec mode", e)
             }
         }
     }
@@ -174,24 +180,28 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
             return
         }
         attachedSurface = surface
-        NeoLog.d(TAG, "attachSurface: isValid=${surface.isValid}")
+        ZakoLog.d(TAG, "attachSurface: isValid=${surface.isValid}")
         val isMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isLoaded()
-            PlayerEngine.AUTO -> MPVLib.isLoaded()
+            PlayerEngine.MPV -> MPVLib.isReady()
+            PlayerEngine.AUTO -> MPVLib.isReady()
             PlayerEngine.SYSTEM -> false
         }
 
         if (isMpv && surface.isValid) {
             try {
-                NeoLog.d(TAG, "attachSurface: binding wid and surface to MPVLib")
+                ZakoLog.d(TAG, "attachSurface: binding wid and surface to MPVLib")
                 MPVLib.attachSurface(surface)
-                MPVLib.setOptionString("wid", surface.hashCode().toString())
-                MPVLib.setPropertyString("wid", surface.hashCode().toString())
+                val wid = surface.hashCode().toString()
+                MPVLib.setOptionString("wid", wid)
+                MPVLib.setPropertyString("wid", wid)
                 MPVLib.setOptionString("vo", "gpu")
+                MPVLib.setPropertyString("vo", "gpu")
                 MPVLib.setOptionString("gpu-context", "android")
+                MPVLib.setPropertyString("gpu-context", "android")
                 MPVLib.setOptionString("ao", "audiotrack,opensles")
-            } catch (e: Exception) {
-                NeoLog.e(TAG, "attachSurface MPVLib error", e)
+                MPVLib.setPropertyString("ao", "audiotrack,opensles")
+            } catch (e: Throwable) {
+                ZakoLog.e(TAG, "attachSurface MPVLib error", e)
             }
         } else {
             try {
@@ -199,31 +209,36 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                     mediaPlayer?.setSurface(surface)
                 }
             } catch (e: Exception) {
-                NeoLog.e(TAG, "attachSurface MediaPlayer error", e)
+                ZakoLog.e(TAG, "attachSurface MediaPlayer error", e)
             }
         }
     }
 
     fun detachSurface() {
         attachedSurface = null
-        NeoLog.d(TAG, "detachSurface")
-        if (MPVLib.isLoaded()) {
+        ZakoLog.d(TAG, "detachSurface: pausing and resetting wid")
+        pause()
+        if (MPVLib.isReady()) {
             try {
+                MPVLib.setPropertyBoolean("pause", true)
+                MPVLib.setPropertyString("wid", "0")
                 MPVLib.detachSurface()
-            } catch (e: Exception) {
-                NeoLog.e(TAG, "detachSurface MPVLib error", e)
+            } catch (e: Throwable) {
+                ZakoLog.e(TAG, "detachSurface MPVLib error", e)
             }
         }
-        try {
-            mediaPlayer?.setSurface(null)
-        } catch (e: Exception) {
-            NeoLog.e(TAG, "detachSurface MediaPlayer error", e)
+        if (isMediaPlayerPrepared) {
+            try {
+                mediaPlayer?.setSurface(null)
+            } catch (e: Exception) {
+                ZakoLog.e(TAG, "detachSurface MediaPlayer error", e)
+            }
         }
     }
 
     fun loadVideo(url: String, title: String, headers: Map<String, String> = emptyMap(), resumePos: Long = -1L) {
         activeHeaders = headers
-        NeoLog.i(TAG, "loadVideo: $title on $url")
+        ZakoLog.i(TAG, "loadVideo: $title on $url")
         val resumePosition = if (resumePos >= 0L) {
             resumePos
         } else if (_state.value.activeUrl.isNotEmpty() && _state.value.activeUrl != url && _state.value.currentPositionMs > 0L) {
@@ -241,8 +256,8 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
         )
 
         val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isLoaded()
-            PlayerEngine.AUTO -> MPVLib.isLoaded()
+            PlayerEngine.MPV -> MPVLib.isReady()
+            PlayerEngine.AUTO -> MPVLib.isReady()
             PlayerEngine.SYSTEM -> false
         }
 
@@ -273,17 +288,17 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                 if (resumePosition > 0L) {
                     MPVLib.command(arrayOf("seek", (resumePosition / 1000.0).toString(), "absolute"))
                 }
-            } catch (e: Exception) {
-                NeoLog.e(TAG, "MPV loadfile error", e)
+            } catch (e: Throwable) {
+                ZakoLog.e(TAG, "MPV loadfile error", e)
             }
             play()
         } else {
             // Stop MPV if running
-            if (MPVLib.isLoaded()) {
+            if (MPVLib.isReady()) {
                 try {
                     MPVLib.command(arrayOf("stop"))
                     MPVLib.detachSurface()
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
             startMediaPlayerPlayback(url, headers, resumePosition)
         }
@@ -291,6 +306,8 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
 
     private fun startMediaPlayerPlayback(url: String, headers: Map<String, String>, resumePositionMs: Long) {
         progressTickerJob?.cancel()
+        isMediaPlayerPrepared = false
+        pendingResumePositionMs = resumePositionMs
         try {
             mediaPlayer?.apply {
                 try { stop() } catch (_: Exception) {}
@@ -299,7 +316,7 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
             }
             mediaPlayer = null
         } catch (e: Exception) {
-            NeoLog.w(TAG, "Error cleaning previous MediaPlayer", e)
+            ZakoLog.w(TAG, "Error cleaning previous MediaPlayer", e)
         }
 
         try {
@@ -318,15 +335,19 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                     }
                 }
 
-                val uri = Uri.parse(url)
-                if (headers.isNotEmpty()) {
-                    setDataSource(context, uri, headers)
+                if (url.startsWith("/") || File(url).exists()) {
+                    setDataSource(url)
                 } else {
-                    setDataSource(context, uri)
+                    val uri = Uri.parse(url)
+                    if (headers.isNotEmpty()) {
+                        setDataSource(context, uri, headers)
+                    } else {
+                        setDataSource(context, uri)
+                    }
                 }
 
                 setOnVideoSizeChangedListener { _, width, height ->
-                    NeoLog.d(TAG, "MediaPlayer video size changed: ${width}x$height")
+                    ZakoLog.d(TAG, "MediaPlayer video size changed: ${width}x$height")
                     if (width > 0 && height > 0) {
                         _state.value = _state.value.copy(
                             videoWidth = width,
@@ -336,18 +357,20 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                 }
 
                 setOnPreparedListener { mp ->
+                    isMediaPlayerPrepared = true
                     val dur = mp.duration.toLong().coerceAtLeast(0L)
-                    NeoLog.i(TAG, "MediaPlayer prepared, duration: ${dur}ms, resumePosition: ${resumePositionMs}ms")
+                    val seekPos = pendingResumePositionMs
+                    ZakoLog.i(TAG, "MediaPlayer prepared, duration: ${dur}ms, resumePosition: ${seekPos}ms")
                     _state.value = _state.value.copy(
                         durationMs = dur,
                         isBuffering = false,
                         isPlaying = true
                     )
-                    if (resumePositionMs > 0L && resumePositionMs < dur) {
+                    if (seekPos > 0L && seekPos < dur) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            mp.seekTo(resumePositionMs, MediaPlayer.SEEK_CLOSEST)
+                            mp.seekTo(seekPos, MediaPlayer.SEEK_CLOSEST)
                         } else {
-                            mp.seekTo(resumePositionMs.toInt())
+                            mp.seekTo(seekPos.toInt())
                         }
                     }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -356,7 +379,7 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                             params.speed = _state.value.currentSpeed
                             mp.playbackParams = params
                         } catch (e: Exception) {
-                            NeoLog.w(TAG, "Failed to set playback params speed", e)
+                            ZakoLog.w(TAG, "Failed to set playback params speed", e)
                         }
                     }
                     mp.start()
@@ -388,7 +411,7 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                 }
 
                 setOnCompletionListener {
-                    NeoLog.i(TAG, "MediaPlayer playback completed")
+                    ZakoLog.i(TAG, "MediaPlayer playback completed")
                     _state.value = _state.value.copy(
                         isPlaying = false,
                         currentPositionMs = _state.value.durationMs
@@ -396,7 +419,11 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                 }
 
                 setOnErrorListener { _, what, extra ->
-                    NeoLog.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                    ZakoLog.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                    if (what == -38) {
+                        return@setOnErrorListener true
+                    }
+                    isMediaPlayerPrepared = false
                     _state.value = _state.value.copy(
                         isBuffering = false,
                         isPlaying = false
@@ -408,7 +435,8 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
             }
             this.mediaPlayer = player
         } catch (e: Exception) {
-            NeoLog.e(TAG, "Failed to initialize MediaPlayer for $url", e)
+            isMediaPlayerPrepared = false
+            ZakoLog.e(TAG, "Failed to initialize MediaPlayer for $url", e)
             _state.value = _state.value.copy(isBuffering = false)
         }
     }
@@ -418,18 +446,20 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
         progressTickerJob = scope.launch {
             while (isActive) {
                 delay(300)
-                mediaPlayer?.let { mp ->
-                    try {
-                        if (mp.isPlaying) {
-                            val pos = mp.currentPosition.toLong()
-                            val dur = mp.duration.toLong()
-                            _state.value = _state.value.copy(
-                                currentPositionMs = pos,
-                                durationMs = if (dur > 0) dur else _state.value.durationMs,
-                                isPlaying = true
-                            )
-                        }
-                    } catch (_: Exception) {}
+                if (isMediaPlayerPrepared) {
+                    mediaPlayer?.let { mp ->
+                        try {
+                            if (mp.isPlaying) {
+                                val pos = mp.currentPosition.toLong()
+                                val dur = mp.duration.toLong()
+                                _state.value = _state.value.copy(
+                                    currentPositionMs = pos,
+                                    durationMs = if (dur > 0) dur else _state.value.durationMs,
+                                    isPlaying = true
+                                )
+                            }
+                        } catch (_: Exception) {}
+                    }
                 }
             }
         }
@@ -438,19 +468,22 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
     fun play() {
         _state.value = _state.value.copy(isPlaying = true)
         val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isLoaded()
-            PlayerEngine.AUTO -> MPVLib.isLoaded()
+            PlayerEngine.MPV -> MPVLib.isReady()
+            PlayerEngine.AUTO -> MPVLib.isReady()
             PlayerEngine.SYSTEM -> false
         }
         if (shouldUseMpv) {
             try {
                 MPVLib.setPropertyBoolean("pause", false)
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         } else {
-            try {
-                mediaPlayer?.start()
-            } catch (e: Exception) {
-                NeoLog.e(TAG, "play error", e)
+            if (isMediaPlayerPrepared) {
+                try {
+                    mediaPlayer?.start()
+                    startProgressTicker()
+                } catch (e: Exception) {
+                    ZakoLog.e(TAG, "play error", e)
+                }
             }
         }
     }
@@ -458,19 +491,21 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
     fun pause() {
         _state.value = _state.value.copy(isPlaying = false)
         val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isLoaded()
-            PlayerEngine.AUTO -> MPVLib.isLoaded()
+            PlayerEngine.MPV -> MPVLib.isReady()
+            PlayerEngine.AUTO -> MPVLib.isReady()
             PlayerEngine.SYSTEM -> false
         }
         if (shouldUseMpv) {
             try {
                 MPVLib.setPropertyBoolean("pause", true)
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         } else {
-            try {
-                mediaPlayer?.pause()
-            } catch (e: Exception) {
-                NeoLog.e(TAG, "pause error", e)
+            if (isMediaPlayerPrepared) {
+                try {
+                    mediaPlayer?.pause()
+                } catch (e: Exception) {
+                    ZakoLog.e(TAG, "pause error", e)
+                }
             }
         }
     }
@@ -486,25 +521,29 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
             bufferedPositionMs = maxOf(_state.value.bufferedPositionMs, target)
         )
         val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isLoaded()
-            PlayerEngine.AUTO -> MPVLib.isLoaded()
+            PlayerEngine.MPV -> MPVLib.isReady()
+            PlayerEngine.AUTO -> MPVLib.isReady()
             PlayerEngine.SYSTEM -> false
         }
         if (shouldUseMpv) {
             try {
                 MPVLib.command(arrayOf("seek", (target / 1000.0).toString(), "absolute"))
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         } else {
-            try {
-                mediaPlayer?.let { mp ->
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        mp.seekTo(target, MediaPlayer.SEEK_CLOSEST)
-                    } else {
-                        mp.seekTo(target.toInt())
+            if (isMediaPlayerPrepared) {
+                try {
+                    mediaPlayer?.let { mp ->
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            mp.seekTo(target, MediaPlayer.SEEK_CLOSEST)
+                        } else {
+                            mp.seekTo(target.toInt())
+                        }
                     }
+                } catch (e: Exception) {
+                    ZakoLog.e(TAG, "seek error", e)
                 }
-            } catch (e: Exception) {
-                NeoLog.e(TAG, "seek error", e)
+            } else {
+                pendingResumePositionMs = target
             }
         }
     }
@@ -516,7 +555,7 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
 
     fun setAspectRatio(mode: AspectRatioMode) {
         _state.value = _state.value.copy(aspectRatio = mode)
-        if (MPVLib.isLoaded()) {
+        if (MPVLib.isReady()) {
             try {
                 val ratio = when (mode) {
                     AspectRatioMode.FIT -> "-1"
@@ -525,7 +564,7 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                     AspectRatioMode.FIXED_4_3 -> "1.333333"
                 }
                 MPVLib.setPropertyString("video-aspect-override", ratio)
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
     }
 
@@ -540,16 +579,16 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
             currentSpeed = targetSpeed
         )
         val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isLoaded()
-            PlayerEngine.AUTO -> MPVLib.isLoaded()
+            PlayerEngine.MPV -> MPVLib.isReady()
+            PlayerEngine.AUTO -> MPVLib.isReady()
             PlayerEngine.SYSTEM -> false
         }
         if (shouldUseMpv) {
             try {
                 MPVLib.setPropertyDouble("speed", targetSpeed.toDouble())
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (isMediaPlayerPrepared && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 try {
                     mediaPlayer?.let { mp ->
                         val params = mp.playbackParams
@@ -557,7 +596,7 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                         mp.playbackParams = params
                     }
                 } catch (e: Exception) {
-                    NeoLog.w(TAG, "setSpeedBoost MediaPlayer error", e)
+                    ZakoLog.w(TAG, "setSpeedBoost MediaPlayer error", e)
                 }
             }
         }
@@ -569,17 +608,17 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
             currentSpeed = if (_state.value.isSpeedBoosted) _state.value.boostSpeed else speed
         )
         val shouldUseMpv = when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isLoaded()
-            PlayerEngine.AUTO -> MPVLib.isLoaded()
+            PlayerEngine.MPV -> MPVLib.isReady()
+            PlayerEngine.AUTO -> MPVLib.isReady()
             PlayerEngine.SYSTEM -> false
         }
         val targetSpeed = _state.value.currentSpeed
         if (shouldUseMpv) {
             try {
                 MPVLib.setPropertyDouble("speed", targetSpeed.toDouble())
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (isMediaPlayerPrepared && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 try {
                     mediaPlayer?.let { mp ->
                         val params = mp.playbackParams
@@ -587,7 +626,7 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
                         mp.playbackParams = params
                     }
                 } catch (e: Exception) {
-                    NeoLog.w(TAG, "setPlaybackSpeed MediaPlayer error", e)
+                    ZakoLog.w(TAG, "setPlaybackSpeed MediaPlayer error", e)
                 }
             }
         }
@@ -648,13 +687,17 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
     }
 
     fun release() {
+        isMediaPlayerPrepared = false
         progressTickerJob?.cancel()
         attachedSurface = null
-        if (MPVLib.isLoaded()) {
+        if (MPVLib.isReady()) {
             try {
                 MPVLib.removeObserver(this)
+                MPVLib.isInitialized = false
                 MPVLib.destroy()
-            } catch (_: Exception) {}
+            } catch (e: Throwable) {
+                ZakoLog.e(TAG, "release MPV error", e)
+            }
         }
         try {
             mediaPlayer?.apply {
@@ -664,7 +707,9 @@ class NeoPlayer(val context: Context) : MPVLib.EventObserver {
             }
             mediaPlayer = null
         } catch (e: Exception) {
-            NeoLog.w(TAG, "release MediaPlayer error", e)
+            ZakoLog.w(TAG, "release MediaPlayer error", e)
         }
     }
 }
+
+typealias NeoPlayer = ZakoPlayer

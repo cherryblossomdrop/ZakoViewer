@@ -8,13 +8,15 @@ import androidx.lifecycle.viewModelScope
 import moe.zako.viewer.core.cdn.CdnNode
 import moe.zako.viewer.core.cdn.CdnSmartRouter
 import moe.zako.viewer.core.external.ExternalLauncher
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.core.player.AspectRatioMode
 import moe.zako.viewer.core.player.HwDecMode
 import moe.zako.viewer.core.player.MultiNodeStreamBuffer
-import moe.zako.viewer.core.player.NeoPlayer
+import moe.zako.viewer.core.player.ZakoPlayer
 import moe.zako.viewer.core.player.PlayerEngine
 import moe.zako.viewer.core.player.VideoPlayerState
+import moe.zako.viewer.data.local.dao.DownloadDao
+import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.repository.FavoriteRepository
 import moe.zako.viewer.data.repository.HistoryRepository
@@ -23,6 +25,7 @@ import moe.zako.viewer.data.source.cosav.CosApiClient
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 
 data class PlayerUiState(
     val video: CosVideoItem? = null,
@@ -42,6 +45,7 @@ data class PlayerUiState(
 
     // Gesture Visual Feedback States
     val showPlayPauseIndicator: Boolean = false,
+    val isIndicatorPlaying: Boolean = false,
     val seekDeltaSeconds: Int? = null,
     val seekTargetMs: Long? = null,
     val brightnessPercent: Int? = null,
@@ -53,12 +57,14 @@ data class PlayerUiState(
 
 class PlayerViewModel(
     private val videoId: String,
-    val player: NeoPlayer,
+    private val initialLocalPath: String = "",
+    val player: ZakoPlayer,
     private val apiClient: CosApiClient = CosApiClient.instance,
     private val cdnSmartRouter: CdnSmartRouter = CdnSmartRouter(),
     private val favoriteRepository: FavoriteRepository,
     private val historyRepository: HistoryRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val downloadDao: DownloadDao? = null
 ) : ViewModel() {
     companion object {
         private const val TAG = "PlayerViewModel"
@@ -147,13 +153,59 @@ class PlayerViewModel(
     private fun loadAndStartPlayback() {
         viewModelScope.launch {
             try {
+                // 1. 优先检查本地是否存在已下载的完整视频文件
+                var localFile: File? = if (initialLocalPath.isNotBlank()) File(initialLocalPath) else null
+                val downloadRecord = downloadDao?.getDownloadByVideoId(videoId)
+
+                if ((localFile == null || !localFile.exists() || localFile.length() == 0L) && downloadRecord != null) {
+                    if (downloadRecord.status == DownloadEntity.STATUS_COMPLETED) {
+                        val recordFile = File(downloadRecord.savePath)
+                        if (recordFile.exists() && recordFile.length() > 0L) {
+                            localFile = recordFile
+                        }
+                    }
+                }
+
+                if (localFile != null && localFile.exists() && localFile.length() > 0L) {
+                    val title = downloadRecord?.title ?: "本地视频"
+                    ZakoLog.i(TAG, "Playing local downloaded video directly: ${localFile.absolutePath} for $videoId")
+                    _uiState.update {
+                        it.copy(
+                            video = CosVideoItem(
+                                id = videoId,
+                                title = title,
+                                cover = downloadRecord?.coverUrl,
+                                photo = downloadRecord?.coverUrl
+                            )
+                        )
+                    }
+
+                    // 记录历史
+                    historyRepository.recordWatch(
+                        videoId = videoId,
+                        title = title,
+                        coverUrl = downloadRecord?.coverUrl ?: "",
+                        duration = "",
+                        isVip = false
+                    )
+
+                    // 强制直接加载本地文件播放，严禁请求在线视频流地址
+                    player.loadVideo(
+                        url = localFile.absolutePath,
+                        title = title,
+                        headers = emptyMap()
+                    )
+                    return@launch
+                }
+
+                // 2. 本地文件不存在时，请求在线视频流
                 val detail = apiClient.getVideoDetail(videoId)
                 _uiState.update { it.copy(video = detail) }
 
                 detail?.let { vid ->
                     val lines = vid.allVideoLines.ifEmpty { vid.allMp4Lines }
                     if (lines.isNotEmpty()) {
-                        NeoLog.i(TAG, "Initializing multi-node streaming buffer on ${lines.size} CDN nodes")
+                        ZakoLog.i(TAG, "Initializing multi-node streaming buffer on ${lines.size} CDN nodes")
                         val streamBuffer = MultiNodeStreamBuffer.getInstance(player.context)
                         streamBuffer.onBufferProgress = { bufferedMs, _, _ ->
                             player.updateBufferedPosition(bufferedMs)
@@ -183,13 +235,16 @@ class PlayerViewModel(
                     }
                 }
             } catch (e: Exception) {
-                NeoLog.e(TAG, "Error starting playback for $videoId", e)
+                ZakoLog.e(TAG, "Error starting playback for $videoId", e)
             }
         }
     }
 
     // --- Controls and Menu ---
     fun toggleControls() {
+        if (_uiState.value.showMoreMenu) {
+            return
+        }
         if (!_uiState.value.playerState.isLocked) {
             _uiState.update { it.copy(showControls = !it.showControls) }
         }
@@ -219,7 +274,7 @@ class PlayerViewModel(
     }
 
     fun showMoreMenu(show: Boolean) {
-        _uiState.update { it.copy(showMoreMenu = show) }
+        _uiState.update { it.copy(showMoreMenu = show, showControls = if (show) true else it.showControls) }
     }
 
     fun showEngineDialog(show: Boolean) {
@@ -251,15 +306,26 @@ class PlayerViewModel(
         showHwDecDialog(false)
     }
 
-    // --- Gesture Actions ---
-    fun onDoubleTapCenter() {
+    // --- Play / Pause Action ---
+    fun togglePlayPause() {
         if (_uiState.value.playerState.isLocked) return
-        player.togglePlayPause()
-        _uiState.update { it.copy(showPlayPauseIndicator = true) }
+        val wasPlaying = player.state.value.isPlaying
+        if (wasPlaying) {
+            player.pause()
+            _uiState.update { it.copy(showPlayPauseIndicator = true, isIndicatorPlaying = false) }
+        } else {
+            player.play()
+            _uiState.update { it.copy(showPlayPauseIndicator = true, isIndicatorPlaying = true) }
+        }
         viewModelScope.launch {
-            kotlinx.coroutines.delay(600)
+            kotlinx.coroutines.delay(650)
             _uiState.update { it.copy(showPlayPauseIndicator = false) }
         }
+    }
+
+    // --- Gesture Actions ---
+    fun onDoubleTapCenter() {
+        togglePlayPause()
     }
 
     fun onDoubleTapLeft() {
@@ -393,6 +459,7 @@ class PlayerViewModel(
 
     // 3. 使用外部播放器打开
     fun openWithExternalPlayer(context: Context) {
+        player.pause()
         val currentUrl = _uiState.value.playerState.activeUrl
         val title = _uiState.value.video?.title ?: "视频播放"
         if (currentUrl.isNotEmpty()) {

@@ -1,6 +1,6 @@
 ﻿package moe.zako.viewer.core.cdn
 
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -49,7 +49,7 @@ class CdnSpeedTester(
         urls: List<String>,
         onNodeTested: ((CdnNode) -> Unit)? = null
     ): List<CdnNode> = withContext(Dispatchers.IO) {
-        NeoLog.i(TAG, "Starting concurrent CDN speed test on ${urls.size} nodes")
+        ZakoLog.i(TAG, "Starting concurrent CDN speed test on ${urls.size} nodes")
         
         val deferreds = urls.mapIndexed { idx, url ->
             async {
@@ -109,9 +109,9 @@ class CdnSpeedTester(
                     success = true
                 }
             }
-            NeoLog.d(TAG, "$nodeName test done: latency=${latency}ms, speed=${speedBps / 1024}KB/s, success=$success")
+            ZakoLog.d(TAG, "$nodeName test done: latency=${latency}ms, speed=${speedBps / 1024}KB/s, success=$success")
         } catch (e: Exception) {
-            NeoLog.w(TAG, "$nodeName test failed: ${e.message}")
+            ZakoLog.w(TAG, "$nodeName test failed: ${e.message}")
             success = false
         }
 

@@ -18,4 +18,6 @@
     <color name="ic_launcher_green_fg">#FF5BB974</color>
     <color name="ic_launcher_yellow_bg">#FFFDF5D6</color>
     <color name="ic_launcher_yellow_fg">#FFE5C138</color>
+    <color name="ic_launcher_blue_bg">#FFE5F3FD</color>
+    <color name="ic_launcher_blue_fg">#FF008BF3</color>
 </resources>

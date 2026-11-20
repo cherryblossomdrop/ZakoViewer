@@ -13,7 +13,9 @@ data class DownloadsUiState(
     val selectedTab: Int = 0, // 0 = 已下载, 1 = 下载中
     val completedList: List<DownloadEntity> = emptyList(),
     val activeList: List<DownloadEntity> = emptyList(),
-    val currentStoragePath: String = ""
+    val currentStoragePath: String = "",
+    val isMultiSelectMode: Boolean = false,
+    val selectedIds: Set<String> = emptySet()
 )
 
 class DownloadsViewModel(
@@ -25,6 +27,7 @@ class DownloadsViewModel(
     val uiState: StateFlow<DownloadsUiState> = _uiState.asStateFlow()
 
     init {
+        downloadManager.reconcileLocalDownloadFiles()
         viewModelScope.launch {
             downloadManager.completedDownloadsFlow.collect { list ->
                 _uiState.update { it.copy(completedList = list) }
@@ -44,11 +47,19 @@ class DownloadsViewModel(
     }
 
     fun selectTab(tabIndex: Int) {
-        _uiState.update { it.copy(selectedTab = tabIndex) }
+        _uiState.update { it.copy(selectedTab = tabIndex, isMultiSelectMode = false, selectedIds = emptySet()) }
     }
 
     fun pauseDownload(videoId: String) {
         downloadManager.pauseDownload(videoId)
+    }
+
+    fun resumeDownload(videoId: String) {
+        downloadManager.resumeDownload(videoId)
+    }
+
+    fun redownload(videoId: String) {
+        downloadManager.redownload(videoId)
     }
 
     fun deleteDownload(videoId: String) {
@@ -58,6 +69,49 @@ class DownloadsViewModel(
     fun updateCustomStoragePath(newPath: String) {
         viewModelScope.launch {
             settingsRepository.setDownloadPath(newPath)
+        }
+    }
+
+    // --- 多选模式管理 ---
+    fun enterMultiSelect(initialId: String? = null) {
+        _uiState.update {
+            it.copy(
+                isMultiSelectMode = true,
+                selectedIds = if (initialId != null) setOf(initialId) else emptySet()
+            )
+        }
+    }
+
+    fun exitMultiSelect() {
+        _uiState.update { it.copy(isMultiSelectMode = false, selectedIds = emptySet()) }
+    }
+
+    fun toggleSelect(videoId: String) {
+        _uiState.update {
+            val newSet = it.selectedIds.toMutableSet()
+            if (newSet.contains(videoId)) {
+                newSet.remove(videoId)
+            } else {
+                newSet.add(videoId)
+            }
+            it.copy(selectedIds = newSet)
+        }
+    }
+
+    fun toggleSelectAll() {
+        val currentTabItems = if (_uiState.value.selectedTab == 0) _uiState.value.completedList else _uiState.value.activeList
+        val currentIds = currentTabItems.map { it.videoId }.toSet()
+        _uiState.update {
+            val allSelected = it.selectedIds.containsAll(currentIds)
+            it.copy(selectedIds = if (allSelected) emptySet() else currentIds)
+        }
+    }
+
+    fun deleteSelected() {
+        val idsToDelete = _uiState.value.selectedIds.toList()
+        if (idsToDelete.isNotEmpty()) {
+            downloadManager.deleteDownloads(idsToDelete)
+            exitMultiSelect()
         }
     }
 }

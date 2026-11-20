@@ -4,14 +4,16 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import androidx.core.content.FileProvider
 import moe.zako.viewer.ui.components.ZakoToast
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
+import java.io.File
 
 object ExternalLauncher {
     private const val TAG = "ExternalLauncher"
 
     /**
-     * Launch external video player with stream URL and HTTP headers (User-Agent, Referer, etc.)
+     * Launch external video player with stream URL or local file Uri and HTTP headers (if online)
      */
     fun openExternalPlayer(
         context: Context,
@@ -20,25 +22,41 @@ object ExternalLauncher {
         customPackage: String? = null
     ) {
         try {
-            NeoLog.i(TAG, "Opening external player for URL: $videoUrl (Package: $customPackage)")
-            val uri = Uri.parse(videoUrl)
+            ZakoLog.i(TAG, "Opening external player for URL: $videoUrl (Package: $customPackage)")
+            val isLocalFile = videoUrl.startsWith("/") || videoUrl.startsWith("file://") || File(videoUrl).exists()
+            val localFile = if (videoUrl.startsWith("file://")) File(videoUrl.removePrefix("file://")) else File(videoUrl)
+
+            val uri = if (isLocalFile && localFile.exists()) {
+                try {
+                    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", localFile)
+                } catch (e: Exception) {
+                    ZakoLog.w(TAG, "FileProvider error, fallback to fromFile: ${e.message}")
+                    Uri.fromFile(localFile)
+                }
+            } else {
+                Uri.parse(videoUrl)
+            }
+
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "video/*")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 putExtra("title", title)
 
-                // Standard headers extra used by MX Player, VLC, MPV, etc.
-                val headers = arrayOf(
-                    "User-Agent", "Mozilla/5.0 (Linux; Android 14)",
-                    "Referer", "https://api.cos-dkop.net/"
-                )
-                putExtra("headers", headers)
+                if (!isLocalFile) {
+                    // Standard headers extra used by MX Player, VLC, MPV, etc.
+                    val headers = arrayOf(
+                        "User-Agent", "Mozilla/5.0 (Linux; Android 14)",
+                        "Referer", "https://api.cos-dkop.net/"
+                    )
+                    putExtra("headers", headers)
 
-                val headersBundle = Bundle().apply {
-                    putString("User-Agent", "Mozilla/5.0 (Linux; Android 14)")
-                    putString("Referer", "https://api.cos-dkop.net/")
+                    val headersBundle = Bundle().apply {
+                        putString("User-Agent", "Mozilla/5.0 (Linux; Android 14)")
+                        putString("Referer", "https://api.cos-dkop.net/")
+                    }
+                    putExtra("android.media.intent.extra.HTTP_HEADERS", headersBundle)
                 }
-                putExtra("android.media.intent.extra.HTTP_HEADERS", headersBundle)
 
                 if (!customPackage.isNullOrEmpty()) {
                     setPackage(customPackage)
@@ -47,9 +65,10 @@ object ExternalLauncher {
 
             context.startActivity(Intent.createChooser(intent, "选择外部播放器").apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             })
         } catch (e: Exception) {
-            NeoLog.e(TAG, "Failed to launch external player", e)
+            ZakoLog.e(TAG, "Failed to launch external player", e)
             ZakoToast.show("无法启动外部播放器: ${e.message}")
         }
     }
@@ -64,7 +83,7 @@ object ExternalLauncher {
         customPackage: String? = null
     ) {
         try {
-            NeoLog.i(TAG, "Opening external downloader for URL: $downloadUrl (Package: $customPackage)")
+            ZakoLog.i(TAG, "Opening external downloader for URL: $downloadUrl (Package: $customPackage)")
             val uri = Uri.parse(downloadUrl)
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "video/*")
@@ -82,7 +101,7 @@ object ExternalLauncher {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             })
         } catch (e: Exception) {
-            NeoLog.e(TAG, "Failed to launch external downloader", e)
+            ZakoLog.e(TAG, "Failed to launch external downloader", e)
             ZakoToast.show("无法启动外部下载器: ${e.message}")
         }
     }

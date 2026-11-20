@@ -10,15 +10,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import moe.zako.viewer.ui.theme.NeoIcons
+import moe.zako.viewer.ui.screens.profile.settings.SettingsViewModel
+import moe.zako.viewer.ui.theme.ZakoIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,15 +28,23 @@ fun ProfileScreen(
     onNavigateToDownloads: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToWatchLater: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") onNavigateToSettings: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     onNavigateToAppearance: () -> Unit,
     onNavigateToPlayback: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
     onNavigateToShare: () -> Unit,
     onNavigateToSettingsDownload: () -> Unit,
     onNavigateToBackupRestore: () -> Unit,
-    onNavigateToAbout: () -> Unit
+    onNavigateToAbout: () -> Unit,
+    settingsViewModel: SettingsViewModel
 ) {
+    val context = LocalContext.current
+    val settingsState by settingsViewModel.uiState.collectAsState()
+    var showClearCacheConfirmDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        settingsViewModel.calculateCacheSize(context)
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -178,7 +188,7 @@ fun ProfileScreen(
                     )
 
                     ProfileItemCard(
-                        icon = NeoIcons.WatchLater,
+                        icon = ZakoIcons.WatchLater,
                         title = "稍后再看",
                         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 4.dp),
                         onClick = onNavigateToWatchLater
@@ -240,6 +250,13 @@ fun ProfileScreen(
                     )
 
                     ProfileItemCard(
+                        icon = Icons.Outlined.CleaningServices,
+                        title = "清理缓存",
+                        shape = RoundedCornerShape(4.dp),
+                        onClick = { showClearCacheConfirmDialog = true }
+                    )
+
+                    ProfileItemCard(
                         icon = Icons.Outlined.Info,
                         title = "关于",
                         shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
@@ -249,12 +266,43 @@ fun ProfileScreen(
             }
         }
     }
+
+    if (showClearCacheConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheConfirmDialog = false },
+            icon = { Icon(Icons.Default.CleaningServices, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text("清理缓存") },
+            text = {
+                Text(
+                    text = "确定要彻底清理图片缓存、播放器临时流媒体缓存及网络缓存吗？\n\n当前缓存大小: ${settingsState.cacheSizeFormatted}\n\n（个人偏好设置、收藏夹与已下载的本地视频不会被删除）",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearCacheConfirmDialog = false
+                        settingsViewModel.clearAppCache(context)
+                    }
+                ) {
+                    Text("清理", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCacheConfirmDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 fun ProfileItemCard(
     icon: ImageVector,
     title: String,
+    subtitle: String? = null,
+    trailingText: String? = null,
     shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(12.dp),
     onClick: () -> Unit
 ) {
@@ -281,12 +329,30 @@ fun ProfileItemCard(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (!trailingText.isNullOrBlank()) {
+                Text(
+                    text = trailingText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
 
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,

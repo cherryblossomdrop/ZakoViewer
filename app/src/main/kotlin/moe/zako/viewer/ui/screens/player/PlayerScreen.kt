@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,8 +43,10 @@ import moe.zako.viewer.core.player.MPVView
 import moe.zako.viewer.core.player.PlayerEngine
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.GestureFeedbackOverlays
+import moe.zako.viewer.ui.components.SpeedBadge
 import moe.zako.viewer.ui.components.WavyProgressSlider
-import moe.zako.viewer.ui.theme.NeoIcons
+import moe.zako.viewer.ui.components.playerGestureDetector
+import moe.zako.viewer.ui.theme.ZakoIcons
 import moe.zako.viewer.ui.theme.OverlayBlack
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -111,113 +114,42 @@ fun PlayerScreen(
         }
     }
 
+    if (isExiting) {
+        return
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .pointerInput(state.playerState.isLocked) {
-                if (state.playerState.isLocked) return@pointerInput
-
-                detectTapGestures(
-                    onPress = {
-                        try {
-                            tryAwaitRelease()
-                        } finally {
-                            viewModel.onLongPressEnd()
-                        }
-                    },
-                    onTap = { viewModel.toggleControls() },
-                    onDoubleTap = { offset ->
-                        val screenWidth = size.width
-                        when {
-                            offset.x < screenWidth * 0.35f -> viewModel.onDoubleTapLeft()
-                            offset.x > screenWidth * 0.65f -> viewModel.onDoubleTapRight()
-                            else -> viewModel.onDoubleTapCenter()
-                        }
-                    },
-                    onLongPress = {
-                        viewModel.onLongPressStart()
+            .playerGestureDetector(
+                isLocked = state.playerState.isLocked,
+                onSingleTap = { viewModel.toggleControls() },
+                onDoubleTapLeft = { viewModel.onDoubleTapLeft() },
+                onDoubleTapCenter = { viewModel.onDoubleTapCenter() },
+                onDoubleTapRight = { viewModel.onDoubleTapRight() },
+                onLongPressStart = { viewModel.onLongPressStart() },
+                onLongPressEnd = { viewModel.onLongPressEnd() },
+                onSeekDrag = { deltaMs -> viewModel.onSeekGesture(deltaMs) },
+                onSeekDragEnd = { viewModel.onSeekGestureEnd() },
+                onBrightnessDrag = { percent -> viewModel.onBrightnessGesture(percent) },
+                onBrightnessDragEnd = { viewModel.onBrightnessGestureEnd() },
+                onVolumeDrag = { percent -> viewModel.onVolumeGesture(percent) },
+                onVolumeDragEnd = { viewModel.onVolumeGestureEnd() },
+                currentBrightness = activity?.window?.attributes?.screenBrightness ?: -1f,
+                currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat(),
+                maxVolume = maxVolume,
+                setBrightness = { newB ->
+                    activity?.let { act ->
+                        val lp = act.window.attributes
+                        lp.screenBrightness = newB
+                        act.window.attributes = lp
                     }
-                )
-            }
-            .pointerInput(state.playerState.isLocked) {
-                if (state.playerState.isLocked) return@pointerInput
-
-                var isHorizontal = false
-                var isVerticalLeft = false
-                var isVerticalRight = false
-                var totalDragX = 0f
-                var totalDragY = 0f
-                var startVolume = 0f
-                var startBrightness = 0.5f
-
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        totalDragX = 0f
-                        totalDragY = 0f
-                        isHorizontal = false
-                        isVerticalLeft = false
-                        isVerticalRight = false
-                        startVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat()
-                        val curB = activity?.window?.attributes?.screenBrightness ?: -1f
-                        startBrightness = if (curB < 0f) 0.5f else curB
-                    },
-                    onDragEnd = {
-                        if (isHorizontal) viewModel.onSeekGestureEnd()
-                        if (isVerticalLeft) viewModel.onBrightnessGestureEnd()
-                        if (isVerticalRight) viewModel.onVolumeGestureEnd()
-                        viewModel.onLongPressEnd()
-                    },
-                    onDragCancel = {
-                        if (isHorizontal) viewModel.onSeekGestureEnd()
-                        if (isVerticalLeft) viewModel.onBrightnessGestureEnd()
-                        if (isVerticalRight) viewModel.onVolumeGestureEnd()
-                        viewModel.onLongPressEnd()
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        totalDragX += dragAmount.x
-                        totalDragY += dragAmount.y
-
-                        if (!isHorizontal && !isVerticalLeft && !isVerticalRight) {
-                            if (abs(totalDragX) > abs(totalDragY) && abs(totalDragX) > 20) {
-                                isHorizontal = true
-                            } else if (abs(totalDragY) > 20) {
-                                if (change.position.x < size.width * 0.5f) {
-                                    isVerticalLeft = true
-                                } else {
-                                    isVerticalRight = true
-                                }
-                            }
-                        }
-
-                        if (isHorizontal) {
-                            // Horizontal Swipe -> Seek position adjustment
-                            val seekDeltaMs = (totalDragX * 90).toLong()
-                            viewModel.onSeekGesture(seekDeltaMs)
-                        } else if (isVerticalLeft) {
-                            // Vertical Left Swipe -> Continuous Brightness adjustment
-                            activity?.let { act ->
-                                val lp = act.window.attributes
-                                val dragRange = (size.height * 0.7f).coerceAtLeast(100f)
-                                val newBrightness = (startBrightness + (-totalDragY / dragRange)).coerceIn(0.01f, 1.0f)
-                                lp.screenBrightness = newBrightness
-                                act.window.attributes = lp
-                                viewModel.onBrightnessGesture((newBrightness * 100).toInt())
-                            }
-                        } else if (isVerticalRight) {
-                            // Vertical Right Swipe -> Continuous Volume adjustment
-                            val dragRange = (size.height * 0.7f).coerceAtLeast(100f)
-                            val deltaFraction = -totalDragY / dragRange
-                            val newVolFloat = (startVolume + deltaFraction * maxVolume).coerceIn(0f, maxVolume.toFloat())
-                            val newVolInt = newVolFloat.roundToInt().coerceIn(0, maxVolume)
-                            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVolInt, 0)
-                            val percent = ((newVolFloat / maxVolume) * 100).roundToInt().coerceIn(0, 100)
-                            viewModel.onVolumeGesture(percent)
-                        }
-                    }
-                )
-            }
+                },
+                setVolume = { newVol ->
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+                }
+            )
     ) {
         // 1. MPV SurfaceView Core
         if (!isExiting) {
@@ -252,7 +184,7 @@ fun PlayerScreen(
         // 2. Visual Animated Gesture Feedback HUD Overlays
         GestureFeedbackOverlays(
             showPlayPauseIndicator = state.showPlayPauseIndicator,
-            isPlaying = state.playerState.isPlaying,
+            isPlaying = state.isIndicatorPlaying,
             seekFeedbackDeltaSeconds = state.seekDeltaSeconds,
             seekTargetMs = state.seekTargetMs,
             brightnessPercent = state.brightnessPercent,
@@ -315,15 +247,16 @@ fun PlayerScreen(
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                         )
 
-                        // 画面比例切换 (适应屏幕、填充、16:9、4:3) - 矢量图标与切换提示
+                        // 画面比例切换 (适应屏幕、填充、16:9、4:3) - 方正圆角画框矢量图标
                         IconButton(onClick = {
                             val nextMode = viewModel.cycleAspectRatio()
                             ZakoToast.show("画面比例: ${nextMode.label}")
                         }) {
                             Icon(
-                                imageVector = Icons.Default.AspectRatio,
+                                imageVector = ZakoIcons.AspectRatio,
                                 contentDescription = "画面比例 (${state.playerState.aspectRatio.label})",
-                                tint = Color.White
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
 
@@ -346,14 +279,14 @@ fun PlayerScreen(
                                 // 1. 添加到收藏夹
                                 DropdownMenuItem(
                                     text = { Text("添加到收藏夹") },
-                                    leadingIcon = { Icon(imageVector = Icons.Default.Star, contentDescription = null) },
+                                    leadingIcon = { Icon(imageVector = Icons.Default.Favorite, contentDescription = null) },
                                     onClick = { viewModel.openAddToFavorites() }
                                 )
 
                                 // 2. 添加到稍后再看
                                 DropdownMenuItem(
                                     text = { Text("添加到稍后再看") },
-                                    leadingIcon = { Icon(imageVector = NeoIcons.WatchLater, contentDescription = null) },
+                                    leadingIcon = { Icon(imageVector = ZakoIcons.WatchLater, contentDescription = null) },
                                     onClick = {
                                         viewModel.addToWatchLater()
                                         ZakoToast.show("已加入稍后再看")
@@ -370,7 +303,7 @@ fun PlayerScreen(
                                 // 4. 对 CDN 节点进行测速
                                 DropdownMenuItem(
                                     text = { Text(if (state.isCdnTesting) "测速中..." else "对 CDN 节点进行测速") },
-                                    leadingIcon = { Icon(imageVector = Icons.Default.Speed, contentDescription = null) },
+                                    leadingIcon = { Icon(imageVector = Icons.Rounded.NetworkCheck, contentDescription = null) },
                                     onClick = {
                                         viewModel.triggerCdnSpeedTest()
                                         ZakoToast.show("正在并发测试全部 CDN 节点速率与延迟")
@@ -476,7 +409,7 @@ fun PlayerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { viewModel.player.togglePlayPause() }) {
+                                IconButton(onClick = { viewModel.togglePlayPause() }) {
                                     Icon(
                                         imageVector = if (state.playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                         contentDescription = "播放/暂停",
@@ -498,12 +431,22 @@ fun PlayerScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                // 播放倍速切换按钮 - 矢量图标
+                                // 播放倍速切换按钮 - 动态倍速矢量徽标
+                                val currentSpeed = if (state.playerState.isSpeedBoosted) state.playerState.boostSpeed else state.playerState.normalSpeed
                                 IconButton(onClick = { viewModel.showSpeedDialog(true) }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Speed,
-                                        contentDescription = "播放倍速 (${state.playerState.normalSpeed}x)",
+                                    SpeedBadge(
+                                        speed = currentSpeed,
                                         tint = Color.White
+                                    )
+                                }
+
+                                // 退出全屏按钮（控制栏右下角退出全屏入口）
+                                IconButton(onClick = handleBack) {
+                                    Icon(
+                                        imageVector = ZakoIcons.FullscreenExit,
+                                        contentDescription = "退出全屏",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
                             }

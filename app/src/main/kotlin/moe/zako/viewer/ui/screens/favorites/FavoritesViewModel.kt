@@ -2,7 +2,7 @@
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.data.local.dao.DownloadDao
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity

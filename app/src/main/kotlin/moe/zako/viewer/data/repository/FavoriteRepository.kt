@@ -1,6 +1,6 @@
 ﻿package moe.zako.viewer.data.repository
 
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.data.local.dao.FavoriteDao
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
@@ -15,7 +15,7 @@ class FavoriteRepository(private val favoriteDao: FavoriteDao) {
     suspend fun ensureDefaultRootFolderExists(): FavoriteFolderEntity {
         val rootFolders = favoriteDao.getRootFoldersList()
         if (rootFolders.isEmpty()) {
-            NeoLog.i(TAG, "Creating pre-built unique root favorite folder: '我的收藏'")
+            ZakoLog.i(TAG, "Creating pre-built unique root favorite folder: '我的收藏'")
             val defaultFolder = FavoriteFolderEntity(
                 parentId = null,
                 name = "我的收藏",
@@ -52,7 +52,7 @@ class FavoriteRepository(private val favoriteDao: FavoriteDao) {
     suspend fun createFolder(name: String, parentId: Long?): Long {
         // 用户不能创建根收藏夹，根收藏夹必须有且仅有一个，若 parentId 为空则默认挂靠至唯一根收藏夹
         val targetParentId = parentId ?: ensureDefaultRootFolderExists().id
-        NeoLog.i(TAG, "Creating favorite folder: '$name' under parent: $targetParentId")
+        ZakoLog.i(TAG, "Creating favorite folder: '$name' under parent: $targetParentId")
         return favoriteDao.insertFolder(
             FavoriteFolderEntity(
                 parentId = targetParentId,
@@ -75,10 +75,10 @@ class FavoriteRepository(private val favoriteDao: FavoriteDao) {
         val folder = favoriteDao.getFolderById(folderId) ?: return false
         if (folder.parentId == null) {
             // 根收藏夹不能被删除，必须始终存在
-            NeoLog.w(TAG, "Cannot delete root folder: $folderId ('${folder.name}')")
+            ZakoLog.w(TAG, "Cannot delete root folder: $folderId ('${folder.name}')")
             return false
         }
-        NeoLog.i(TAG, "Deleting favorite folder: $folderId ('${folder.name}')")
+        ZakoLog.i(TAG, "Deleting favorite folder: $folderId ('${folder.name}')")
         deleteFolderRecursive(folderId)
         return true
     }
@@ -146,12 +146,12 @@ class FavoriteRepository(private val favoriteDao: FavoriteDao) {
 
     // --- Batch Metadata Move & Copy ---
     suspend fun batchMove(itemIds: List<Long>, targetFolderId: Long) {
-        NeoLog.i(TAG, "Batch moving ${itemIds.size} items to folder $targetFolderId")
+        ZakoLog.i(TAG, "Batch moving ${itemIds.size} items to folder $targetFolderId")
         favoriteDao.batchMoveItems(itemIds, targetFolderId)
     }
 
     suspend fun batchCopy(items: List<FavoriteItemEntity>, targetFolderId: Long) {
-        NeoLog.i(TAG, "Batch copying ${items.size} items to folder $targetFolderId")
+        ZakoLog.i(TAG, "Batch copying ${items.size} items to folder $targetFolderId")
         favoriteDao.batchCopyItems(items, targetFolderId)
     }
 

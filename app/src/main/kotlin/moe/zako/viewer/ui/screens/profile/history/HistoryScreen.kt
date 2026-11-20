@@ -75,7 +75,7 @@ fun HistoryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = { viewModel.showAddToFavoritesDialog() }) {
-                            Icon(imageVector = Icons.Default.Star, contentDescription = null)
+                            Icon(imageVector = Icons.Default.Favorite, contentDescription = null)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("加入收藏夹")
                         }

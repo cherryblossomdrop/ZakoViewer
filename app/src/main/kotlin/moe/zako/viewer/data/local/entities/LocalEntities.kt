@@ -60,7 +60,8 @@ data class DownloadEntity(
     val speedBps: Long = 0,
     val activeNodesCount: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
-    val completedAt: Long? = null
+    val completedAt: Long? = null,
+    val cdnUrlsJson: String = ""
 ) {
     companion object {
         const val STATUS_PENDING = "PENDING"
@@ -73,3 +74,10 @@ data class DownloadEntity(
     val progress: Float
         get() = if (totalBytes > 0) downloadedBytes.toFloat() / totalBytes.toFloat() else 0f
 }
+
+@Entity(tableName = "search_history")
+data class SearchHistoryEntity(
+    @PrimaryKey
+    val query: String,
+    val searchedAt: Long = System.currentTimeMillis()
+)

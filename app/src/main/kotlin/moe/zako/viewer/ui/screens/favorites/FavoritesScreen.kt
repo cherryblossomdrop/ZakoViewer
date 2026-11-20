@@ -122,7 +122,7 @@ fun FavoritesScreen(
                         ) {
                             Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("复制视频 (${state.selectedItemIds.size})")
+                            Text("复制 (${state.selectedItemIds.size})")
                         }
 
                         TextButton(onClick = { viewModel.batchDeleteSelected() }) {
@@ -513,7 +513,7 @@ fun FavoritesScreen(
                 )
 
                 ListItem(
-                    headlineContent = { Text("移动") },
+                    headlineContent = { Text("移动到") },
                     leadingContent = { Icon(Icons.Default.DriveFileMove, contentDescription = null) },
                     modifier = Modifier.combinedClickable(onClick = {
                         val fid = folder.id
@@ -581,7 +581,7 @@ fun FavoritesScreen(
 
                 // 3. 移动
                 ListItem(
-                    headlineContent = { Text("移动") },
+                    headlineContent = { Text("移动到") },
                     leadingContent = { Icon(Icons.Default.DriveFileMove, contentDescription = null) },
                     modifier = Modifier.combinedClickable(onClick = {
                         val iid = item.id
@@ -592,7 +592,7 @@ fun FavoritesScreen(
 
                 // 4. 复制
                 ListItem(
-                    headlineContent = { Text("复制到其它收藏夹") },
+                    headlineContent = { Text("复制到") },
                     leadingContent = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
                     modifier = Modifier.combinedClickable(onClick = {
                         val itm = item

@@ -1,7 +1,7 @@
 ﻿package moe.zako.viewer.core.player
 
 import android.content.Context
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -67,7 +67,7 @@ class MultiNodeStreamBuffer(
             serverSocket = server
             proxyPort = server.localPort
             isServerRunning.set(true)
-            NeoLog.i(TAG, "Local streaming proxy server started on 127.0.0.1:$proxyPort")
+            ZakoLog.i(TAG, "Local streaming proxy server started on 127.0.0.1:$proxyPort")
 
             scope.launch {
                 while (isServerRunning.get() && !server.isClosed) {
@@ -78,13 +78,13 @@ class MultiNodeStreamBuffer(
                         }
                     } catch (e: Exception) {
                         if (isServerRunning.get()) {
-                            NeoLog.w(TAG, "Proxy server accept error", e)
+                            ZakoLog.w(TAG, "Proxy server accept error", e)
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            NeoLog.e(TAG, "Failed to start local proxy server", e)
+            ZakoLog.e(TAG, "Failed to start local proxy server", e)
         }
     }
 
@@ -212,7 +212,7 @@ class MultiNodeStreamBuffer(
         // Step 1: Fetch and parse original M3U8 playlist
         val playlistText = fetchM3u8Content(primaryUrl, headers)
         if (playlistText == null) {
-            NeoLog.w(TAG, "Failed to fetch master m3u8 playlist, falling back to direct stream")
+            ZakoLog.w(TAG, "Failed to fetch master m3u8 playlist, falling back to direct stream")
             return@withContext primaryUrl
         }
 
@@ -234,7 +234,7 @@ class MultiNodeStreamBuffer(
         }
 
         val proxyUrl = "http://127.0.0.1:$proxyPort/video/$videoId/index.m3u8"
-        NeoLog.i(TAG, "Multi-node buffer initialized for $videoId with ${segments.size} segments across ${cdnUrls.size} CDN nodes. Playing via $proxyUrl")
+        ZakoLog.i(TAG, "Multi-node buffer initialized for $videoId with ${segments.size} segments across ${cdnUrls.size} CDN nodes. Playing via $proxyUrl")
         return@withContext proxyUrl
     }
 
@@ -246,7 +246,7 @@ class MultiNodeStreamBuffer(
                 if (resp.isSuccessful) resp.body?.string() else null
             }
         } catch (e: Exception) {
-            NeoLog.w(TAG, "fetchM3u8Content error", e)
+            ZakoLog.w(TAG, "fetchM3u8Content error", e)
             null
         }
     }
@@ -341,7 +341,7 @@ class MultiNodeStreamBuffer(
             }
         }
         workers.joinAll()
-        NeoLog.i(TAG, "Multi-node background buffer fully completed to the end of video $videoId")
+        ZakoLog.i(TAG, "Multi-node background buffer fully completed to the end of video $videoId")
     }
 
     private fun resolveSegmentUrl(baseCdnUrl: String, relativeUri: String): String {
@@ -396,12 +396,27 @@ class MultiNodeStreamBuffer(
      */
     fun stopBuffering(videoId: String? = null) {
         if (videoId == null || videoId == activeVideoId) {
-            NeoLog.i(TAG, "Stopping multi-node buffer for $activeVideoId")
+            ZakoLog.i(TAG, "Stopping multi-node buffer for $activeVideoId")
             activeJob?.cancel()
             activeJob = null
             activeVideoId = null
             activeSegments.clear()
             prioritySegment.set(-1)
+        }
+    }
+
+    /**
+     * Clears all local video segment cache in cacheDir/stream_buffer.
+     */
+    fun clearCache() {
+        stopBuffering()
+        try {
+            val bufferDir = File(context.cacheDir, "stream_buffer")
+            if (bufferDir.exists()) {
+                bufferDir.deleteRecursively()
+            }
+        } catch (e: Exception) {
+            ZakoLog.w(TAG, "Error clearing stream buffer cache", e)
         }
     }
 }

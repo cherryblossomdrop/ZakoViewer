@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import moe.zako.viewer.core.logger.NeoLog
+import moe.zako.viewer.core.logger.ZakoLog
 
 /**
  * SurfaceView implementation managing native surface lifecycle and player attachment.
@@ -114,23 +114,25 @@ class MPVView @JvmOverloads constructor(
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
-        NeoLog.d(TAG, "surfaceCreated: surface isValid=${holder.surface.isValid}")
+        ZakoLog.d(TAG, "surfaceCreated: surface isValid=${holder.surface.isValid}")
         if (holder.surface.isValid) {
             isSurfaceCreated = true
-            if (MPVLib.isLoaded()) {
+            if (MPVLib.isReady()) {
                 try {
                     // Bind wid and attach valid surface
                     MPVLib.attachSurface(holder.surface)
-                    MPVLib.setOptionString("wid", holder.surface.hashCode().toString())
+                    val wid = holder.surface.hashCode().toString()
+                    MPVLib.setOptionString("wid", wid)
+                    MPVLib.setPropertyString("wid", wid)
                     // Initialize vo=gpu, gpu-context=android, ao=audiotrack,opensles
                     MPVLib.setOptionString("vo", "gpu")
-                    MPVLib.setOptionString("gpu-context", "android")
-                    MPVLib.setOptionString("ao", "audiotrack,opensles")
                     MPVLib.setPropertyString("vo", "gpu")
+                    MPVLib.setOptionString("gpu-context", "android")
                     MPVLib.setPropertyString("gpu-context", "android")
+                    MPVLib.setOptionString("ao", "audiotrack,opensles")
                     MPVLib.setPropertyString("ao", "audiotrack,opensles")
-                } catch (e: Exception) {
-                    NeoLog.e(TAG, "Error in surfaceCreated MPV setup", e)
+                } catch (e: Throwable) {
+                    ZakoLog.e(TAG, "Error in surfaceCreated MPV setup", e)
                 }
             }
             onSurfaceCreatedListener?.invoke(holder)
@@ -138,28 +140,28 @@ class MPVView @JvmOverloads constructor(
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        NeoLog.d(TAG, "surfaceChanged: width=$width, height=$height")
-        if (MPVLib.isLoaded()) {
+        ZakoLog.d(TAG, "surfaceChanged: width=$width, height=$height")
+        if (MPVLib.isReady()) {
             try {
                 MPVLib.setPropertyString("android-surface-size", "${width}x$height")
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        visibility = GONE
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
-        NeoLog.d(TAG, "surfaceDestroyed: detaching surface")
+        ZakoLog.d(TAG, "surfaceDestroyed: detaching surface and resetting wid")
         isSurfaceCreated = false
-        visibility = GONE
-        if (MPVLib.isLoaded()) {
+        if (MPVLib.isReady()) {
             try {
+                MPVLib.setPropertyBoolean("pause", true)
+                MPVLib.setPropertyString("wid", "0")
                 MPVLib.detachSurface()
-            } catch (e: Exception) {
-                NeoLog.e(TAG, "Error detaching surface from MPVLib", e)
+            } catch (e: Throwable) {
+                ZakoLog.e(TAG, "Error detaching surface from MPVLib", e)
             }
         }
         onSurfaceDestroyedListener?.invoke(holder)

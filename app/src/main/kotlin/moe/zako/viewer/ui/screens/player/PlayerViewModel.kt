@@ -209,11 +209,7 @@ class PlayerViewModel(
                             "User-Agent" to "Mozilla/5.0 (Linux; Android 14)",
                             "Referer" to "https://api.cos-dkop.net/"
                         )
-                        val isMpvReady = when (player.state.value.engine) {
-                            moe.zako.viewer.core.player.PlayerEngine.MPV -> moe.zako.viewer.core.player.MPVLib.isReady()
-                            moe.zako.viewer.core.player.PlayerEngine.AUTO -> moe.zako.viewer.core.player.MPVLib.isReady()
-                            moe.zako.viewer.core.player.PlayerEngine.SYSTEM -> false
-                        }
+                        val isMpvReady = moe.zako.viewer.core.player.MPVLib.isReady()
 
                         val streamUrl = if (isMpvReady) {
                             ZakoLog.i(TAG, "libmpv is ready, directly streaming from CDN")

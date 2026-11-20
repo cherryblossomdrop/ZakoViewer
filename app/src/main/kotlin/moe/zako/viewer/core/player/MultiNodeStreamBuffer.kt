@@ -8,6 +8,7 @@ import okhttp3.Request
 import java.io.*
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketException
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -23,8 +24,10 @@ import java.util.concurrent.atomic.AtomicInteger
 class MultiNodeStreamBuffer(
     private val context: Context,
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(25, TimeUnit.SECONDS)
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .writeTimeout(10, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 ) {
     companion object {
@@ -53,6 +56,32 @@ class MultiNodeStreamBuffer(
 
     // Priority demand channel for seeking ahead
     private val prioritySegment = AtomicInteger(-1)
+
+    // Active session metadata and streaming calls
+    data class ActiveVideoInfo(
+        val videoId: String,
+        val cdnUrls: List<String>,
+        val headers: Map<String, String>,
+        val segments: List<HlsSegment>,
+        val videoDir: File
+    )
+    private val activeVideoInfoMap = ConcurrentHashMap<String, ActiveVideoInfo>()
+    private val activeStreamingCalls = ConcurrentHashMap<String, MutableSet<okhttp3.Call>>()
+
+    private fun registerStreamingCall(videoId: String, call: okhttp3.Call) {
+        activeStreamingCalls.computeIfAbsent(videoId) { ConcurrentHashMap.newKeySet() }.add(call)
+    }
+
+    private fun unregisterStreamingCall(videoId: String, call: okhttp3.Call) {
+        activeStreamingCalls[videoId]?.remove(call)
+    }
+
+    private fun cancelActiveStreamingCalls(videoId: String) {
+        activeStreamingCalls[videoId]?.forEach { call ->
+            try { call.cancel() } catch (_: Throwable) {}
+        }
+        activeStreamingCalls[videoId]?.clear()
+    }
 
     // Callbacks
     var onBufferProgress: ((bufferedMs: Long, totalDurationMs: Long, percent: Float) -> Unit)? = null
@@ -122,19 +151,57 @@ class MultiNodeStreamBuffer(
                     serveM3u8Playlist(targetFile, output)
                 } else if (filename.endsWith(".ts")) {
                     val index = filename.removePrefix("seg_").removeSuffix(".ts").toIntOrNull()
-                    if (index != null && !targetFile.exists()) {
-                        // Priority fetch for immediate player playback / seek
-                        prioritySegment.set(index)
-                        // Wait up to 10s for segment to arrive
-                        var waitedMs = 0
-                        while (!targetFile.exists() && waitedMs < 10000) {
-                            Thread.sleep(100)
-                            waitedMs += 100
+                    val isCached = targetFile.exists() && targetFile.length() > 0 && activeSegments[index] == true
+                    if (isCached) {
+                        serveMediaFile(targetFile, output, "video/mp2t", rangeHeader)
+                    } else {
+                        // 严禁阻塞等待顺序下载！立即按请求的切片向上游 CDN 发起直连流式拉取
+                        cancelActiveStreamingCalls(videoId)
+                        if (index != null) {
+                            prioritySegment.set(index)
+                        }
+                        val info = activeVideoInfoMap[videoId]
+                        if (info != null && index != null && index in info.segments.indices) {
+                            val seg = info.segments[index]
+                            val nodeUrl = info.cdnUrls.firstOrNull() ?: ""
+                            val fullSegUrl = resolveSegmentUrl(nodeUrl, seg.relativeUri)
+                            streamUpstreamDirectly(
+                                videoId = videoId,
+                                url = fullSegUrl,
+                                headers = info.headers,
+                                rangeHeader = rangeHeader,
+                                defaultMimeType = "video/mp2t",
+                                clientOutput = output,
+                                cacheTargetFile = targetFile,
+                                segmentIndex = index
+                            )
+                        } else {
+                            serveMediaFile(targetFile, output, "video/mp2t", rangeHeader)
                         }
                     }
-                    serveMediaFile(targetFile, output, "video/mp2t", rangeHeader)
                 } else {
-                    serveMediaFile(targetFile, output, "video/mp4", rangeHeader)
+                    // MP4 / 直接流媒体文件请求
+                    if (targetFile.exists() && targetFile.length() > 0) {
+                        serveMediaFile(targetFile, output, "video/mp4", rangeHeader)
+                    } else {
+                        cancelActiveStreamingCalls(videoId)
+                        val info = activeVideoInfoMap[videoId]
+                        val primaryUrl = info?.cdnUrls?.firstOrNull()
+                        if (!primaryUrl.isNullOrEmpty()) {
+                            streamUpstreamDirectly(
+                                videoId = videoId,
+                                url = primaryUrl,
+                                headers = info.headers,
+                                rangeHeader = rangeHeader,
+                                defaultMimeType = "video/mp4",
+                                clientOutput = output,
+                                cacheTargetFile = null,
+                                segmentIndex = null
+                            )
+                        } else {
+                            serveMediaFile(targetFile, output, "video/mp4", rangeHeader)
+                        }
+                    }
                 }
             }
         } catch (_: java.net.SocketException) {
@@ -148,6 +215,117 @@ class MultiNodeStreamBuffer(
             }
         } finally {
             try { socket.close() } catch (_: Exception) {}
+        }
+    }
+
+    private fun streamUpstreamDirectly(
+        videoId: String,
+        url: String,
+        headers: Map<String, String>,
+        rangeHeader: String?,
+        defaultMimeType: String,
+        clientOutput: OutputStream,
+        cacheTargetFile: File?,
+        segmentIndex: Int?
+    ) {
+        val reqBuilder = Request.Builder().url(url)
+        headers.forEach { (k, v) -> reqBuilder.header(k, v) }
+        if (!rangeHeader.isNullOrBlank()) {
+            reqBuilder.header("Range", rangeHeader)
+        }
+
+        val call = client.newCall(reqBuilder.build())
+        registerStreamingCall(videoId, call)
+
+        var tempFile: File? = null
+        var fileOut: FileOutputStream? = null
+
+        try {
+            call.execute().use { resp ->
+                unregisterStreamingCall(videoId, call)
+                if (!resp.isSuccessful && resp.code != 206) {
+                    val errorResp = "HTTP/1.1 ${resp.code} ${resp.message}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                    clientOutput.write(errorResp.toByteArray(Charsets.UTF_8))
+                    clientOutput.flush()
+                    return
+                }
+
+                val body = resp.body ?: run {
+                    val errorResp = "HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                    clientOutput.write(errorResp.toByteArray(Charsets.UTF_8))
+                    clientOutput.flush()
+                    return
+                }
+
+                val isPartial = resp.code == 206 || !rangeHeader.isNullOrBlank()
+                val statusCode = if (isPartial) 206 else 200
+                val statusText = if (isPartial) "Partial Content" else "OK"
+                val contentType = resp.header("Content-Type") ?: defaultMimeType
+                val contentLength = body.contentLength()
+                val contentRange = resp.header("Content-Range")
+
+                val headerSb = StringBuilder()
+                headerSb.append("HTTP/1.1 $statusCode $statusText\r\n")
+                headerSb.append("Content-Type: $contentType\r\n")
+                if (contentLength >= 0L) {
+                    headerSb.append("Content-Length: $contentLength\r\n")
+                }
+                if (!contentRange.isNullOrBlank()) {
+                    headerSb.append("Content-Range: $contentRange\r\n")
+                }
+                headerSb.append("Accept-Ranges: bytes\r\n")
+                headerSb.append("Access-Control-Allow-Origin: *\r\n")
+                headerSb.append("Connection: close\r\n\r\n")
+
+                clientOutput.write(headerSb.toString().toByteArray(Charsets.UTF_8))
+                clientOutput.flush()
+
+                val shouldCache = cacheTargetFile != null && rangeHeader.isNullOrBlank()
+                if (shouldCache) {
+                    tempFile = File(cacheTargetFile!!.parentFile, "${cacheTargetFile.name}.stream_tmp")
+                    fileOut = FileOutputStream(tempFile)
+                }
+
+                body.byteStream().use { input ->
+                    val buf = ByteArray(32768)
+                    var bytesRead: Int
+                    while (input.read(buf).also { bytesRead = it } != -1) {
+                        clientOutput.write(buf, 0, bytesRead)
+                        fileOut?.write(buf, 0, bytesRead)
+                    }
+                    clientOutput.flush()
+                }
+
+                fileOut?.flush()
+                fileOut?.close()
+                fileOut = null
+
+                if (tempFile != null && tempFile!!.length() > 0 && cacheTargetFile != null) {
+                    tempFile!!.renameTo(cacheTargetFile)
+                    if (segmentIndex != null) {
+                        activeSegments[segmentIndex] = true
+                    }
+                }
+            }
+        } catch (_: SocketException) {
+            call.cancel()
+        } catch (e: IOException) {
+            call.cancel()
+            if (e.message?.contains("Broken pipe", ignoreCase = true) != true &&
+                e.message?.contains("Connection reset", ignoreCase = true) != true) {
+                ZakoLog.w(TAG, "streamUpstreamDirectly IO error: ${e.message}")
+            }
+        } catch (t: Throwable) {
+            call.cancel()
+            ZakoLog.w(TAG, "streamUpstreamDirectly error", t)
+        } finally {
+            unregisterStreamingCall(videoId, call)
+            try { fileOut?.close() } catch (_: Throwable) {}
+            try {
+                if (tempFile?.exists() == true && cacheTargetFile?.exists() != true) {
+                    tempFile?.delete()
+                }
+            } catch (_: Throwable) {}
         }
     }
 
@@ -274,7 +452,8 @@ class MultiNodeStreamBuffer(
         val isHls = primaryUrl.contains(".m3u8", ignoreCase = true)
 
         if (!isHls || proxyPort == 0) {
-            // Return direct URL if proxy unavailable or not HLS
+            // Return direct URL if proxy unavailable or not HLS, but cache video metadata for streaming
+            activeVideoInfoMap[videoId] = ActiveVideoInfo(videoId, cdnUrls, headers, emptyList(), videoDir)
             return@withContext primaryUrl
         }
 
@@ -282,13 +461,17 @@ class MultiNodeStreamBuffer(
         val playlistText = fetchM3u8Content(primaryUrl, headers)
         if (playlistText == null) {
             ZakoLog.w(TAG, "Failed to fetch master m3u8 playlist, falling back to direct stream")
+            activeVideoInfoMap[videoId] = ActiveVideoInfo(videoId, cdnUrls, headers, emptyList(), videoDir)
             return@withContext primaryUrl
         }
 
         val segments = parseSegments(playlistText)
         if (segments.isEmpty()) {
+            activeVideoInfoMap[videoId] = ActiveVideoInfo(videoId, cdnUrls, headers, emptyList(), videoDir)
             return@withContext primaryUrl
         }
+
+        activeVideoInfoMap[videoId] = ActiveVideoInfo(videoId, cdnUrls, headers, segments, videoDir)
 
         val totalDurationMs = (segments.sumOf { it.durationSec } * 1000).toLong()
 
@@ -471,6 +654,8 @@ class MultiNodeStreamBuffer(
         }
         if (videoId == null || videoId == target) {
             ZakoLog.i(TAG, "Stopping multi-node buffer for $target")
+            cancelActiveStreamingCalls(videoId ?: target)
+            activeVideoInfoMap.remove(videoId ?: target)
             activeJob?.cancel()
             activeJob = null
             activeVideoId = null
@@ -485,6 +670,8 @@ class MultiNodeStreamBuffer(
     fun clearCache() {
         stopBuffering()
         try {
+            activeVideoInfoMap.keys.forEach { cancelActiveStreamingCalls(it) }
+            activeVideoInfoMap.clear()
             val bufferDir = File(context.cacheDir, "stream_buffer")
             if (bufferDir.exists()) {
                 bufferDir.deleteRecursively()

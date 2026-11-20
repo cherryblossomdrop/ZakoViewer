@@ -117,6 +117,13 @@ Java_moe_zako_viewer_core_player_MPVLib_destroy(JNIEnv *env, jobject thiz) {
     std::lock_guard<std::mutex> lock(g_mpv_mutex);
     LOGI("MPVLib native destroy invoked");
     if (g_mpv) {
+        if (fn_mpv_set_property_string) {
+            fn_mpv_set_property_string(g_mpv, "vo", "null");
+        }
+        if (fn_mpv_set_property) {
+            int64_t wid = 0;
+            fn_mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &wid);
+        }
         if (fn_mpv_terminate_destroy) {
             fn_mpv_terminate_destroy(g_mpv);
         }
@@ -138,9 +145,14 @@ Java_moe_zako_viewer_core_player_MPVLib_attachSurface(JNIEnv *env, jobject thiz,
         g_native_window = nullptr;
     }
     g_native_window = ANativeWindow_fromSurface(env, surface);
-    if (g_mpv && g_native_window && fn_mpv_set_property) {
-        int64_t wid = reinterpret_cast<int64_t>(g_native_window);
-        fn_mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &wid);
+    if (g_mpv && g_native_window) {
+        if (fn_mpv_set_property) {
+            int64_t wid = reinterpret_cast<int64_t>(g_native_window);
+            fn_mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &wid);
+        }
+        if (fn_mpv_set_property_string) {
+            fn_mpv_set_property_string(g_mpv, "vo", "gpu");
+        }
     }
 }
 
@@ -148,9 +160,14 @@ JNIEXPORT void JNICALL
 Java_moe_zako_viewer_core_player_MPVLib_detachSurface(JNIEnv *env, jobject thiz) {
     std::lock_guard<std::mutex> lock(g_mpv_mutex);
     LOGI("MPVLib native detachSurface invoked");
-    if (g_mpv && fn_mpv_set_property) {
-        int64_t wid = 0;
-        fn_mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &wid);
+    if (g_mpv) {
+        if (fn_mpv_set_property_string) {
+            fn_mpv_set_property_string(g_mpv, "vo", "null");
+        }
+        if (fn_mpv_set_property) {
+            int64_t wid = 0;
+            fn_mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &wid);
+        }
     }
     if (g_native_window) {
         ANativeWindow_release(g_native_window);

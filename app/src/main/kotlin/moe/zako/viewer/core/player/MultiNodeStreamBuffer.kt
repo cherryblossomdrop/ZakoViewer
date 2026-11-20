@@ -257,6 +257,10 @@ class MultiNodeStreamBuffer(
         cdnUrls: List<String>,
         headers: Map<String, String> = emptyMap()
     ): String = withContext(Dispatchers.IO) {
+        val primaryUrl = cdnUrls.firstOrNull() ?: return@withContext ""
+        if (videoId.isBlank() || videoId.equals("null", ignoreCase = true)) {
+            return@withContext primaryUrl
+        }
         if (activeVideoId != null && activeVideoId != videoId) {
             stopBuffering(activeVideoId)
         }
@@ -267,7 +271,6 @@ class MultiNodeStreamBuffer(
         val videoDir = File(File(context.cacheDir, "stream_buffer"), videoId)
         if (!videoDir.exists()) videoDir.mkdirs()
 
-        val primaryUrl = cdnUrls.firstOrNull() ?: return@withContext ""
         val isHls = primaryUrl.contains(".m3u8", ignoreCase = true)
 
         if (!isHls || proxyPort == 0) {
@@ -462,6 +465,10 @@ class MultiNodeStreamBuffer(
      */
     fun stopBuffering(videoId: String? = null) {
         val target = activeVideoId ?: return
+        if (target.isBlank() || target.equals("null", ignoreCase = true)) {
+            activeVideoId = null
+            return
+        }
         if (videoId == null || videoId == target) {
             ZakoLog.i(TAG, "Stopping multi-node buffer for $target")
             activeJob?.cancel()

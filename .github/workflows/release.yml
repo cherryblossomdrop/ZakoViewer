@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (e.g. v1.2.32)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Source Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Determine Release Tag
+        id: vars
+        run: |
+          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            TAG="${{ github.event.inputs.tag_name }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Package Source Code
+        run: |
+          TAG="${{ steps.vars.outputs.tag }}"
+          ZIP_NAME="ZakoViewer-${TAG}-source.zip"
+          echo "Packaging source code for ${TAG}..."
+          git archive --format=zip --prefix="ZakoViewer-${TAG}/" -o "${ZIP_NAME}" HEAD
+          echo "Package created: ${ZIP_NAME}"
+          ls -lh "${ZIP_NAME}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: Release ${{ steps.vars.outputs.tag }}
+          files: ZakoViewer-${{ steps.vars.outputs.tag }}-source.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false

@@ -80,20 +80,67 @@ object MPVLib {
         fun onPlaybackEnd()
     }
 
+    interface LogObserver {
+        fun onLogMessage(prefix: String, level: Int, text: String)
+    }
+
     private val observers = mutableListOf<EventObserver>()
+    private val logObservers = mutableListOf<LogObserver>()
 
     fun addObserver(observer: EventObserver) {
-        observers.add(observer)
+        synchronized(observers) {
+            observers.add(observer)
+        }
     }
 
     fun removeObserver(observer: EventObserver) {
-        observers.remove(observer)
+        synchronized(observers) {
+            observers.remove(observer)
+        }
+    }
+
+    fun addLogObserver(observer: LogObserver) {
+        synchronized(logObservers) {
+            logObservers.add(observer)
+        }
+    }
+
+    fun removeLogObserver(observer: LogObserver) {
+        synchronized(logObservers) {
+            logObservers.remove(observer)
+        }
     }
 
     // Called from JNI
     @JvmStatic
+    fun onNativeLogMessage(prefix: String, level: Int, text: String) {
+        val trimmed = text.trimEnd()
+        if (trimmed.isEmpty()) return
+
+        val obsCopy = synchronized(logObservers) { logObservers.toList() }
+        for (obs in obsCopy) {
+            try {
+                obs.onLogMessage(prefix, level, trimmed)
+            } catch (t: Throwable) {
+                ZakoLog.w(TAG, "LogObserver callback error: ${t.message}")
+            }
+        }
+
+        // Direct to ZakoLog based on level
+        // mpv log levels: 10=fatal, 20=error, 30=warn, 40=info, 50=v, 60=debug, 70=trace
+        val tag = "MPV/$prefix"
+        when {
+            level <= 20 -> ZakoLog.e(tag, trimmed)
+            level <= 30 -> ZakoLog.w(tag, trimmed)
+            level <= 40 -> ZakoLog.i(tag, trimmed)
+            else -> ZakoLog.d(tag, trimmed)
+        }
+    }
+
+    @JvmStatic
     fun onNativePropertyChange(property: String, value: String) {
-        for (obs in observers) {
+        val obsCopy = synchronized(observers) { observers.toList() }
+        for (obs in obsCopy) {
             obs.onPropertyChange(property, value)
         }
     }
@@ -101,5 +148,17 @@ object MPVLib {
     @JvmStatic
     fun onNativeEvent(eventId: Int) {
         // Handle MPV_EVENT_END_FILE, MPV_EVENT_PLAYBACK_RESTART, etc.
+        val obsCopy = synchronized(observers) { observers.toList() }
+        when (eventId) {
+            7 -> { // MPV_EVENT_END_FILE
+                for (obs in obsCopy) obs.onPlaybackEnd()
+            }
+            12 -> { // MPV_EVENT_PAUSE
+                for (obs in obsCopy) obs.onPlaybackStateChange(false)
+            }
+            13, 21 -> { // MPV_EVENT_UNPAUSE, MPV_EVENT_PLAYBACK_RESTART
+                for (obs in obsCopy) obs.onPlaybackStateChange(true)
+            }
+        }
     }
 }

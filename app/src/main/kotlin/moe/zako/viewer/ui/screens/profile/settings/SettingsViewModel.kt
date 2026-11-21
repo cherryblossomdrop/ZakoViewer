@@ -18,7 +18,7 @@ data class SettingsUiState(
     val externalDownloaderPkg: String = "",
     val downloadPath: String = "",
     val playerEngine: String = "mpv",
-    val hwDecMode: String = "mediacodec",
+    val hwDecMode: String = "mediacodec-copy",
     val dynamicColor: Boolean = true,
     val customTheme: String = "#686BDD",
     val coverBlurEnabled: Boolean = true, // 默认开启

@@ -22,6 +22,7 @@ class MPVView @JvmOverloads constructor(
     private var isSurfaceCreated = false
     var onSurfaceCreatedListener: ((SurfaceHolder) -> Unit)? = null
     var onSurfaceDestroyedListener: ((SurfaceHolder) -> Unit)? = null
+    var onSurfaceChangedListener: ((SurfaceHolder, Int, Int) -> Unit)? = null
 
     var videoWidth: Int = 0
         set(value) {
@@ -123,10 +124,13 @@ class MPVView @JvmOverloads constructor(
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         ZakoLog.d(TAG, "surfaceChanged: width=$width, height=$height")
-        if (MPVLib.isReady()) {
-            try {
-                MPVLib.setPropertyString("android-surface-size", "${width}x$height")
-            } catch (_: Throwable) {}
+        if (width > 0 && height > 0) {
+            if (MPVLib.isReady()) {
+                try {
+                    MPVLib.setPropertyString("android-surface-size", "${width}x$height")
+                } catch (_: Throwable) {}
+            }
+            onSurfaceChangedListener?.invoke(holder, width, height)
         }
     }
 

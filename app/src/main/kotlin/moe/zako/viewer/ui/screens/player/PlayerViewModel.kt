@@ -136,7 +136,7 @@ class PlayerViewModel(
                     "mediacodec-copy" -> HwDecMode.MEDIACODEC_COPY
                     "auto" -> HwDecMode.AUTO
                     "no" -> HwDecMode.OFF
-                    else -> HwDecMode.MEDIACODEC
+                    else -> HwDecMode.MEDIACODEC_COPY
                 }
                 player.setHwDecMode(mode)
             }

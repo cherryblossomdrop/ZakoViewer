@@ -221,7 +221,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     val hwDecModeFlow: Flow<String> = context.dataStore.data.map {
-        it[KEY_HWDEC_MODE] ?: "mediacodec"
+        it[KEY_HWDEC_MODE] ?: "mediacodec-copy"
     }
 
     val longPressSpeedFlow: Flow<Float> = context.dataStore.data.map {

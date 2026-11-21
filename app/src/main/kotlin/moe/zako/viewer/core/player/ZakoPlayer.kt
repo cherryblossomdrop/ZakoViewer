@@ -107,6 +107,8 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
     private var pendingResumePositionMs = 0L
     private var lastSurfaceWidth = 0
     private var lastSurfaceHeight = 0
+    private var isSurfaceAttachedToMpv = false
+    private var pendingMpvResumePosMs = 0L
 
     fun setSurfaceSize(width: Int, height: Int) {
         if (width > 0 && height > 0) {
@@ -159,9 +161,21 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         mediaPlayer = null
         isMediaPlayerPrepared = false
         if (player != null) {
+            // 先在主线程同步断开 Surface 绑定并尽量 stop，确保立即解绑 BufferQueue，彻底杜绝与 MPV EGL Surface 争抢
+            try {
+                if (player.isPlaying) {
+                    player.stop()
+                }
+            } catch (_: Throwable) {}
+            try {
+                player.setDisplay(null)
+            } catch (_: Throwable) {}
+            try {
+                player.setSurface(null)
+            } catch (_: Throwable) {}
+
             mediaPlayerScope.launch {
                 try {
-                    try { player.stop() } catch (_: Throwable) {}
                     try { player.reset() } catch (_: Throwable) {}
                     try { player.release() } catch (_: Throwable) {}
                     ZakoLog.d(TAG, "MediaPlayer released asynchronously in background thread")
@@ -194,7 +208,8 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         if (!MPVLib.isLoaded()) return
         try {
             // Video output & hardware decoding
-            MPVLib.setOptionString("vo", "gpu")
+            // 初始化阶段先设为 null，等真正拿到有效 Surface 并在 attachSurface 时再切换为 gpu，避免启动报 Missing surface pointer
+            MPVLib.setOptionString("vo", "null")
             MPVLib.setOptionString("gpu-context", "android")
             MPVLib.setOptionString("gpu-api", "opengl")
             MPVLib.setOptionString("opengl-es", "yes")
@@ -213,7 +228,8 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             MPVLib.setOptionString("vd-lavc-threads", "0")
             MPVLib.setOptionString("vd-lavc-dr", "yes")
             MPVLib.setOptionString("force-window", "yes")
-            MPVLib.setOptionString("msg-level", "all=warn,vo=v,vd=v")
+            // 收敛日志级别为 all=warn，避免播放时高频产生 seek 等调试输出
+            MPVLib.setOptionString("msg-level", "all=warn")
 
             // Streaming buffer & demuxer caching (NextPlayerCloud reference)
             MPVLib.setOptionString("cache", "yes")
@@ -236,12 +252,18 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
 
     fun setEngine(engine: PlayerEngine) {
         if (_state.value.engine == engine) return
-        ZakoLog.i(TAG, "Switching player engine to: ${engine.name}")
-        _state.value = _state.value.copy(engine = engine)
-        val curPos = _state.value.currentPositionMs
+        val currentPosition = if (_state.value.engine == PlayerEngine.SYSTEM) {
+            try {
+                mediaPlayer?.takeIf { isMediaPlayerPrepared }?.currentPosition?.toLong()?.coerceAtLeast(0L)
+            } catch (_: Throwable) { null } ?: _state.value.currentPositionMs
+        } else {
+            _state.value.currentPositionMs
+        }
+        ZakoLog.i(TAG, "Switching player engine to: ${engine.name}, currentPosition: ${currentPosition}ms")
+        _state.value = _state.value.copy(engine = engine, currentPositionMs = currentPosition)
         val curUrl = _state.value.activeUrl
         if (curUrl.isNotEmpty()) {
-            loadVideo(curUrl, _state.value.title, activeHeaders, resumePos = curPos)
+            loadVideo(curUrl, _state.value.title, activeHeaders, resumePos = currentPosition)
         }
     }
 
@@ -271,6 +293,10 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 ZakoLog.w(TAG, "attachSurface ignored: surface is not valid")
                 return
             }
+            if (isMpvActive() && isSurfaceAttachedToMpv && attachedSurface === surface) {
+                ZakoLog.d(TAG, "attachSurface ignored: surface already attached to MPV")
+                return
+            }
             attachedSurface = surface
             attachedHolder = holder
             ZakoLog.d(TAG, "attachSurface: surface isValid=true")
@@ -285,6 +311,7 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                     }
                     ZakoLog.d(TAG, "attachSurface: binding surface to MPVLib")
                     MPVLib.attachSurface(surface)
+                    isSurfaceAttachedToMpv = true
                     try {
                         MPVLib.setPropertyString("force-window", "yes")
                         MPVLib.setPropertyString("vo", "gpu")
@@ -318,9 +345,13 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         synchronized(surfaceLock) {
             attachedSurface = null
             attachedHolder = null
+            isSurfaceAttachedToMpv = false
             ZakoLog.d(TAG, "detachSurface: detaching surface")
 
             if (isMpvActive()) {
+                try {
+                    MPVLib.setPropertyString("vo", "null")
+                } catch (_: Throwable) {}
                 try {
                     MPVLib.detachSurface()
                 } catch (e: Throwable) {
@@ -344,7 +375,6 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
 
     fun loadVideo(url: String, title: String, headers: Map<String, String> = emptyMap(), resumePos: Long = -1L) {
         activeHeaders = headers
-        ZakoLog.i(TAG, "loadVideo: $title on $url")
         val resumePosition = if (resumePos >= 0L) {
             resumePos
         } else if (_state.value.activeUrl.isNotEmpty() && _state.value.activeUrl != url && _state.value.currentPositionMs > 0L) {
@@ -352,6 +382,7 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         } else {
             0L
         }
+        ZakoLog.i(TAG, "loadVideo: $title on $url, resumePosition: ${resumePosition}ms")
 
         _state.value = _state.value.copy(
             activeUrl = url,
@@ -367,6 +398,7 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         if (shouldUseMpv) {
             // Stop and release previous MediaPlayer asynchronously in background
             safeAsyncReleaseMediaPlayer()
+            pendingMpvResumePosMs = resumePosition
 
             try {
                 if (!MPVLib.isReady() && MPVLib.isLoaded()) {
@@ -377,8 +409,9 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 }
                 configureMpvOptions(_state.value.hwDecMode)
                 attachedSurface?.let { surf ->
-                    if (surf.isValid) {
+                    if (surf.isValid && !isSurfaceAttachedToMpv) {
                         MPVLib.attachSurface(surf)
+                        isSurfaceAttachedToMpv = true
                         try {
                             MPVLib.setPropertyString("force-window", "yes")
                             MPVLib.setPropertyString("vo", "gpu")
@@ -393,9 +426,13 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                     try { MPVLib.setOptionString("http-header-fields", headerList) } catch (_: Throwable) {}
                     try { MPVLib.setPropertyString("http-header-fields", headerList) } catch (_: Throwable) {}
                 }
-                MPVLib.command(arrayOf("loadfile", url))
                 if (resumePosition > 0L) {
-                    MPVLib.command(arrayOf("seek", (resumePosition / 1000.0).toString(), "absolute"))
+                    val resumeSecStr = (resumePosition / 1000.0).toString()
+                    try { MPVLib.setOptionString("start", resumeSecStr) } catch (_: Throwable) {}
+                    try { MPVLib.setPropertyString("start", resumeSecStr) } catch (_: Throwable) {}
+                    MPVLib.command(arrayOf("loadfile", url, "replace", "-1", "start=$resumeSecStr"))
+                } else {
+                    MPVLib.command(arrayOf("loadfile", url))
                 }
             } catch (e: Throwable) {
                 ZakoLog.e(TAG, "MPV loadfile error", e)
@@ -407,7 +444,9 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             if (MPVLib.isReady()) {
                 try {
                     MPVLib.command(arrayOf("stop"))
+                    MPVLib.setPropertyString("vo", "null")
                     MPVLib.detachSurface()
+                    isSurfaceAttachedToMpv = false
                 } catch (_: Throwable) {}
             }
             startMediaPlayerPlayback(url, headers, resumePosition)
@@ -581,8 +620,15 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                             val cacheSec = demuxCache ?: 0.0
                             val bufMs = if (durMs > 0L) (posMs + (cacheSec * 1000.0).toLong()).coerceIn(0L, durMs) else 0L
 
+                            val effectivePos = if (pendingMpvResumePosMs > 0L && posMs == 0L) {
+                                pendingMpvResumePosMs
+                            } else {
+                                if (posMs > 0L) pendingMpvResumePosMs = 0L
+                                posMs
+                            }
+
                             _state.value = _state.value.copy(
-                                currentPositionMs = posMs,
+                                currentPositionMs = effectivePos,
                                 durationMs = if (durMs > 0L) durMs else _state.value.durationMs,
                                 isPlaying = isPlaying,
                                 isBuffering = isBuffering,
@@ -853,6 +899,20 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         _state.value = _state.value.copy(isPlaying = false)
     }
 
+    override fun onFileLoaded() {
+        val pending = pendingMpvResumePosMs
+        if (pending > 0L) {
+            val sec = pending / 1000.0
+            ZakoLog.i(TAG, "MPV file loaded event: seeking to resumePosition: ${pending}ms (${sec}s)")
+            try {
+                MPVLib.command(arrayOf("seek", sec.toString(), "absolute"))
+            } catch (e: Throwable) {
+                ZakoLog.w(TAG, "Seek on file loaded failed", e)
+            }
+            pendingMpvResumePosMs = 0L
+        }
+    }
+
     fun release() {
         isMediaPlayerPrepared = false
         progressTickerJob?.cancel()
@@ -866,10 +926,12 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         } catch (_: Exception) {}
         attachedSurface = null
         attachedHolder = null
+        isSurfaceAttachedToMpv = false
         if (MPVLib.isReady()) {
             try {
                 MPVLib.removeObserver(this)
                 MPVLib.isInitialized = false
+                try { MPVLib.setPropertyString("vo", "null") } catch (_: Throwable) {}
                 MPVLib.destroy()
             } catch (e: Throwable) {
                 ZakoLog.e(TAG, "release MPV error", e)

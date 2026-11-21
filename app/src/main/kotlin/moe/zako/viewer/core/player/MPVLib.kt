@@ -78,6 +78,7 @@ object MPVLib {
         fun onPropertyChange(property: String, value: Any?)
         fun onPlaybackStateChange(isPlaying: Boolean)
         fun onPlaybackEnd()
+        fun onFileLoaded() {}
     }
 
     interface LogObserver {
@@ -152,6 +153,9 @@ object MPVLib {
         when (eventId) {
             7 -> { // MPV_EVENT_END_FILE
                 for (obs in obsCopy) obs.onPlaybackEnd()
+            }
+            8 -> { // MPV_EVENT_FILE_LOADED
+                for (obs in obsCopy) obs.onFileLoaded()
             }
             12 -> { // MPV_EVENT_PAUSE
                 for (obs in obsCopy) obs.onPlaybackStateChange(false)

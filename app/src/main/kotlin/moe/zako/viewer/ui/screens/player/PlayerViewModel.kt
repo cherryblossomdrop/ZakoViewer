@@ -66,6 +66,7 @@ data class PlayerUiState(
 class PlayerViewModel(
     private val videoId: String,
     private val initialLocalPath: String = "",
+    private val forceOnline: Boolean = false,
     val player: ZakoPlayer,
     private val apiClient: CosApiClient = CosApiClient.instance,
     private val cdnSmartRouter: CdnSmartRouter = CdnSmartRouter(),
@@ -168,8 +169,10 @@ class PlayerViewModel(
         playbackJob?.cancel()
         playbackJob = viewModelScope.launch {
             try {
-                // 1. 优先检测本地是否已有完整已下载视频（统一检测与校验）
-                val localInfo = downloadManager.findLocalCompletedVideo(videoId, initialLocalPath)
+                // 1. 若非强制在线播放，优先检测本地是否已有完整已下载视频（统一检测与校验）
+                val localInfo = if (!forceOnline) {
+                    downloadManager.findLocalCompletedVideo(videoId, initialLocalPath)
+                } else null
 
                 if (localInfo != null) {
                     val localFile = localInfo.file
@@ -617,6 +620,13 @@ class PlayerViewModel(
             )
         }
         _uiState.update { it.copy(showMoreMenu = false) }
+    }
+
+    // 查看视频详情页（从本地播放页跳转详情页，避免后台播放冲突）
+    fun onViewDetailClicked(onNavigate: (String) -> Unit) {
+        player.pause()
+        showMoreMenu(false)
+        onNavigate(videoId)
     }
 
     // 4. 选择 CDN 节点播放 (弹窗打开即自动并发测速并自动选优，支持随时手动选线覆盖)

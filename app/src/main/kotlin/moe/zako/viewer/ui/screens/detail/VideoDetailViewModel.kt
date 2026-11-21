@@ -358,7 +358,7 @@ class VideoDetailViewModel(
 
     fun startInlinePlayback() {
         val current = _uiState.value.video ?: return
-        val lines = current.allMp4Lines.ifEmpty { current.allVideoLines }
+        val lines = current.allVideoLines.ifEmpty { current.allMp4Lines }
         if (lines.isEmpty()) {
             return
         }
@@ -371,13 +371,32 @@ class VideoDetailViewModel(
                 )
                 val isMpv = player.state.value.engine == PlayerEngine.MPV ||
                         (player.state.value.engine == PlayerEngine.AUTO && moe.zako.viewer.core.player.MPVLib.isReady())
+
+                // 详情页强制在线片源：根据数据源设置进行 CDN 测速选优或默认节点
+                val autoSelectCdn = settingsRepository.autoSelectCdnFlow.first()
+                val defaultCdnIndex = settingsRepository.defaultCdnIndexFlow.first()
+
+                val targetNode = if (autoSelectCdn && lines.size > 1) {
+                    ZakoLog.i(TAG, "Auto-selecting fastest CDN node for inline playback of $videoId among ${lines.size} lines")
+                    cdnSmartRouter.autoSelectFastestNode(lines)
+                } else {
+                    cdnSmartRouter.initializeNodes(lines)
+                    val targetIdx = defaultCdnIndex.coerceIn(0, (lines.size - 1).coerceAtLeast(0))
+                    val chosen = cdnSmartRouter.nodesFlow.value.getOrNull(targetIdx)
+                        ?: cdnSmartRouter.nodesFlow.value.firstOrNull()
+                        ?: CdnNode(0, "线路 1", lines.first())
+                    cdnSmartRouter.selectNode(chosen)
+                    ZakoLog.i(TAG, "Using default CDN node for inline playback: ${chosen.name} (${chosen.url})")
+                    chosen
+                }
+
                 val streamUrl = if (isMpv) {
-                    lines.first()
+                    targetNode.url
                 } else {
                     val streamBuffer = MultiNodeStreamBuffer.getInstance(player.context)
                     streamBuffer.startBuffering(
                         videoId = current.id,
-                        cdnUrls = lines,
+                        cdnUrls = listOf(targetNode.url) + lines.filter { it != targetNode.url },
                         headers = headers
                     )
                 }

@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -18,6 +19,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import kotlinx.coroutines.launch
 import moe.zako.viewer.ZakoApplication
 import moe.zako.viewer.core.player.ZakoPlayer
 import moe.zako.viewer.ui.components.ZakoBottomBar
@@ -58,6 +60,25 @@ fun ZakoNavHost(
         Screen.Favorites.route,
         Screen.Profile.route
     )
+
+    val coroutineScope = rememberCoroutineScope()
+    // 统一列表点击路由（观看记录、收藏夹、稍后再看）：本地优先播放，未命中则进详情页
+    val handleListVideoClick: (String) -> Unit = { videoId ->
+        coroutineScope.launch {
+            val local = app.downloadManager.findLocalCompletedVideo(videoId)
+            if (local != null) {
+                navController.navigate(
+                    Screen.Player.createRoute(
+                        videoId = videoId,
+                        localPath = local.file.absolutePath,
+                        forceOnline = false
+                    )
+                )
+            } else {
+                navController.navigate(Screen.VideoDetail.createRoute(videoId))
+            }
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -165,9 +186,7 @@ fun ZakoNavHost(
                         }
                         FavoritesScreen(
                             viewModel = viewModel,
-                            onNavigateToPlayer = { videoId ->
-                                navController.navigate(Screen.Player.createRoute(videoId))
-                            },
+                            onNavigateToPlayer = handleListVideoClick,
                             onNavigateToDetail = { videoId ->
                                 navController.navigate(Screen.VideoDetail.createRoute(videoId))
                             }
@@ -216,7 +235,7 @@ fun ZakoNavHost(
                             viewModel = viewModel,
                             onNavigateBack = { navController.popBackStack() },
                             onNavigateToPlayer = { id ->
-                                navController.navigate(Screen.Player.createRoute(id))
+                                navController.navigate(Screen.Player.createRoute(id, forceOnline = true))
                             },
                             onNavigateToDetail = { id ->
                                 navController.navigate(Screen.VideoDetail.createRoute(id))
@@ -236,6 +255,10 @@ fun ZakoNavHost(
                                 type = NavType.StringType
                                 defaultValue = ""
                                 nullable = true
+                            },
+                            navArgument("forceOnline") {
+                                type = NavType.BoolType
+                                defaultValue = false
                             }
                         ),
                         enterTransition = { EnterTransition.None },
@@ -246,6 +269,7 @@ fun ZakoNavHost(
                         val context = LocalContext.current
                         val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
                         val rawLocalPath = backStackEntry.arguments?.getString("localPath") ?: ""
+                        val forceOnline = backStackEntry.arguments?.getBoolean("forceOnline") ?: false
                         val localPath = if (rawLocalPath.isNotEmpty()) {
                             try { java.net.URLDecoder.decode(rawLocalPath, "UTF-8") } catch (_: Exception) { rawLocalPath }
                         } else ""
@@ -254,6 +278,7 @@ fun ZakoNavHost(
                             PlayerViewModel(
                                 videoId = videoId,
                                 initialLocalPath = localPath,
+                                forceOnline = forceOnline,
                                 player = ZakoPlayer(context),
                                 favoriteRepository = app.favoriteRepository,
                                 historyRepository = app.historyRepository,
@@ -264,7 +289,10 @@ fun ZakoNavHost(
                         }
                         PlayerScreen(
                             viewModel = viewModel,
-                            onNavigateBack = { navController.popBackStack() }
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToDetail = { id ->
+                                navController.navigate(Screen.VideoDetail.createRoute(id))
+                            }
                         )
                     }
 
@@ -302,9 +330,7 @@ fun ZakoNavHost(
                 HistoryScreen(
                     viewModel = viewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToDetail = { id ->
-                        navController.navigate(Screen.VideoDetail.createRoute(id))
-                    }
+                    onNavigateToDetail = handleListVideoClick
                 )
             }
 
@@ -316,9 +342,7 @@ fun ZakoNavHost(
                 WatchLaterScreen(
                     viewModel = viewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToDetail = { id ->
-                        navController.navigate(Screen.VideoDetail.createRoute(id))
-                    }
+                    onNavigateToDetail = handleListVideoClick
                 )
             }
 

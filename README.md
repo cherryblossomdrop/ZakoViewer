@@ -1,6 +1,6 @@
 # ZakoViewer
 
-ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现代化 Android 视频客户端应用。项目深度整合底层 64 位 MPV 原生渲染管线与端侧智能决策架构，提供高可用流媒体选线、本地资产优先仲裁、语义级隐写分享及 Material 3 Expressive 极致流体视觉体验。
+ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现代化 Android 视频客户端应用。项目深度整合底层 MPV 原生渲染管线与端侧智能决策架构，提供高可用流媒体选线、本地资产优先仲裁、语义级隐写分享及 Material 3 Expressive 极致流体视觉体验。
 
 ---
 
@@ -36,11 +36,11 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 - **断点记忆无缝热切**：彻底修复切线重播缺陷，切换节点时精确透传 `currentPositionMs` 维持播放连续性，彻底消除重载黑屏与进度丢失；
 - **持久化数据源策略**：播放设置深度集成「数据源与 CDN 选线」持久化区块，支持自由切换「自动选择最优节点（推荐）」与「固定默认线路（线路 1 ~ 5）」，满足个性化网络调度诉求。
 
-### 3. 🛡️ 纯血 64 位 MPV 异构原生渲染引擎 (Pure 64-bit libmpv Native Pipeline)
-- **架构精炼聚焦**：彻底移除冗余 32 位兼容层，纯粹专注现代 ARM64-v8a 微架构，极大减小二进制体积并释放卓越解码性能；
-- **JNI 异构互斥隔离与生命周期锁定**：底层跨语言调用全面引入原子互斥锁（Mutex）与异步 Seek 屏障，彻底阻断播放引擎热切换与 Surface 生命周期冲突导致的 SIGSEGV 崩溃；
-- **消除渲染死锁与 ANR 阻塞**：重构 Surface 绑定管线与视频输出配置（强制保证 `vo=gpu`、硬件解码直通与 wid 严格绑定），规避重复 VO 初始化，从根源杜绝主线程阻塞与起播黑屏；
-- **本地微型反向代理网关**：内置支持流式 HTTP Range 请求的专用本地代理网关，高效适配原生播放内核与多节点分片拉取。
+### 3. 🛡️ MPV 原生播放器内核与渲染管线 (libmpv Native Pipeline)
+- **libmpv 原生硬件加速**：基于高性能 libmpv 底层驱动音视频管线，支持 GPU 渲染输出直通与多格式硬件解码加速；
+- **JNI 互斥锁与生命周期同步**：底层跨语言交互引入互斥锁（Mutex）与异步 Seek 屏障，严密协同 Surface 生命周期，杜绝引擎热切换与跨线程竞争崩溃；
+- **渲染死锁与起播保护**：深度优化视频输出绑定与配置管线，规避重复初始化与渲染死锁，保障无缝起播体验；
+- **本地微型反向代理网关**：内置支持流式 HTTP Range 请求的专用本地代理网关，高效适配原生播放内核与网络分片拉取。
 
 ### 4. 🔏 语义级 SFW 汉字隐写编解码分享协议 (Steganographic SFW Cipher Protocol)
 - **全自然语意混淆映射**：业内首创将复杂特征定位符隐写编码为无任何违禁词的纯中文自然汉字暗号，杜绝外链敏感拦截与社交平台封禁风险；
@@ -71,7 +71,7 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 - **核心语言**：Kotlin 1.9+, C++ 17 (JNI 跨语言绑定)
 - **UI 体系**：Jetpack Compose (Material 3 Expressive, Edge-to-Edge Fluid Layout)
-- **底层媒体内核**：libmpv (ARM64-v8a 硬件解码增强定制版)
+- **底层媒体内核**：libmpv (原生硬件加速渲染管线)
 - **响应式数据流**：Kotlin Coroutines & Flow (SupervisorJob, 异构调度)
 - **本地存储引擎**：Room Database (SQLite 递归拓扑), Jetpack DataStore Preferences
 - **存储权限与沙盒**：Android MediaStore API (Scoped Storage), SAF
@@ -128,16 +128,6 @@ app/src/main/
 ```powershell
 # 验证 Debug 与 Release 双版本自动化编译通过
 .\gradlew.bat assemble --no-daemon --console=plain
-```
-
-### 3. 自动化发版与纯源码发布
-
-本项目配置了自动化 GitHub Actions 发版流水线。推送语义化版本 Tag 时，系统将自动触发 Release 并附带当前版本的纯净源码压缩包（排除所有二进制产物与敏感配置）：
-
-```powershell
-# 基于当前最新提交创建并推送版本 Tag 触发自动发版
-git tag v1.2.32
-git push origin v1.2.32
 ```
 
 ---

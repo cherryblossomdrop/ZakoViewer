@@ -54,7 +54,6 @@ class BackupRestoreViewModel(
             try {
                 val result = backupRestoreManager.exportBackup(_uiState.value.includeDownloadedVideos)
                 _uiState.update { it.copy(isExporting = false, exportResult = result) }
-                ZakoToast.show("已保存到 ${result.displayPath}")
             } catch (e: Exception) {
                 ZakoLog.e("BackupRestoreViewModel", "Failed to export backup", e)
                 _uiState.update { it.copy(isExporting = false, restoreStatusMessage = "备份导出失败: ${e.message}") }

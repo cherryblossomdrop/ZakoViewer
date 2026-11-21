@@ -333,6 +333,7 @@ fun ZakoNavHost(
                     onNavigateToShare = { navController.navigate(Screen.SettingsShare.route) },
                     onNavigateToPlayer = { navController.navigate(Screen.SettingsPlayer.route) },
                     onNavigateToDownload = { navController.navigate(Screen.SettingsDownload.route) },
+                    onNavigateToLogs = { navController.navigate(Screen.LogViewer.route) },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

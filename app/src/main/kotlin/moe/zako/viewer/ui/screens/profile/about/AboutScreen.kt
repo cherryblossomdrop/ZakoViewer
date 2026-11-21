@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import moe.zako.viewer.core.storage.PublicStorageHelper
 import moe.zako.viewer.data.repository.SettingsRepository
 import kotlinx.coroutines.launch
 
@@ -162,7 +163,7 @@ fun AboutScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = "导出日志", style = MaterialTheme.typography.titleMedium)
                             Text(
-                                text = "实时查看客户端运行日志，一键导出为文本文件排错",
+                                text = "实时查看客户端运行日志，一键导出为文本文件排错\n日志保存目录：${PublicStorageHelper.LOGS_DISPLAY_DIR}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

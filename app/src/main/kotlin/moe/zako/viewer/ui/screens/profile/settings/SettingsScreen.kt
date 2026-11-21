@@ -34,6 +34,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import moe.zako.viewer.core.external.AppPickerHelper
 import moe.zako.viewer.core.permission.StoragePermissionHelper
+import moe.zako.viewer.core.storage.PublicStorageHelper
 import moe.zako.viewer.ui.components.AppPickerDialog
 import moe.zako.viewer.ui.components.CustomColorDialog
 import moe.zako.viewer.ui.components.FolderBrowserDialog
@@ -55,6 +56,7 @@ fun SettingsScreen(
     onNavigateToShare: () -> Unit,
     onNavigateToPlayer: () -> Unit,
     onNavigateToDownload: () -> Unit,
+    onNavigateToLogs: () -> Unit = {},
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -126,7 +128,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 分组 3: 存储与临时缓存管理
+            // 分组 3: 存储与日志管理
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     SettingsCategoryItem(
@@ -134,8 +136,15 @@ fun SettingsScreen(
                         title = "清理应用缓存",
                         subtitle = "图片加载、流媒体及网络临时文件",
                         trailingText = state.cacheSizeFormatted,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 4.dp),
                         onClick = { showClearCacheConfirmDialog = true }
+                    )
+                    SettingsCategoryItem(
+                        icon = Icons.Default.Terminal,
+                        title = "运行日志与导出",
+                        subtitle = "日志保存目录：${PublicStorageHelper.LOGS_DISPLAY_DIR}",
+                        shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+                        onClick = onNavigateToLogs
                     )
                 }
             }

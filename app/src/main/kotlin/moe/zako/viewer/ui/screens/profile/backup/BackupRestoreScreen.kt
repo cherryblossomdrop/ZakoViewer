@@ -2,9 +2,9 @@
 
 import android.content.Intent
 import android.net.Uri
-import moe.zako.viewer.ui.components.ZakoToast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,12 +14,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import moe.zako.viewer.core.permission.StoragePermissionHelper
-import java.io.File
+import moe.zako.viewer.core.storage.PublicStorageHelper
+import moe.zako.viewer.ui.components.ZakoToast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,7 +31,106 @@ fun BackupRestoreScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val state by viewModel.uiState.collectAsState()
+    var showExportResultDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.exportResult) {
+        if (state.exportResult != null) {
+            showExportResultDialog = true
+        }
+    }
+
+    // 备份导出成功结果弹窗（替代纯 Toast 提示）
+    if (showExportResultDialog && state.exportResult != null) {
+        val result = state.exportResult!!
+        AlertDialog(
+            onDismissRequest = { showExportResultDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("备份导出成功")
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "数据备份已完整写入公共存储：",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                clipboardManager.setText(AnnotatedString(result.displayPath))
+                                ZakoToast.show("已复制文件路径到剪贴板")
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = result.displayPath,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "复制路径",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = "可在系统文件管理器的下载目录中直接查看与管理。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "application/zip"
+                            putExtra(Intent.EXTRA_STREAM, result.uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "分享备份文件"))
+                    }
+                ) {
+                    Text("分享")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(result.displayPath))
+                            ZakoToast.show("已复制文件路径到剪贴板")
+                        }
+                    ) {
+                        Text("复制路径")
+                    }
+                    TextButton(onClick = { showExportResultDialog = false }) {
+                        Text("确定")
+                    }
+                }
+            }
+        )
+    }
 
     // Document Picker Launcher for Restore
     val restoreFileLauncher = rememberLauncherForActivityResult(
@@ -91,7 +193,7 @@ fun BackupRestoreScreen(
                                 onClick = { StoragePermissionHelper.requestAllFilesAccess(context) },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("前往授予所有文件访问权限")
+                                Text("前往系统设置授予权限")
                             }
                         }
                     }
@@ -116,6 +218,46 @@ fun BackupRestoreScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // 常驻显示备份保存目录 (随时可查，点击复制)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    clipboardManager.setText(AnnotatedString(PublicStorageHelper.BACKUPS_DISPLAY_DIR))
+                                    ZakoToast.show("已复制备份目录到剪贴板")
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Folder,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "备份保存目录：${PublicStorageHelper.BACKUPS_DISPLAY_DIR}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "复制目录路径",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -170,25 +312,42 @@ fun BackupRestoreScreen(
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Text(
-                                        text = "备份已保存至:\n${result.displayPath}",
+                                        text = "最近备份已保存至:\n${result.displayPath}",
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Button(
-                                        onClick = {
-                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                type = "application/zip"
-                                                putExtra(Intent.EXTRA_STREAM, result.uri)
-                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            }
-                                            context.startActivity(Intent.createChooser(shareIntent, "分享备份文件"))
-                                        }
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Icon(imageVector = Icons.Default.Share, contentDescription = null)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("分享备份文件")
+                                        Button(
+                                            onClick = {
+                                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "application/zip"
+                                                    putExtra(Intent.EXTRA_STREAM, result.uri)
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                context.startActivity(Intent.createChooser(shareIntent, "分享备份文件"))
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(imageVector = Icons.Default.Share, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("分享备份")
+                                        }
+                                        OutlinedButton(
+                                            onClick = {
+                                                clipboardManager.setText(AnnotatedString(result.displayPath))
+                                                ZakoToast.show("已复制路径到剪贴板")
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("复制路径")
+                                        }
                                     }
                                 }
                             }

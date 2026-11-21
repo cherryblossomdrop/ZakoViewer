@@ -7,6 +7,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.core.icon.AppIconManager
 import moe.zako.viewer.core.logger.ZakoLog
@@ -67,6 +68,9 @@ class ZakoApplication : Application(), ImageLoaderFactory {
         }
         // 初始化下载任务状态，清理异常中断残留
         downloadManager.initialize()
+        // 迁移旧版离线封面并全量检查自动补全
+        CoverCacheManager.migrateLegacyDownloadCovers(this)
+        CoverCacheManager.syncMissingCovers(this)
     }
 
     override fun newImageLoader(): ImageLoader {

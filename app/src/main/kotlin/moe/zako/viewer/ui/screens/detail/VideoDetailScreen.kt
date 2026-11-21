@@ -55,6 +55,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
+import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.cdn.CdnNode
 import moe.zako.viewer.core.player.HwDecMode
 import moe.zako.viewer.core.player.MPVView
@@ -572,7 +573,7 @@ fun DetailEmbeddedPlayer(
             ) {
                 val isCoverBlurEnabled = LocalCoverBlurEnabled.current
                 AsyncImage(
-                    model = video.displayCover,
+                    model = CoverCacheManager.getCoverModel(LocalContext.current, video.id, video.displayCover),
                     contentDescription = video.title,
                     modifier = Modifier
                         .fillMaxSize()

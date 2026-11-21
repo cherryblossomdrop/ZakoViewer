@@ -18,9 +18,11 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,8 +80,9 @@ fun WatchLaterScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             val isCoverBlurEnabled = LocalCoverBlurEnabled.current
+                            val context = LocalContext.current
                             AsyncImage(
-                                model = item.coverUrl,
+                                model = CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .width(100.dp)

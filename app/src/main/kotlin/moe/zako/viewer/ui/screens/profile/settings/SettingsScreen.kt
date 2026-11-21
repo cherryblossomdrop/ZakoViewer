@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -1358,6 +1359,10 @@ fun SettingsDownloadScreen(
                     viewModel.dismissMigrationDialog()
                 }
             },
+            properties = DialogProperties(
+                dismissOnBackPress = !state.isMigrating,
+                dismissOnClickOutside = !state.isMigrating
+            ),
             title = { Text(if (state.isMigrating) "正在迁移文件" else "迁移已下载文件") },
             text = {
                 if (state.isMigrating) {

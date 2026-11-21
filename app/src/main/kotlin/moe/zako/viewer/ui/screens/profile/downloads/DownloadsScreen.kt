@@ -31,7 +31,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.ui.components.FolderBrowserDialog
@@ -511,6 +513,74 @@ fun DownloadsScreen(
             }
         )
     }
+
+    // Migration Confirmation & Progress Dialog
+    if (state.showMigrationDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!state.isMigrating) {
+                    viewModel.dismissMigrationDialog()
+                }
+            },
+            properties = DialogProperties(
+                dismissOnBackPress = !state.isMigrating,
+                dismissOnClickOutside = !state.isMigrating
+            ),
+            title = { Text(if (state.isMigrating) "正在迁移文件" else "迁移已下载文件") },
+            text = {
+                if (state.isMigrating) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp)
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(36.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = state.migrationProgressText,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "检测到原下载目录存在 ${state.filesToMigrateCount} 个已下载视频文件。",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "是否将已下载视频完整移动至新目录，并同步更新本地记录？",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "新目录: ${state.pendingNewDownloadPath}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (!state.isMigrating) {
+                    Button(onClick = { viewModel.confirmMigration() }) {
+                        Text("迁移并更新")
+                    }
+                }
+            },
+            dismissButton = {
+                if (!state.isMigrating) {
+                    Row {
+                        TextButton(onClick = { viewModel.skipMigrationAndSetPath() }) {
+                            Text("仅更改路径")
+                        }
+                        TextButton(onClick = { viewModel.dismissMigrationDialog() }) {
+                            Text("取消")
+                        }
+                    }
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -529,14 +599,9 @@ fun CompletedDownloadItem(
     val file = remember(item.savePath) { File(item.savePath) }
     val fileExists = file.exists() && file.length() > 0L
 
-    // 优先加载本地离线缓存的视频封面，仅在未缓存时回退网络 URL
-    val localCover = remember(item.videoId) {
-        File(context.filesDir, "download_covers/${item.videoId}.jpg")
-    }
-    val coverModel = if (localCover.exists() && localCover.length() > 0L) {
-        localCover.absolutePath
-    } else {
-        item.coverUrl
+    // 优先加载本地持久化封面，缺失时自动补全
+    val coverModel = remember(item.videoId, item.coverUrl) {
+        CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl)
     }
 
     Card(
@@ -652,14 +717,9 @@ fun ActiveDownloadItem(
     val isPausedOrFailed = item.status == DownloadEntity.STATUS_PAUSED || item.status == DownloadEntity.STATUS_FAILED
     val isCoverBlurEnabled = LocalCoverBlurEnabled.current
 
-    // 优先加载本地离线缓存的视频封面，仅在未缓存时回退网络 URL
-    val localCover = remember(item.videoId) {
-        File(context.filesDir, "download_covers/${item.videoId}.jpg")
-    }
-    val coverModel = if (localCover.exists() && localCover.length() > 0L) {
-        localCover.absolutePath
-    } else {
-        item.coverUrl
+    // 优先加载本地持久化封面，缺失时自动补全
+    val coverModel = remember(item.videoId, item.coverUrl) {
+        CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl)
     }
 
     Card(

@@ -89,6 +89,12 @@ interface FavoriteDao {
     @Query("SELECT COUNT(*) > 0 FROM favorite_items WHERE videoId = :videoId")
     fun isFavoriteFlow(videoId: String): Flow<Boolean>
 
+    @Query("SELECT * FROM favorite_items WHERE videoId = :videoId LIMIT 1")
+    suspend fun getItemByVideoId(videoId: String): FavoriteItemEntity?
+
+    @Query("UPDATE favorite_items SET coverUrl = :coverUrl WHERE videoId = :videoId")
+    suspend fun updateCoverUrl(videoId: String, coverUrl: String)
+
     @Query("DELETE FROM favorite_items WHERE videoId = :videoId")
     suspend fun deleteItemByVideoId(videoId: String)
 

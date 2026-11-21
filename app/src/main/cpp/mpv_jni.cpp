@@ -393,7 +393,11 @@ Java_moe_zako_viewer_core_player_MPVLib_attachSurface(JNIEnv *env, jobject thiz,
 
     // Deduplication: if surface is already attached, do not recreate GlobalRef or re-set wid
     if (g_surface && env->IsSameObject(g_surface, surface)) {
-        LOGI("attachSurface ignored: surface is already attached");
+        LOGI("attachSurface: surface is already attached, re-ensuring vo=gpu");
+        if (g_mpv) {
+            mpv_set_property_string(g_mpv, "force-window", "yes");
+            mpv_set_property_string(g_mpv, "vo", "gpu");
+        }
         return;
     }
 

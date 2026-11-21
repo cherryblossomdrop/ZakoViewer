@@ -114,6 +114,8 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         if (width > 0 && height > 0) {
             lastSurfaceWidth = width
             lastSurfaceHeight = height
+            val hasSurf = attachedSurface?.isValid == true
+            ZakoLog.i(TAG, "setSurfaceSize: ${width}x${height}, isMpvInitialized=${MPVLib.isInitialized}, hasSurface=$hasSurf, isBoundToMpv=$isSurfaceAttachedToMpv")
             if (isMpvActive()) {
                 try {
                     MPVLib.setPropertyString("android-surface-size", "${width}x$height")
@@ -136,14 +138,6 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
     }
     private val mediaPlayerDispatcher = mediaPlayerExecutor.asCoroutineDispatcher()
     private val mediaPlayerScope = CoroutineScope(mediaPlayerDispatcher + SupervisorJob())
-
-    private fun isMpvActive(): Boolean {
-        return when (_state.value.engine) {
-            PlayerEngine.MPV -> MPVLib.isReady()
-            PlayerEngine.SYSTEM -> false
-            PlayerEngine.AUTO -> MPVLib.isReady()
-        }
-    }
 
     private fun safeAsyncMediaPlayerOp(action: (MediaPlayer) -> Unit) {
         val player = mediaPlayer ?: return
@@ -186,19 +180,83 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         }
     }
 
-    init {
-        if (MPVLib.isLoaded()) {
-            try {
-                MPVLib.create(context)
-                configureMpvOptions(_state.value.hwDecMode)
-                MPVLib.init()
-                MPVLib.isInitialized = true
+    private fun isMpvActive(): Boolean {
+        return when (_state.value.engine) {
+            PlayerEngine.MPV -> MPVLib.isReady()
+            PlayerEngine.SYSTEM -> false
+            PlayerEngine.AUTO -> MPVLib.isReady()
+        }
+    }
+
+    private fun isMpvPreferred(): Boolean {
+        return (_state.value.engine == PlayerEngine.MPV || _state.value.engine == PlayerEngine.AUTO) && MPVLib.isLoaded()
+    }
+
+    private fun initMpvIfNeeded(): Boolean {
+        if (!MPVLib.isLoaded()) return false
+        synchronized(MPVLib) {
+            if (!MPVLib.isReady()) {
+                try {
+                    val hasSurf = attachedSurface?.isValid == true
+                    ZakoLog.i(TAG, "initMpv: initializing MPVLib instance, hasSurface=$hasSurf")
+                    MPVLib.create(context)
+                    configureMpvOptions(_state.value.hwDecMode)
+                    MPVLib.init()
+                    MPVLib.isInitialized = true
+                    MPVLib.addObserver(this)
+                    ZakoLog.i(
+                        TAG,
+                        "initMpv: MPVLib initialized successfully, isMpvInitialized=${MPVLib.isInitialized}, hasSurface=$hasSurf, isBoundToMpv=$isSurfaceAttachedToMpv"
+                    )
+                } catch (e: Throwable) {
+                    MPVLib.isInitialized = false
+                    ZakoLog.e(TAG, "initMpv: failed to initialize MPVLib", e)
+                    return false
+                }
+            } else {
                 MPVLib.addObserver(this)
-            } catch (e: Throwable) {
-                MPVLib.isInitialized = false
-                ZakoLog.e(TAG, "Failed to initialize MPVLib", e)
+            }
+            // 若在 MPV 初始化前已有有效 Surface，立即进行补绑激活
+            synchronized(surfaceLock) {
+                val surf = attachedSurface
+                if (surf != null && surf.isValid && !isSurfaceAttachedToMpv) {
+                    bindSurfaceToMpv(surf)
+                }
             }
         }
+        return MPVLib.isReady()
+    }
+
+    private fun bindSurfaceToMpv(surface: Surface) {
+        if (!MPVLib.isReady()) {
+            ZakoLog.w(TAG, "bindSurfaceToMpv: skipped, MPVLib is not ready")
+            return
+        }
+        try {
+            ZakoLog.i(TAG, "bindSurfaceToMpv: attaching surface to MPVLib, surfaceSize=${lastSurfaceWidth}x${lastSurfaceHeight}")
+            MPVLib.attachSurface(surface)
+            if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0) {
+                try {
+                    MPVLib.setPropertyString("android-surface-size", "${lastSurfaceWidth}x${lastSurfaceHeight}")
+                } catch (_: Throwable) {}
+            }
+            try {
+                MPVLib.setPropertyString("force-window", "yes")
+                MPVLib.setPropertyString("vo", "gpu")
+            } catch (_: Throwable) {}
+            isSurfaceAttachedToMpv = true
+            val currentVo = try { MPVLib.getPropertyString("vo") } catch (_: Throwable) { "unknown" }
+            ZakoLog.i(
+                TAG,
+                "bindSurfaceToMpv: complete, isMpvInitialized=${MPVLib.isInitialized}, hasSurface=${attachedSurface?.isValid == true}, isBoundToMpv=$isSurfaceAttachedToMpv, vo=$currentVo, surfaceSize=${lastSurfaceWidth}x${lastSurfaceHeight}"
+            )
+        } catch (e: Throwable) {
+            ZakoLog.e(TAG, "bindSurfaceToMpv failed", e)
+        }
+    }
+
+    init {
+        initMpvIfNeeded()
     }
 
     /**
@@ -208,8 +266,10 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         if (!MPVLib.isLoaded()) return
         try {
             // Video output & hardware decoding
-            // 初始化阶段先设为 null，等真正拿到有效 Surface 并在 attachSurface 时再切换为 gpu，避免启动报 Missing surface pointer
-            MPVLib.setOptionString("vo", "null")
+            // 仅在 MPV 尚未就绪且尚未关联有效 Surface 时，初始化阶段预设 vo="null"，避免启动阶段报 Missing surface pointer
+            if (!MPVLib.isReady() && attachedSurface == null) {
+                MPVLib.setOptionString("vo", "null")
+            }
             MPVLib.setOptionString("gpu-context", "android")
             MPVLib.setOptionString("gpu-api", "opengl")
             MPVLib.setOptionString("opengl-es", "yes")
@@ -223,6 +283,9 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 HwDecMode.OFF -> "no"
             }
             MPVLib.setOptionString("hwdec", effectiveHwdec)
+            if (MPVLib.isReady()) {
+                MPVLib.setPropertyString("hwdec", effectiveHwdec)
+            }
             MPVLib.setOptionString("hwdec-codecs", "all")
             MPVLib.setOptionString("vd-lavc-fast", "yes")
             MPVLib.setOptionString("vd-lavc-threads", "0")
@@ -293,34 +356,20 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 ZakoLog.w(TAG, "attachSurface ignored: surface is not valid")
                 return
             }
-            if (isMpvActive() && isSurfaceAttachedToMpv && attachedSurface === surface) {
-                ZakoLog.d(TAG, "attachSurface ignored: surface already attached to MPV")
-                return
-            }
+            val isSameSurface = (attachedSurface === surface)
             attachedSurface = surface
             attachedHolder = holder
-            ZakoLog.d(TAG, "attachSurface: surface isValid=true")
+            val mpvPreferred = isMpvPreferred()
+            ZakoLog.i(
+                TAG,
+                "attachSurface: surface received, isValid=true, isSameSurface=$isSameSurface, engine=${_state.value.engine}, mpvPreferred=$mpvPreferred, isMpvInitialized=${MPVLib.isInitialized}, hasSurface=true, isBoundToMpv=$isSurfaceAttachedToMpv"
+            )
 
-            if (isMpvActive()) {
-                try {
-                    if (!MPVLib.isReady() && MPVLib.isLoaded()) {
-                        MPVLib.create(context)
-                        configureMpvOptions(_state.value.hwDecMode)
-                        MPVLib.init()
-                        MPVLib.isInitialized = true
-                    }
-                    ZakoLog.d(TAG, "attachSurface: binding surface to MPVLib")
-                    MPVLib.attachSurface(surface)
-                    isSurfaceAttachedToMpv = true
-                    try {
-                        MPVLib.setPropertyString("force-window", "yes")
-                        MPVLib.setPropertyString("vo", "gpu")
-                        if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0) {
-                            MPVLib.setPropertyString("android-surface-size", "${lastSurfaceWidth}x${lastSurfaceHeight}")
-                        }
-                    } catch (_: Throwable) {}
-                } catch (e: Throwable) {
-                    ZakoLog.e(TAG, "attachSurface MPVLib error", e)
+            if (mpvPreferred) {
+                if (initMpvIfNeeded()) {
+                    bindSurfaceToMpv(surface)
+                } else {
+                    ZakoLog.w(TAG, "attachSurface: MPV preferred but init failed, keeping surface cached")
                 }
             } else {
                 // 严禁在 UI 主线程执行任何阻塞 IPC 操作，派发至后台单线程异步处理
@@ -343,12 +392,13 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
 
     fun detachSurface() {
         synchronized(surfaceLock) {
+            val wasBound = isSurfaceAttachedToMpv
+            ZakoLog.i(TAG, "detachSurface: detaching surface, wasBoundToMpv=$wasBound, isMpvInitialized=${MPVLib.isInitialized}")
             attachedSurface = null
             attachedHolder = null
             isSurfaceAttachedToMpv = false
-            ZakoLog.d(TAG, "detachSurface: detaching surface")
 
-            if (isMpvActive()) {
+            if (isMpvPreferred() && MPVLib.isReady()) {
                 try {
                     MPVLib.setPropertyString("vo", "null")
                 } catch (_: Throwable) {}
@@ -382,7 +432,12 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         } else {
             0L
         }
-        ZakoLog.i(TAG, "loadVideo: $title on $url, resumePosition: ${resumePosition}ms")
+        val shouldUseMpv = isMpvPreferred()
+        val hasSurfInitial = attachedSurface?.isValid == true
+        ZakoLog.i(
+            TAG,
+            "loadVideo: $title on $url, resumePosition: ${resumePosition}ms, engine=${_state.value.engine}, shouldUseMpv=$shouldUseMpv, isMpvInitialized=${MPVLib.isInitialized}, hasSurface=$hasSurfInitial, isBoundToMpv=$isSurfaceAttachedToMpv"
+        )
 
         _state.value = _state.value.copy(
             activeUrl = url,
@@ -393,34 +448,32 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         )
 
         // 只要 libmpv 可用且选中 MPV/AUTO，全链路走 libmpv 渲染与播放，并且直接使用原始 URL 进行原生异步拉流
-        val shouldUseMpv = isMpvActive()
-
         if (shouldUseMpv) {
             // Stop and release previous MediaPlayer asynchronously in background
             safeAsyncReleaseMediaPlayer()
             pendingMpvResumePosMs = resumePosition
 
             try {
-                if (!MPVLib.isReady() && MPVLib.isLoaded()) {
-                    MPVLib.create(context)
-                    configureMpvOptions(_state.value.hwDecMode)
-                    MPVLib.init()
-                    MPVLib.isInitialized = true
+                if (!initMpvIfNeeded()) {
+                    ZakoLog.w(TAG, "loadVideo: MPV init failed, falling back to MediaPlayer")
+                    startMediaPlayerPlayback(url, headers, resumePosition)
+                    return
                 }
                 configureMpvOptions(_state.value.hwDecMode)
-                attachedSurface?.let { surf ->
-                    if (surf.isValid && !isSurfaceAttachedToMpv) {
-                        MPVLib.attachSurface(surf)
-                        isSurfaceAttachedToMpv = true
-                        try {
-                            MPVLib.setPropertyString("force-window", "yes")
-                            MPVLib.setPropertyString("vo", "gpu")
-                            if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0) {
-                                MPVLib.setPropertyString("android-surface-size", "${lastSurfaceWidth}x${lastSurfaceHeight}")
-                            }
-                        } catch (_: Throwable) {}
+
+                // 检查当前是否已有有效 Surface：若已有有效 Surface 必须立即绑定并激活 vo=gpu
+                synchronized(surfaceLock) {
+                    val surf = attachedSurface
+                    val hasValidSurface = surf != null && surf.isValid
+                    ZakoLog.i(TAG, "loadVideo MPV surface check: hasValidSurface=$hasValidSurface, isBoundToMpv=$isSurfaceAttachedToMpv")
+                    if (hasValidSurface) {
+                        bindSurfaceToMpv(surf!!)
+                    } else {
+                        // 暂无有效 Surface，先设为 null，待 Surface 真正创建并回调 attachSurface 时再切 gpu
+                        try { MPVLib.setPropertyString("vo", "null") } catch (_: Throwable) {}
                     }
                 }
+
                 if (headers.isNotEmpty()) {
                     val headerList = headers.entries.joinToString(",") { "${it.key}: ${it.value}" }
                     try { MPVLib.setOptionString("http-header-fields", headerList) } catch (_: Throwable) {}
@@ -434,6 +487,12 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 } else {
                     MPVLib.command(arrayOf("loadfile", url))
                 }
+                val currentVo = try { MPVLib.getPropertyString("vo") } catch (_: Throwable) { "unknown" }
+                val hasSurfFinal = attachedSurface?.isValid == true
+                ZakoLog.i(
+                    TAG,
+                    "loadVideo MPV ready: isMpvInitialized=${MPVLib.isInitialized}, hasSurface=$hasSurfFinal, isBoundToMpv=$isSurfaceAttachedToMpv, vo=$currentVo, surfaceSize=${lastSurfaceWidth}x${lastSurfaceHeight}"
+                )
             } catch (e: Throwable) {
                 ZakoLog.e(TAG, "MPV loadfile error", e)
             }

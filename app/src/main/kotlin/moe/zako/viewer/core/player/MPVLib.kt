@@ -90,7 +90,9 @@ object MPVLib {
 
     fun addObserver(observer: EventObserver) {
         synchronized(observers) {
-            observers.add(observer)
+            if (!observers.contains(observer)) {
+                observers.add(observer)
+            }
         }
     }
 
@@ -102,7 +104,9 @@ object MPVLib {
 
     fun addLogObserver(observer: LogObserver) {
         synchronized(logObservers) {
-            logObservers.add(observer)
+            if (!logObservers.contains(observer)) {
+                logObservers.add(observer)
+            }
         }
     }
 

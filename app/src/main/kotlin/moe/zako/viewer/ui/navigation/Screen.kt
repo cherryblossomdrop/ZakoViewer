@@ -18,13 +18,17 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
         fun createRoute(videoId: String) = "video_detail/$videoId"
     }
 
-    object Player : Screen("player/{videoId}?localPath={localPath}", "播放器") {
-        fun createRoute(videoId: String, localPath: String = ""): String =
-            if (localPath.isNotEmpty()) {
-                "player/$videoId?localPath=${java.net.URLEncoder.encode(localPath, "UTF-8")}"
-            } else {
-                "player/$videoId"
-            }
+    object Player : Screen("player/{videoId}?localPath={localPath}&forceOnline={forceOnline}", "播放器") {
+        fun createRoute(videoId: String, localPath: String = "", forceOnline: Boolean = false): String {
+            val encodedPath = if (localPath.isNotEmpty()) {
+                try {
+                    java.net.URLEncoder.encode(localPath, "UTF-8")
+                } catch (_: Exception) {
+                    localPath
+                }
+            } else ""
+            return "player/$videoId?localPath=$encodedPath&forceOnline=$forceOnline"
+        }
     }
 
     object Downloads : Screen("downloads", "离线下载")

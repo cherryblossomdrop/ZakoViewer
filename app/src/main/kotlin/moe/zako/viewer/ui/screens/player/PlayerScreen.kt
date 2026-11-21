@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.OfflinePin
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -55,7 +56,8 @@ import kotlin.math.roundToInt
 @Composable
 fun PlayerScreen(
     viewModel: PlayerViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToDetail: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -250,16 +252,12 @@ fun PlayerScreen(
                             )
                             if (state.isLocalPlayback) {
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
-                                ) {
-                                    Text(
-                                        text = "本地",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                CompositionLocalProvider(LocalContentColor provides Color.White) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.OfflinePin,
+                                        contentDescription = "本地视频",
+                                        tint = LocalContentColor.current,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
@@ -310,6 +308,15 @@ fun PlayerScreen(
                                         ZakoToast.show("已加入稍后再看")
                                     }
                                 )
+
+                                // 本地播放界面专属：查看视频详情页
+                                if (state.isLocalPlayback && onNavigateToDetail != null) {
+                                    DropdownMenuItem(
+                                        text = { Text("查看视频详情页") },
+                                        leadingIcon = { Icon(imageVector = Icons.Default.Info, contentDescription = null) },
+                                        onClick = { viewModel.onViewDetailClicked(onNavigateToDetail) }
+                                    )
+                                }
 
                                 // 3. 使用外部播放器打开
                                 DropdownMenuItem(

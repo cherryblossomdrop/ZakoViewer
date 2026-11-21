@@ -158,6 +158,14 @@ fun HomeScreen(
         sortVideos(list, state.sortDimension, state.sortDirection).distinctBy { it.id }
     }
 
+    LaunchedEffect(state.errorMessage) {
+        state.errorMessage?.let { msg ->
+            if (displayedVideos.isNotEmpty()) {
+                ZakoToast.show(msg)
+            }
+        }
+    }
+
     // 自动补全加载：当客户端过滤导致当前屏暂无匹配项但服务端仍有更多数据时，自动尝试加载下一页（最多连续探测5页）
     LaunchedEffect(displayedVideos.isEmpty(), state.isLoading, state.hasMore, state.videos.size, state.layoutMode) {
         if (state.layoutMode == LayoutMode.WATERFALL && displayedVideos.isEmpty() && state.hasMore && !state.isLoading && !state.isRefreshing && state.videos.isNotEmpty() && state.page < 5) {
@@ -524,7 +532,29 @@ fun HomeScreen(
                 .padding(innerPadding)
                 .nestedScroll(pullToRefreshState.nestedScrollConnection)
         ) {
-            if (displayedVideos.isEmpty() && !state.isLoading && !state.isRefreshing) {
+            if (state.isLoading && displayedVideos.isEmpty()) {
+                // 切换标签/提交新搜索时展示居中加载中动画，提供清晰明确的过渡感知
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(36.dp),
+                            strokeWidth = 3.dp
+                        )
+                        Text(
+                            text = "加载中…",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else if (displayedVideos.isEmpty() && !state.isLoading && !state.isRefreshing) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center

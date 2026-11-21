@@ -9,7 +9,10 @@ import moe.zako.viewer.data.repository.SearchHistoryRepository
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.data.source.cosav.CosApiClient
 import moe.zako.viewer.data.source.cosav.CosVideoItem
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 enum class SortDimension(val label: String, val apiOrder: String) {
@@ -71,6 +74,8 @@ class HomeViewModel(
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private var loadJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -266,7 +271,7 @@ class HomeViewModel(
     }
 
     fun refresh() {
-        loadVideos(refresh = true)
+        loadVideos(refresh = true, isPullRefresh = true)
     }
 
     fun loadMore() {
@@ -275,19 +280,27 @@ class HomeViewModel(
         }
     }
 
-    private fun loadVideos(refresh: Boolean, targetPage: Int? = null) {
-        viewModelScope.launch {
-            val isPaginated = _uiState.value.layoutMode == LayoutMode.PAGINATED
-            val currentPage = targetPage ?: if (refresh) 0 else _uiState.value.page + 1
+    private fun loadVideos(refresh: Boolean, targetPage: Int? = null, isPullRefresh: Boolean = false) {
+        if (!refresh && _uiState.value.isLoading) return
 
-            _uiState.update {
-                it.copy(
-                    isLoading = !refresh,
-                    isRefreshing = refresh,
-                    errorMessage = null
-                )
-            }
+        // 切换标签/提交新搜索/初始加载时，立即取消上一次尚未完成的请求，避免并发竞态
+        loadJob?.cancel()
 
+        val isPaginated = _uiState.value.layoutMode == LayoutMode.PAGINATED
+        val currentPage = targetPage ?: if (refresh) 0 else _uiState.value.page + 1
+
+        _uiState.update { current ->
+            current.copy(
+                // 切换标签/新搜索时清空旧数据，以便触发居中加载动画并防止将旧标签结果误认为新标签数据
+                videos = if (refresh && !isPullRefresh) emptyList() else current.videos,
+                isLoading = !isPullRefresh,
+                isRefreshing = isPullRefresh,
+                errorMessage = null,
+                page = if (refresh) 0 else current.page
+            )
+        }
+
+        loadJob = viewModelScope.launch {
             try {
                 val query = _uiState.value.searchQuery.trim()
                 val orderParam = _uiState.value.sortDimension.apiOrder
@@ -317,6 +330,7 @@ class HomeViewModel(
                             order = apiOrder,
                             limit = 20
                         )
+                        if (!isActive) return@launch
                         val filtered = response.items.filter { filterItem(it) }
                         _uiState.update { current ->
                             current.copy(
@@ -333,6 +347,7 @@ class HomeViewModel(
                             val collected = mutableListOf<CosVideoItem>()
                             var totalCount = 0
                             for (p in 0..2) {
+                                if (!isActive) return@launch
                                 val resp = apiClient.getVideoLists(
                                     page = p,
                                     keyword = apiKw,
@@ -344,6 +359,7 @@ class HomeViewModel(
                                 collected.addAll(resp.items)
                                 if (resp.items.size < 20 || collected.size >= totalCount) break
                             }
+                            if (!isActive) return@launch
                             val filtered = collected.distinctBy { it.id }.filter { filterItem(it) }
                             _uiState.update { current ->
                                 current.copy(
@@ -362,6 +378,7 @@ class HomeViewModel(
                                 order = apiOrder,
                                 limit = 20
                             )
+                            if (!isActive) return@launch
                             val filtered = response.items.filter { filterItem(it) }
                             _uiState.update { current ->
                                 val combined = if (refresh) filtered else (current.videos + filtered).distinctBy { it.id }
@@ -387,6 +404,7 @@ class HomeViewModel(
                             } else {
                                 apiClient.getVideoLists(page = currentPage, order = "mv", limit = 20).items
                             }
+                            if (!isActive) return@launch
                             _uiState.update { current ->
                                 current.copy(
                                     videos = items,
@@ -400,6 +418,7 @@ class HomeViewModel(
                             // Fixed / continuous recommendation flow for Waterfall
                             if (refresh || currentPage == 0) {
                                 val recommendItems = apiClient.getVideoRecommend()
+                                if (!isActive) return@launch
                                 _uiState.update { current ->
                                     current.copy(
                                         videos = recommendItems,
@@ -411,6 +430,7 @@ class HomeViewModel(
                                 }
                             } else {
                                 val moreRecs = apiClient.getVideoRecommend()
+                                if (!isActive) return@launch
                                 _uiState.update { current ->
                                     val existingIds = current.videos.map { it.id }.toSet()
                                     val filteredNew = moreRecs.filter { it.id !in existingIds }
@@ -446,6 +466,7 @@ class HomeViewModel(
                             tags = apiTags,
                             limit = 20
                         )
+                        if (!isActive) return@launch
                         val newItems = response.items
                         _uiState.update { current ->
                             val combined = if (refresh || isPaginated) newItems else (current.videos + newItems).distinctBy { it.id }
@@ -460,6 +481,9 @@ class HomeViewModel(
                     }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) {
+                    return@launch
+                }
                 ZakoLog.e(TAG, "Failed to load videos", e)
                 _uiState.update {
                     it.copy(

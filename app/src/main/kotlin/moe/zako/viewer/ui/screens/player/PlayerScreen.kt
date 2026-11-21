@@ -44,6 +44,7 @@ import moe.zako.viewer.core.player.MPVView
 import moe.zako.viewer.core.player.PlayerEngine
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.GestureFeedbackOverlays
+import moe.zako.viewer.ui.components.PlaybackSpeedDialog
 import moe.zako.viewer.ui.components.PlayerControlDefaults
 import moe.zako.viewer.ui.components.SpeedBadge
 import moe.zako.viewer.ui.components.WavyProgressSlider
@@ -719,38 +720,13 @@ fun PlayerScreen(
         )
     }
 
-    // 播放速度选择弹窗
+    // 播放速度选择弹窗 (全场景支持滚动与高度自适应约束)
     if (state.showSpeedDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.showSpeedDialog(false) },
-            title = { Text("选择播放速度") },
-            text = {
-                Column {
-                    val speedOptions = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 3.0f)
-                    val rows = speedOptions.chunked(4)
-                    for (row in rows) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            for (spd in row) {
-                                val isSelected = state.playerState.normalSpeed == spd
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { viewModel.setPlaybackSpeed(spd) },
-                                    label = { Text("${spd}x") },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.showSpeedDialog(false) }) {
-                    Text("完成")
-                }
-            }
+        val currentSpeed = if (state.playerState.isSpeedBoosted) state.playerState.boostSpeed else state.playerState.normalSpeed
+        PlaybackSpeedDialog(
+            currentSpeed = currentSpeed,
+            onSpeedSelect = { speed -> viewModel.setPlaybackSpeed(speed) },
+            onDismissRequest = { viewModel.showSpeedDialog(false) }
         )
     }
 }

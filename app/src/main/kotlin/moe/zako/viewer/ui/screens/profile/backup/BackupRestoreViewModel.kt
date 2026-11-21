@@ -13,7 +13,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.core.storage.ExportResult
+import moe.zako.viewer.core.storage.PublicStorageHelper
+import moe.zako.viewer.data.backup.BackupProgress
 import moe.zako.viewer.data.backup.BackupRestoreManager
+import moe.zako.viewer.data.backup.RestoreResult
 import moe.zako.viewer.ui.components.ZakoToast
 import java.io.File
 import java.io.IOException
@@ -22,7 +25,11 @@ data class BackupRestoreUiState(
     val includeDownloadedVideos: Boolean = false,
     val isExporting: Boolean = false,
     val isRestoring: Boolean = false,
+    val progressStage: String = "",
+    val progressDetail: String = "",
+    val progressPercent: Float? = null,
     val exportResult: ExportResult? = null,
+    val restoreResult: RestoreResult? = null,
     val restoreStatusMessage: String? = null
 )
 
@@ -50,13 +57,35 @@ class BackupRestoreViewModel(
 
     fun exportBackup() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isExporting = true, exportResult = null, restoreStatusMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isExporting = true,
+                    progressStage = "正在生成备份…",
+                    progressDetail = "准备导出数据...",
+                    progressPercent = null,
+                    exportResult = null,
+                    restoreStatusMessage = null
+                )
+            }
             try {
-                val result = backupRestoreManager.exportBackup(_uiState.value.includeDownloadedVideos)
+                val result = backupRestoreManager.exportBackup(_uiState.value.includeDownloadedVideos) { progress ->
+                    _uiState.update {
+                        it.copy(
+                            progressStage = progress.stage,
+                            progressDetail = progress.detail,
+                            progressPercent = progress.percent
+                        )
+                    }
+                }
                 _uiState.update { it.copy(isExporting = false, exportResult = result) }
             } catch (e: Exception) {
                 ZakoLog.e("BackupRestoreViewModel", "Failed to export backup", e)
-                _uiState.update { it.copy(isExporting = false, restoreStatusMessage = "备份导出失败: ${e.message}") }
+                _uiState.update {
+                    it.copy(
+                        isExporting = false,
+                        restoreStatusMessage = "备份导出失败: ${e.message}"
+                    )
+                }
                 ZakoToast.show("备份导出失败: ${e.message}")
             }
         }
@@ -64,40 +93,101 @@ class BackupRestoreViewModel(
 
     fun restoreBackup(uri: Uri) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isRestoring = true, restoreStatusMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isRestoring = true,
+                    progressStage = "正在读取备份文件…",
+                    progressDetail = "准备读取...",
+                    progressPercent = null,
+                    restoreResult = null,
+                    restoreStatusMessage = null
+                )
+            }
             val tempFile = File(context.cacheDir, "temp_restore_file")
             try {
                 if (tempFile.exists()) {
                     try { tempFile.delete() } catch (_: Exception) {}
                 }
                 withContext(Dispatchers.IO) {
+                    val totalBytes = try {
+                        context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                            pfd.statSize
+                        } ?: -1L
+                    } catch (_: Exception) {
+                        -1L
+                    }
+
                     context.contentResolver.openInputStream(uri)?.use { input ->
                         tempFile.outputStream().use { output ->
-                            input.copyTo(output)
+                            val buffer = ByteArray(65536)
+                            var bytesRead: Int
+                            var copiedBytes = 0L
+                            var lastReportTime = 0L
+
+                            while (input.read(buffer).also { bytesRead = it } != -1) {
+                                output.write(buffer, 0, bytesRead)
+                                copiedBytes += bytesRead
+
+                                val now = System.currentTimeMillis()
+                                if (now - lastReportTime > 80) {
+                                    lastReportTime = now
+                                    if (totalBytes > 0) {
+                                        val percent = (copiedBytes.toFloat() / totalBytes).coerceIn(0f, 1f)
+                                        val copiedStr = PublicStorageHelper.formatBytes(copiedBytes)
+                                        val totalStr = PublicStorageHelper.formatBytes(totalBytes)
+                                        _uiState.update {
+                                            it.copy(
+                                                progressStage = "正在读取备份文件…",
+                                                progressDetail = "$copiedStr / $totalStr",
+                                                progressPercent = percent
+                                            )
+                                        }
+                                    } else {
+                                        val copiedStr = PublicStorageHelper.formatBytes(copiedBytes)
+                                        _uiState.update {
+                                            it.copy(
+                                                progressStage = "正在读取备份文件…",
+                                                progressDetail = "已读取 $copiedStr",
+                                                progressPercent = null
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            output.flush()
                         }
                     } ?: throw IOException("无法读取所选备份文件")
                 }
-                val ok = backupRestoreManager.restoreBackup(tempFile)
+
+                val result = backupRestoreManager.restoreBackup(tempFile) { progress ->
+                    _uiState.update {
+                        it.copy(
+                            progressStage = progress.stage,
+                            progressDetail = progress.detail,
+                            progressPercent = progress.percent
+                        )
+                    }
+                }
+
                 _uiState.update {
                     it.copy(
                         isRestoring = false,
-                        restoreStatusMessage = if (ok) "数据恢复成功！" else "恢复失败，文件损坏或未找到有效备份数据"
+                        restoreResult = result,
+                        restoreStatusMessage = if (result.success) "数据恢复成功！" else (result.errorMessage ?: "恢复失败")
                     )
-                }
-                if (ok) {
-                    ZakoToast.show("数据备份已成功恢复")
-                } else {
-                    ZakoToast.show("恢复失败，未找到有效备份数据")
                 }
             } catch (e: Exception) {
                 ZakoLog.e("BackupRestoreViewModel", "Restore error", e)
                 _uiState.update {
                     it.copy(
                         isRestoring = false,
+                        restoreResult = RestoreResult(
+                            success = false,
+                            errorMessage = e.message ?: "未知读取错误"
+                        ),
                         restoreStatusMessage = "恢复失败: ${e.message}"
                     )
                 }
-                ZakoToast.show("恢复失败: ${e.message}")
             } finally {
                 try {
                     if (tempFile.exists()) {
@@ -113,29 +203,45 @@ class BackupRestoreViewModel(
 
     fun restoreBackup(file: File) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isRestoring = true, restoreStatusMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isRestoring = true,
+                    progressStage = "正在准备恢复…",
+                    progressDetail = "读取备份文件",
+                    progressPercent = null,
+                    restoreResult = null,
+                    restoreStatusMessage = null
+                )
+            }
             try {
-                val ok = backupRestoreManager.restoreBackup(file)
+                val result = backupRestoreManager.restoreBackup(file) { progress ->
+                    _uiState.update {
+                        it.copy(
+                            progressStage = progress.stage,
+                            progressDetail = progress.detail,
+                            progressPercent = progress.percent
+                        )
+                    }
+                }
                 _uiState.update {
                     it.copy(
                         isRestoring = false,
-                        restoreStatusMessage = if (ok) "数据恢复成功！" else "恢复失败，文件损坏或未找到有效备份数据"
+                        restoreResult = result,
+                        restoreStatusMessage = if (result.success) "数据恢复成功！" else (result.errorMessage ?: "恢复失败")
                     )
-                }
-                if (ok) {
-                    ZakoToast.show("数据备份已成功恢复")
-                } else {
-                    ZakoToast.show("恢复失败，未找到有效备份数据")
                 }
             } catch (e: Exception) {
                 ZakoLog.e("BackupRestoreViewModel", "Restore error from file", e)
                 _uiState.update {
                     it.copy(
                         isRestoring = false,
+                        restoreResult = RestoreResult(
+                            success = false,
+                            errorMessage = e.message ?: "未知恢复错误"
+                        ),
                         restoreStatusMessage = "恢复失败: ${e.message}"
                     )
                 }
-                ZakoToast.show("恢复失败: ${e.message}")
             } finally {
                 try {
                     if (file.name == "temp_restore_file" && file.exists()) {
@@ -149,7 +255,11 @@ class BackupRestoreViewModel(
         }
     }
 
+    fun dismissRestoreResult() {
+        _uiState.update { it.copy(restoreResult = null) }
+    }
+
     fun clearStatus() {
-        _uiState.update { it.copy(exportResult = null, restoreStatusMessage = null) }
+        _uiState.update { it.copy(exportResult = null, restoreResult = null, restoreStatusMessage = null) }
     }
 }

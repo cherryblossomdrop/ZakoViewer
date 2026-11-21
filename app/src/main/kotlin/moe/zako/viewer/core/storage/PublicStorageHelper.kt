@@ -31,6 +31,13 @@ object PublicStorageHelper {
     /** UI 常驻展示与说明的日志完整保存目录 */
     const val LOGS_DISPLAY_DIR = "Download/$LOGS_SUB_DIR/"
 
+    fun formatBytes(bytes: Long): String {
+        if (bytes <= 0) return "0.00 B"
+        val units = arrayOf("B", "KB", "MB", "GB", "TB")
+        val i = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.size - 1)
+        return String.format(java.util.Locale.getDefault(), "%.2f %s", bytes / Math.pow(1024.0, i.toDouble()), units[i])
+    }
+
     /**
      * 在公共 Download 目录下创建输出流并完成文件导出。
      * Android 10 (API 29) 及以上优先使用 MediaStore.Downloads 写入 Download/<subDir>/<fileName>，

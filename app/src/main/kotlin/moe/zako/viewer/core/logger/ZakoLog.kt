@@ -298,7 +298,7 @@ object ZakoLog {
 
         val exportResult = PublicStorageHelper.createPublicDownloadOutputStream(
             context = context,
-            subDir = "ZakoViewer/Logs",
+            subDir = PublicStorageHelper.LOGS_SUB_DIR,
             fileName = fileName,
             mimeType = "text/plain"
         ) { outputStream ->

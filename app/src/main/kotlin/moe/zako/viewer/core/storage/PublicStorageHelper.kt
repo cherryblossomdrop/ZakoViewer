@@ -21,6 +21,16 @@ data class ExportResult(
 object PublicStorageHelper {
     private const val TAG = "PublicStorageHelper"
 
+    /** 备份保存子目录名 (位于系统 Download 下) */
+    const val BACKUPS_SUB_DIR = "ZakoViewer/Backups"
+    /** 日志保存子目录名 (位于系统 Download 下) */
+    const val LOGS_SUB_DIR = "ZakoViewer/Logs"
+
+    /** UI 常驻展示与说明的备份完整保存目录 */
+    const val BACKUPS_DISPLAY_DIR = "Download/$BACKUPS_SUB_DIR/"
+    /** UI 常驻展示与说明的日志完整保存目录 */
+    const val LOGS_DISPLAY_DIR = "Download/$LOGS_SUB_DIR/"
+
     /**
      * 在公共 Download 目录下创建输出流并完成文件导出。
      * Android 10 (API 29) 及以上优先使用 MediaStore.Downloads 写入 Download/<subDir>/<fileName>，

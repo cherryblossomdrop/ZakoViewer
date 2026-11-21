@@ -115,7 +115,7 @@ class BackupRestoreManager(
 
         val exportResult = PublicStorageHelper.createPublicDownloadOutputStream(
             context = context,
-            subDir = "ZakoViewer/Backups",
+            subDir = PublicStorageHelper.BACKUPS_SUB_DIR,
             fileName = zipFileName,
             mimeType = "application/zip"
         ) { outputStream ->

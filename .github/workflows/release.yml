@@ -16,14 +16,13 @@ permissions:
 
 jobs:
   release:
-    name: Create Source Release
+    name: Create Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: recursive
 
       - name: Determine Release Tag
         id: vars
@@ -35,12 +34,34 @@ jobs:
           fi
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release
+      - name: Generate Release Notes
+        run: |
+          TAG="${{ steps.vars.outputs.tag }}"
+          PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
+          
+          echo "## 更新日志" > release_notes.md
+          echo "" >> release_notes.md
+          
+          if [ -n "$PREV_TAG" ]; then
+            echo "### 变更记录 (${PREV_TAG}...${TAG})" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" "${PREV_TAG}..${TAG}" >> release_notes.md
+          else
+            echo "### 核心特性与变更记录" >> release_notes.md
+            git log -n 5 --pretty=format:"- %s (%h)" "${TAG}" >> release_notes.md
+          fi
+          
+          echo "" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "**完整提交记录**: https://github.com/${{ github.repository }}/commits/${TAG}" >> release_notes.md
+
+      - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
           name: Release ${{ steps.vars.outputs.tag }}
-          generate_release_notes: true
+          body_path: release_notes.md
+          append_body: false
+          generate_release_notes: false
           draft: false
           prerelease: false
 

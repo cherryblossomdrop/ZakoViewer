@@ -34,25 +34,82 @@ jobs:
           fi
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Generate Release Notes
+      - name: Generate Application Release Notes
+        env:
+          TAG: ${{ steps.vars.outputs.tag }}
         run: |
-          TAG="${{ steps.vars.outputs.tag }}"
-          PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
-          
-          echo "## 更新日志" > release_notes.md
-          echo "" >> release_notes.md
-          
-          if [ -n "$PREV_TAG" ]; then
-            echo "### 变更记录 (${PREV_TAG}...${TAG})" >> release_notes.md
-            git log --pretty=format:"- %s (%h)" "${PREV_TAG}..${TAG}" >> release_notes.md
-          else
-            echo "### 核心特性与变更记录" >> release_notes.md
-            git log -n 5 --pretty=format:"- %s (%h)" "${TAG}" >> release_notes.md
-          fi
-          
-          echo "" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "**完整提交记录**: https://github.com/${{ github.repository }}/commits/${TAG}" >> release_notes.md
+          python3 - << 'EOF'
+          import os
+          import subprocess
+          import re
+
+          tag = os.environ.get("TAG", "")
+          repo = os.environ.get("GITHUB_REPOSITORY", "")
+
+          prev_tag = ""
+          try:
+              prev_tag = subprocess.check_output(
+                  ["git", "describe", "--tags", "--abbrev=0", f"{tag}^"],
+                  text=True, stderr=subprocess.DEVNULL
+              ).strip()
+          except Exception:
+              pass
+
+          if prev_tag:
+              range_spec = [f"{prev_tag}..{tag}"]
+          else:
+              range_spec = ["-n", "1", tag]
+
+          # Filter strictly for commits modifying application source code
+          cmd = [
+              "git", "log", *range_spec,
+              "--grep=^docs:", "--grep=^ci:", "--grep=^chore:", "--invert-grep",
+              "--pretty=format:%H%x00%s%x00%b%x1e",
+              "--", "app/src/", "app/build.gradle.kts"
+          ]
+          output = subprocess.check_output(cmd, text=True, errors="replace")
+
+          entries = []
+          for commit_str in output.strip("\x1e\n ").split("\x1e"):
+              if not commit_str.strip():
+                  continue
+              parts = commit_str.split("\x00")
+              if len(parts) >= 2:
+                  subject = parts[1].strip()
+                  body = parts[2].strip() if len(parts) > 2 else ""
+
+                  body_bullets = []
+                  for line in body.splitlines():
+                      line_clean = line.strip()
+                      if line_clean.startswith(("-", "*", "•")):
+                          if not re.search(r'(README|versionCode|AGENTS|GEMINI|规范|代码规模)', line_clean, re.I):
+                              body_bullets.append(line_clean)
+
+                  if body_bullets:
+                      entries.extend(body_bullets)
+                  else:
+                      clean_subject = re.sub(r'^(feat|fix|refactor|style)(\(.*?\))?:\s*', '', subject)
+                      entries.append(f"- {clean_subject}")
+
+          seen = set()
+          deduped_entries = []
+          for e in entries:
+              if e not in seen:
+                  seen.add(e)
+                  deduped_entries.append(e)
+
+          lines = ["## 更新日志", ""]
+          if deduped_entries:
+              lines.extend(deduped_entries)
+          else:
+              lines.append("- 常规性能优化与体验增强")
+
+          lines.append("")
+          lines.append(f"**完整提交记录**: https://github.com/{repo}/commits/{tag}")
+
+          with open("release_notes.md", "w", encoding="utf-8") as f:
+              f.write("\n".join(lines) + "\n")
+          EOF
 
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2

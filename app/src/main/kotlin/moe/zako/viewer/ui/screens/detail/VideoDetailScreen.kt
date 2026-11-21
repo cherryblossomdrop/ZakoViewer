@@ -65,6 +65,7 @@ import moe.zako.viewer.data.source.cosav.CosComment
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.GestureFeedbackOverlays
+import moe.zako.viewer.ui.components.PlayerControlDefaults
 import moe.zako.viewer.ui.components.SpeedBadge
 import moe.zako.viewer.ui.components.VideoCard
 import moe.zako.viewer.ui.components.WavyProgressSlider
@@ -692,8 +693,8 @@ fun DetailEmbeddedPlayer(
                         contentDescription = "解锁屏幕",
                         tint = Color.White,
                         modifier = Modifier
-                            .padding(if (isFullscreen) 14.dp else 8.dp)
-                            .size(if (isFullscreen) 28.dp else 20.dp)
+                            .padding(PlayerControlDefaults.LockContainerPadding)
+                            .size(PlayerControlDefaults.LockIconSize)
                     )
                 }
             }
@@ -730,12 +731,14 @@ fun DetailEmbeddedPlayer(
                                     } else {
                                         onNavigateBack()
                                     }
-                                }
+                                },
+                                modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = if (isFullscreen) "退出全屏" else "返回",
-                                    tint = Color.White
+                                    tint = Color.White,
+                                    modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
                                 )
                             }
 
@@ -747,32 +750,39 @@ fun DetailEmbeddedPlayer(
                                     maxLines = 1,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .padding(horizontal = 8.dp)
+                                        .padding(horizontal = PlayerControlDefaults.ControlSpacing)
                                 )
                             } else {
                                 Spacer(modifier = Modifier.weight(1f))
                             }
 
                             // 画面比例切换 (适应屏幕、填充、16:9、4:3) - 方正圆角画框矢量图标
-                            IconButton(onClick = {
-                                val nextMode = viewModel.cycleAspectRatio()
-                                ZakoToast.show("画面比例: ${nextMode.label}")
-                            }) {
+                            IconButton(
+                                onClick = {
+                                    val nextMode = viewModel.cycleAspectRatio()
+                                    ZakoToast.show("画面比例: ${nextMode.label}")
+                                },
+                                modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
+                            ) {
                                 Icon(
                                     imageVector = ZakoIcons.AspectRatio,
                                     contentDescription = "画面比例 (${playerState.aspectRatio.label})",
                                     tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
                                 )
                             }
 
                             // 更多选项菜单 (⋮)
                             Box {
-                                IconButton(onClick = { viewModel.showMoreMenu(true) }) {
+                                IconButton(
+                                    onClick = { viewModel.showMoreMenu(true) },
+                                    modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.MoreVert,
                                         contentDescription = "更多选项",
-                                        tint = Color.White
+                                        tint = Color.White,
+                                        modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
                                     )
                                 }
 
@@ -877,8 +887,8 @@ fun DetailEmbeddedPlayer(
                             contentDescription = "锁定屏幕",
                             tint = Color.White,
                             modifier = Modifier
-                                .padding(if (isFullscreen) 14.dp else 8.dp)
-                                .size(if (isFullscreen) 28.dp else 20.dp)
+                                .padding(PlayerControlDefaults.LockContainerPadding)
+                                .size(PlayerControlDefaults.LockIconSize)
                         )
                     }
 
@@ -931,17 +941,17 @@ fun DetailEmbeddedPlayer(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(
                                         onClick = { viewModel.togglePlayPause() },
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
                                     ) {
                                         Icon(
                                             imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                             contentDescription = "播放/暂停",
                                             tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(PlayerControlDefaults.ControlSpacing))
 
                                     val displayPosMs = if (isScrubbing) (scrubProgress * playerState.durationMs).toLong() else playerState.currentPositionMs
                                     val displayPosFormatted = moe.zako.viewer.core.player.VideoPlayerState.formatTime(displayPosMs)
@@ -955,13 +965,13 @@ fun DetailEmbeddedPlayer(
 
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(PlayerControlDefaults.ControlSpacing)
                                 ) {
                                     // 播放倍速切换按钮 - 动态倍速矢量徽标
                                     val currentSpeed = if (playerState.isSpeedBoosted) playerState.boostSpeed else playerState.normalSpeed
                                     IconButton(
                                         onClick = { viewModel.showSpeedDialog(true) },
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
                                     ) {
                                         SpeedBadge(
                                             speed = currentSpeed,
@@ -972,13 +982,13 @@ fun DetailEmbeddedPlayer(
                                     // 全屏 / 退出全屏按钮（唯一全屏入口，位于控制栏右下角）
                                     IconButton(
                                         onClick = onToggleFullscreen,
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
                                     ) {
                                         Icon(
                                             imageVector = if (isFullscreen) ZakoIcons.FullscreenExit else ZakoIcons.Fullscreen,
                                             contentDescription = if (isFullscreen) "退出全屏" else "全屏",
                                             tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
                                         )
                                     }
                                 }

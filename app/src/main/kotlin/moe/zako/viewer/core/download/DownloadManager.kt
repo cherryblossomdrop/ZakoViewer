@@ -622,18 +622,30 @@ class DownloadManager private constructor(private val context: Context) {
         // 5. 流式迁移 (64KB 缓冲块)
         var successCount = 0
         val buffer = ByteArray(65536)
+        ZakoLog.i(TAG, "Starting downloads migration to: $newPath. Total files to migrate: ${existingFiles.size}")
 
         for ((idx, pair) in existingFiles.withIndex()) {
             val (entity, srcFile) = pair
             val currentNumber = idx + 1
             onProgress(currentNumber, existingFiles.size, srcFile.name)
+            ZakoLog.i(TAG, "Migrating file [$currentNumber/${existingFiles.size}]: ${srcFile.name} (${srcFile.length()} bytes)")
 
             val destFile = File(targetDir, srcFile.name)
 
             // 若新目录已存在同名且大小一致的文件，直接重用并对齐数据库记录
             if (destFile.exists() && destFile.length() == srcFile.length()) {
                 downloadDao.updateSavePath(entity.videoId, destFile.absolutePath)
-                try { srcFile.delete() } catch (_: Exception) {}
+                val deleted = try {
+                    srcFile.delete()
+                } catch (e: Exception) {
+                    ZakoLog.w(TAG, "Exception deleting source file ${srcFile.absolutePath}: ${e.message}")
+                    false
+                }
+                if (!deleted) {
+                    ZakoLog.w(TAG, "Failed to delete source file after reuse: ${srcFile.absolutePath}")
+                } else {
+                    ZakoLog.i(TAG, "Deleted source file successfully (reused): ${srcFile.absolutePath}")
+                }
                 successCount++
                 continue
             }
@@ -656,14 +668,24 @@ class DownloadManager private constructor(private val context: Context) {
                     if (destFile.exists()) destFile.delete()
                     if (tmpFile.renameTo(destFile)) {
                         downloadDao.updateSavePath(entity.videoId, destFile.absolutePath)
-                        srcFile.delete()
+                        val deleted = try {
+                            srcFile.delete()
+                        } catch (e: Exception) {
+                            ZakoLog.w(TAG, "Exception deleting source file ${srcFile.absolutePath}: ${e.message}")
+                            false
+                        }
+                        if (!deleted) {
+                            ZakoLog.w(TAG, "Failed to delete source file after migration: ${srcFile.absolutePath}")
+                        } else {
+                            ZakoLog.i(TAG, "Deleted source file successfully: ${srcFile.absolutePath}")
+                        }
                         successCount++
                     } else {
                         ZakoLog.e(TAG, "Failed to rename temp file to ${destFile.name}")
                         tmpFile.delete()
                     }
                 } else {
-                    ZakoLog.e(TAG, "Migrated file size mismatch for ${srcFile.name}")
+                    ZakoLog.e(TAG, "Migrated file size mismatch for ${srcFile.name}: expected ${srcFile.length()}, got ${tmpFile.length()}")
                     tmpFile.delete()
                 }
             } catch (e: Exception) {
@@ -671,6 +693,8 @@ class DownloadManager private constructor(private val context: Context) {
                 try { if (tmpFile.exists()) tmpFile.delete() } catch (_: Exception) {}
             }
         }
+
+        ZakoLog.i(TAG, "Migration completed: $successCount/${existingFiles.size} files migrated successfully to $newPath")
 
         // 6. 更新配置并刷新
         settingsRepository.setDownloadPath(newPath)

@@ -52,14 +52,15 @@ object CoverCacheManager {
     /**
      * UI 渲染封面统一入口。
      * 若本地持久化封面存在且有效（>0 字节），优先返回本地 File；
-     * 若本地无缓存且存在有效网络 URL，回退返回网络 URL 并异步触发后台持久化补全；
-     * 若本地与网络均为空，触发深度补全链（跨表/详情接口/本地帧截图）。
+     * 若本地无缓存且存在有效网络 URL，回退返回网络 URL；
+     * 仅当 [autoFetch] 为 true 时，才异步触发后台持久化保存至 covers 目录（仅限收藏夹、下载列表、稍后再看、历史记录 4 个来源触发）。
+     * 首页推荐流、搜索列表等普通视频卡片默认 autoFetch = false，走常规图片缓存（Coil），避免无限制持久化和备份包膨胀。
      */
     fun getCoverModel(
         context: Context,
         videoId: String?,
         fallbackUrl: String?,
-        autoFetch: Boolean = true
+        autoFetch: Boolean = false
     ): Any? {
         val safeId = videoId?.trim() ?: ""
         if (safeId.isNotEmpty() && hasValidCover(context, safeId)) {

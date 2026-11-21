@@ -35,15 +35,7 @@ fun BackupRestoreScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
-            try {
-                val tempFile = File(context.cacheDir, "temp_restore_file")
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    tempFile.outputStream().use { output -> input.copyTo(output) }
-                }
-                viewModel.restoreBackup(tempFile)
-            } catch (e: Exception) {
-                ZakoToast.show("读取备份文件失败: ${e.message}")
-            }
+            viewModel.restoreBackup(uri)
         }
     }
 
@@ -169,7 +161,7 @@ fun BackupRestoreScreen(
                             }
                         }
 
-                        state.exportSuccessFile?.let { file ->
+                        state.exportResult?.let { result ->
                             Spacer(modifier = Modifier.height(12.dp))
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
@@ -178,7 +170,7 @@ fun BackupRestoreScreen(
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Text(
-                                        text = "备份已生成: ${file.name}",
+                                        text = "备份已保存至:\n${result.displayPath}",
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -186,20 +178,17 @@ fun BackupRestoreScreen(
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Button(
                                         onClick = {
-                                            val uri = FileProvider.getUriForFile(
-                                                context,
-                                                "${context.packageName}.fileprovider",
-                                                file
-                                            )
                                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                type = if (file.name.endsWith(".zip")) "application/zip" else "application/json"
-                                                putExtra(Intent.EXTRA_STREAM, uri)
+                                                type = "application/zip"
+                                                putExtra(Intent.EXTRA_STREAM, result.uri)
                                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                             }
-                                            context.startActivity(Intent.createChooser(shareIntent, "发送/保存备份文件"))
+                                            context.startActivity(Intent.createChooser(shareIntent, "分享备份文件"))
                                         }
                                     ) {
-                                        Text("分享或发送备份文件")
+                                        Icon(imageVector = Icons.Default.Share, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("分享备份文件")
                                     }
                                 }
                             }

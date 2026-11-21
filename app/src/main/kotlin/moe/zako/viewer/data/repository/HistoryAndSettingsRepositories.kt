@@ -12,6 +12,8 @@ import moe.zako.viewer.data.local.dao.WatchLaterDao
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.data.local.entities.SearchHistoryEntity
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
+import moe.zako.viewer.ZakoApplication
+import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.WatchLaterEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -51,6 +53,9 @@ class HistoryRepository(
                 totalDurationMs = totalDurationMs
             )
         )
+        try {
+            CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, coverUrl)
+        } catch (_: Exception) {}
     }
 
     suspend fun deleteHistory(videoId: String) = watchHistoryDao.deleteByVideoId(videoId)
@@ -96,6 +101,9 @@ class HistoryRepository(
                 isVip = isVip
             )
         )
+        try {
+            CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, coverUrl)
+        } catch (_: Exception) {}
     }
 
     suspend fun removeFromWatchLater(videoId: String) = watchLaterDao.deleteByVideoId(videoId)

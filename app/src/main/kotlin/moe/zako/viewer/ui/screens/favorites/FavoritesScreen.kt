@@ -376,7 +376,7 @@ fun FavoritesScreen(
                                     .clipToBounds()
                             ) {
                                 AsyncImage(
-                                    model = CoverCacheManager.getCoverModel(LocalContext.current, item.videoId, item.coverUrl),
+                                    model = CoverCacheManager.getCoverModel(LocalContext.current, item.videoId, item.coverUrl, autoFetch = true),
                                     contentDescription = item.title,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier

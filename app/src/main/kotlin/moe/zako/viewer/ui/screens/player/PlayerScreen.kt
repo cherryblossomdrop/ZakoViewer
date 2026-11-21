@@ -152,35 +152,34 @@ fun PlayerScreen(
     ) {
         // 1. MPV SurfaceView Core
         if (!isExiting) {
-            AndroidView(
-                factory = { ctx ->
-                    MPVView(ctx).apply {
-                        setZOrderMediaOverlay(true)
-                        onSurfaceCreatedListener = { holder ->
-                            viewModel.player.attachSurface(holder.surface, holder)
+            key(state.playerState.engine) {
+                AndroidView(
+                    factory = { ctx ->
+                        MPVView(ctx).apply {
+                            setZOrderMediaOverlay(true)
+                            onSurfaceCreatedListener = { holder ->
+                                viewModel.player.attachSurface(holder.surface, holder)
+                            }
+                            onSurfaceDestroyedListener = {
+                                viewModel.player.detachSurface()
+                            }
+                            onSurfaceChangedListener = { _, width, height ->
+                                viewModel.player.setSurfaceSize(width, height)
+                            }
                         }
-                        onSurfaceDestroyedListener = {
-                            viewModel.player.detachSurface()
-                        }
-                        onSurfaceChangedListener = { _, width, height ->
-                            viewModel.player.setSurfaceSize(width, height)
-                        }
-                        if (holder.surface.isValid) {
-                            viewModel.player.attachSurface(holder.surface, holder)
-                        }
-                    }
-                },
-                update = { view ->
-                    view.aspectRatioMode = state.playerState.aspectRatio
-                    view.videoWidth = state.playerState.videoWidth
-                    view.videoHeight = state.playerState.videoHeight
-                },
-                onRelease = { view ->
-                    view.visibility = android.view.View.GONE
-                    viewModel.player.detachSurface()
-                },
-                modifier = Modifier.align(Alignment.Center)
-            )
+                    },
+                    update = { view ->
+                        view.aspectRatioMode = state.playerState.aspectRatio
+                        view.videoWidth = state.playerState.videoWidth
+                        view.videoHeight = state.playerState.videoHeight
+                    },
+                    onRelease = { view ->
+                        view.visibility = android.view.View.GONE
+                        viewModel.player.detachSurface()
+                    },
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
         }
 
         // 2. Visual Animated Gesture Feedback HUD Overlays

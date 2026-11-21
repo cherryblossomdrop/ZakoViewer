@@ -331,9 +331,9 @@ Java_moe_zako_viewer_core_player_MPVLib_create(JNIEnv *env, jobject thiz, jobjec
     }
 
     if (g_mpv) {
+        mpv_set_property_string(g_mpv, "vo", "null");
         int64_t wid = 0;
         mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &wid);
-        mpv_set_property_string(g_mpv, "vo", "null");
         mpv_terminate_destroy(g_mpv);
         g_mpv = nullptr;
     }
@@ -345,7 +345,10 @@ Java_moe_zako_viewer_core_player_MPVLib_create(JNIEnv *env, jobject thiz, jobjec
     g_mpv = mpv_create();
     LOGI("mpv_create instance: %p", g_mpv);
     if (g_mpv) {
-        mpv_request_log_messages(g_mpv, "v");
+        // Set vo="null" during initialization before surface is attached to avoid "Missing surface pointer"
+        mpv_set_option_string(g_mpv, "vo", "null");
+        mpv_set_option_string(g_mpv, "msg-level", "all=warn");
+        mpv_request_log_messages(g_mpv, "warn");
     }
 }
 
@@ -369,9 +372,10 @@ Java_moe_zako_viewer_core_player_MPVLib_destroy(JNIEnv *env, jobject thiz) {
 
     std::lock_guard<std::mutex> lock(g_mpv_mutex);
     if (g_mpv) {
+        // First set vo="null", then wid=0, then destroy
+        mpv_set_property_string(g_mpv, "vo", "null");
         int64_t wid = 0;
         mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &wid);
-        mpv_set_property_string(g_mpv, "vo", "null");
         mpv_terminate_destroy(g_mpv);
         g_mpv = nullptr;
     }
@@ -387,7 +391,18 @@ Java_moe_zako_viewer_core_player_MPVLib_attachSurface(JNIEnv *env, jobject thiz,
     LOGI("MPVLib native attachSurface invoked");
     if (!surface) return;
 
+    // Deduplication: if surface is already attached, do not recreate GlobalRef or re-set wid
+    if (g_surface && env->IsSameObject(g_surface, surface)) {
+        LOGI("attachSurface ignored: surface is already attached");
+        return;
+    }
+
     if (g_surface) {
+        if (g_mpv) {
+            mpv_set_property_string(g_mpv, "vo", "null");
+            int64_t zero_wid = 0;
+            mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &zero_wid);
+        }
         env->DeleteGlobalRef(g_surface);
         g_surface = nullptr;
     }
@@ -408,9 +423,10 @@ Java_moe_zako_viewer_core_player_MPVLib_detachSurface(JNIEnv *env, jobject thiz)
     std::lock_guard<std::mutex> lock(g_mpv_mutex);
     LOGI("MPVLib native detachSurface invoked");
     if (g_mpv) {
+        // Order: First set vo="null" so VO tears down EGL surface cleanly, then set wid=0
+        mpv_set_property_string(g_mpv, "vo", "null");
         int64_t wid = 0;
         mpv_set_property(g_mpv, "wid", MPV_FORMAT_INT64, &wid);
-        mpv_set_property_string(g_mpv, "vo", "null");
     }
     if (g_surface) {
         env->DeleteGlobalRef(g_surface);

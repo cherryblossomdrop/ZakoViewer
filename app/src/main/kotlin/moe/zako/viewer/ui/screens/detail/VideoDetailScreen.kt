@@ -530,31 +530,30 @@ fun DetailEmbeddedPlayer(
             )
     ) {
         // 1. MPV SurfaceView: 保持在稳定的组合树最底层节点中，绝不被条件分支卸载或替换
-        AndroidView(
-            factory = { ctx ->
-                MPVView(ctx).apply {
-                    setZOrderMediaOverlay(true)
-                    onSurfaceCreatedListener = { holder ->
-                        viewModel.player.attachSurface(holder.surface, holder)
+        key(playerState.engine) {
+            AndroidView(
+                factory = { ctx ->
+                    MPVView(ctx).apply {
+                        setZOrderMediaOverlay(true)
+                        onSurfaceCreatedListener = { holder ->
+                            viewModel.player.attachSurface(holder.surface, holder)
+                        }
+                        onSurfaceDestroyedListener = {
+                            viewModel.player.detachSurface()
+                        }
+                        onSurfaceChangedListener = { _, width, height ->
+                            viewModel.player.setSurfaceSize(width, height)
+                        }
                     }
-                    onSurfaceDestroyedListener = {
-                        viewModel.player.detachSurface()
-                    }
-                    onSurfaceChangedListener = { _, width, height ->
-                        viewModel.player.setSurfaceSize(width, height)
-                    }
-                    if (holder.surface.isValid) {
-                        viewModel.player.attachSurface(holder.surface, holder)
-                    }
-                }
-            },
-            update = { view ->
-                view.aspectRatioMode = playerState.aspectRatio
-                view.videoWidth = playerState.videoWidth
-                view.videoHeight = playerState.videoHeight
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+                },
+                update = { view ->
+                    view.aspectRatioMode = playerState.aspectRatio
+                    view.videoWidth = playerState.videoWidth
+                    view.videoHeight = playerState.videoHeight
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         // 2. 未播放封面图覆盖层 (Overlay): 覆盖在 AndroidView 上方，点击直接起播，不卸载底层播放器
         if (!state.isInlinePlaying) {

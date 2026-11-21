@@ -37,10 +37,16 @@ class MultiNodeStreamBuffer(
         @Volatile
         private var instance: MultiNodeStreamBuffer? = null
 
+        fun isInitialized(): Boolean = instance != null
+
         fun getInstance(context: Context): MultiNodeStreamBuffer {
             return instance ?: synchronized(this) {
                 instance ?: MultiNodeStreamBuffer(context.applicationContext).also { instance = it }
             }
+        }
+
+        fun stopIfActive(videoId: String? = null) {
+            instance?.stopBuffering(videoId)
         }
     }
 
@@ -86,11 +92,9 @@ class MultiNodeStreamBuffer(
     // Callbacks
     var onBufferProgress: ((bufferedMs: Long, totalDurationMs: Long, percent: Float) -> Unit)? = null
 
-    init {
-        startLocalProxyServer()
-    }
-
-    private fun startLocalProxyServer() {
+    @Synchronized
+    private fun ensureProxyServerStarted() {
+        if (isServerRunning.get() && serverSocket?.isClosed == false) return
         try {
             val server = ServerSocket(0)
             serverSocket = server
@@ -450,6 +454,9 @@ class MultiNodeStreamBuffer(
         if (!videoDir.exists()) videoDir.mkdirs()
 
         val isHls = primaryUrl.contains(".m3u8", ignoreCase = true)
+        if (isHls) {
+            ensureProxyServerStarted()
+        }
 
         if (!isHls || proxyPort == 0) {
             // Return direct URL if proxy unavailable or not HLS, but cache video metadata for streaming

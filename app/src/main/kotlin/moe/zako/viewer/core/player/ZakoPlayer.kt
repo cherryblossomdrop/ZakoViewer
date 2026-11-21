@@ -392,6 +392,9 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
 
     fun detachSurface() {
         synchronized(surfaceLock) {
+            if (attachedSurface == null && !isSurfaceAttachedToMpv) {
+                return
+            }
             val wasBound = isSurfaceAttachedToMpv
             ZakoLog.i(TAG, "detachSurface: detaching surface, wasBoundToMpv=$wasBound, isMpvInitialized=${MPVLib.isInitialized}")
             attachedSurface = null

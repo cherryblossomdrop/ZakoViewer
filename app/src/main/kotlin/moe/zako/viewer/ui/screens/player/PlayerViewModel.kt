@@ -25,6 +25,11 @@ import moe.zako.viewer.data.source.cosav.CosApiClient
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CancellationException
 import java.io.File
 
 data class PlayerUiState(
@@ -72,6 +77,10 @@ class PlayerViewModel(
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    private var playbackJob: Job? = null
+    private var speedTestJob: Job? = null
+    @Volatile private var isExited = false
 
     init {
         observePlayerState()
@@ -151,7 +160,8 @@ class PlayerViewModel(
     }
 
     private fun loadAndStartPlayback() {
-        viewModelScope.launch {
+        playbackJob?.cancel()
+        playbackJob = viewModelScope.launch {
             try {
                 // 1. 优先检查本地是否存在已下载的完整视频文件
                 var localFile: File? = if (initialLocalPath.isNotBlank()) File(initialLocalPath) else null
@@ -168,32 +178,47 @@ class PlayerViewModel(
 
                 if (localFile != null && localFile.exists() && localFile.length() > 0L) {
                     val title = downloadRecord?.title ?: "本地视频"
+                    val cover = downloadRecord?.coverUrl ?: ""
                     ZakoLog.i(TAG, "Playing local downloaded video directly: ${localFile.absolutePath} for $videoId")
                     _uiState.update {
                         it.copy(
                             video = CosVideoItem(
                                 id = videoId,
                                 title = title,
-                                cover = downloadRecord?.coverUrl,
-                                photo = downloadRecord?.coverUrl
+                                cover = cover,
+                                photo = cover
                             )
                         )
+                    }
+
+                    // 查询历史播放进度以支持续播
+                    val existingHistory = historyRepository.getHistory(videoId)
+                    val resumePos = if (existingHistory != null && existingHistory.playbackPositionMs > 1000L &&
+                        (existingHistory.totalDurationMs <= 0L || existingHistory.playbackPositionMs < existingHistory.totalDurationMs - 3000L)) {
+                        existingHistory.playbackPositionMs
+                    } else {
+                        0L
                     }
 
                     // 记录历史
                     historyRepository.recordWatch(
                         videoId = videoId,
                         title = title,
-                        coverUrl = downloadRecord?.coverUrl ?: "",
+                        coverUrl = cover,
                         duration = "",
-                        isVip = false
+                        isVip = false,
+                        positionMs = resumePos,
+                        totalDurationMs = existingHistory?.totalDurationMs ?: 0L
                     )
 
-                    // 强制直接加载本地文件播放，严禁请求在线视频流地址
+                    if (isExited || !isActive) return@launch
+
+                    // 强制直接加载本地文件播放，恢复历史进度
                     player.loadVideo(
                         url = localFile.absolutePath,
                         title = title,
-                        headers = emptyMap()
+                        headers = emptyMap(),
+                        resumePos = resumePos
                     )
                     return@launch
                 }
@@ -212,9 +237,23 @@ class PlayerViewModel(
                         val isMpv = player.state.value.engine == PlayerEngine.MPV ||
                                 (player.state.value.engine == PlayerEngine.AUTO && moe.zako.viewer.core.player.MPVLib.isReady())
 
+                        // 自动选线：若有多条线路并发测速选出最快节点
+                        val targetNode = if (lines.size > 1) {
+                            cdnSmartRouter.autoSelectFastestNode(lines)
+                        } else {
+                            cdnSmartRouter.initializeNodes(lines)
+                            cdnSmartRouter.selectedNode.value ?: CdnNode(0, "线路 1", lines.first())
+                        }
+
+                        // 检查测速期间是否已退出或被取消
+                        if (isExited || !isActive) {
+                            ZakoLog.i(TAG, "Playback aborted: page exited during CDN speed test")
+                            return@launch
+                        }
+
                         val streamUrl = if (isMpv) {
-                            ZakoLog.i(TAG, "libmpv is ready, directly streaming from CDN")
-                            lines.first()
+                            ZakoLog.i(TAG, "libmpv is ready, directly streaming from selected CDN node: ${targetNode.name} (${targetNode.url})")
+                            targetNode.url
                         } else {
                             ZakoLog.i(TAG, "Initializing multi-node streaming buffer on ${lines.size} CDN nodes")
                             val streamBuffer = MultiNodeStreamBuffer.getInstance(player.context)
@@ -223,23 +262,41 @@ class PlayerViewModel(
                             }
                             streamBuffer.startBuffering(
                                 videoId = vid.id,
-                                cdnUrls = lines,
+                                cdnUrls = listOf(targetNode.url) + lines.filter { it != targetNode.url },
                                 headers = headers
                             )
                         }
 
-                        // Select best node for fallback / display metadata
-                        cdnSmartRouter.autoSelectFastestNode(lines)
+                        val existingHistory = historyRepository.getHistory(vid.id)
+                        val resumePos = if (existingHistory != null && existingHistory.playbackPositionMs > 1000L &&
+                            (existingHistory.totalDurationMs <= 0L || existingHistory.playbackPositionMs < existingHistory.totalDurationMs - 3000L)) {
+                            existingHistory.playbackPositionMs
+                        } else {
+                            0L
+                        }
+
+                        historyRepository.recordWatch(
+                            videoId = vid.id,
+                            title = vid.title,
+                            coverUrl = vid.cover ?: "",
+                            positionMs = resumePos,
+                            totalDurationMs = existingHistory?.totalDurationMs ?: 0L
+                        )
+
+                        if (isExited || !isActive) return@launch
 
                         player.loadVideo(
                             url = streamUrl,
                             title = vid.title,
-                            headers = headers
+                            headers = headers,
+                            resumePos = resumePos
                         )
                     }
                 }
             } catch (e: Exception) {
-                ZakoLog.e(TAG, "Error starting playback for $videoId", e)
+                if (e !is CancellationException) {
+                    ZakoLog.e(TAG, "Error starting playback for $videoId", e)
+                }
             }
         }
     }
@@ -508,11 +565,15 @@ class PlayerViewModel(
 
     // 4. 对 CDN 节点进行测速
     fun triggerCdnSpeedTest() {
-        viewModelScope.launch {
+        speedTestJob?.cancel()
+        speedTestJob = viewModelScope.launch {
             _uiState.update { it.copy(showMoreMenu = false) }
             val lines = _uiState.value.video?.allVideoLines ?: emptyList()
             if (lines.isNotEmpty()) {
-                cdnSmartRouter.autoSelectFastestNode(lines)
+                val fastest = cdnSmartRouter.autoSelectFastestNode(lines)
+                if (isActive && !isExited) {
+                    selectCdnNode(fastest)
+                }
             }
         }
     }
@@ -540,9 +601,47 @@ class PlayerViewModel(
         _uiState.update { it.copy(showCdnDialog = false) }
     }
 
+    fun savePlaybackProgress() {
+        val pos = player.state.value.currentPositionMs
+        val dur = player.state.value.durationMs
+        val vid = _uiState.value.video
+        val title = vid?.title ?: ""
+        val cover = vid?.cover ?: ""
+        if (pos > 0L) {
+            try {
+                runBlocking(Dispatchers.IO) {
+                    historyRepository.recordWatch(
+                        videoId = videoId,
+                        title = title,
+                        coverUrl = cover,
+                        positionMs = pos,
+                        totalDurationMs = dur
+                    )
+                }
+                ZakoLog.i(TAG, "Saved playback progress for $videoId: ${pos}ms / ${dur}ms")
+            } catch (e: Exception) {
+                ZakoLog.w(TAG, "Failed to save playback progress for $videoId", e)
+            }
+        }
+    }
+
+    fun onExit() {
+        if (isExited) return
+        isExited = true
+        savePlaybackProgress()
+        playbackJob?.cancel()
+        speedTestJob?.cancel()
+        cdnSmartRouter.cancelTesting()
+        try {
+            player.pause()
+            player.detachSurface()
+        } catch (_: Exception) {}
+        MultiNodeStreamBuffer.stopIfActive(videoId)
+    }
+
     override fun onCleared() {
         super.onCleared()
-        MultiNodeStreamBuffer.getInstance(player.context).stopBuffering(videoId)
+        onExit()
         player.release()
     }
 }

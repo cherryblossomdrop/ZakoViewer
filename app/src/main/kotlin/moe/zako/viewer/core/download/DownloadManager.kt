@@ -50,6 +50,108 @@ class DownloadManager private constructor(private val context: Context) {
         return CoverCacheManager.getCoverFile(context, videoId)
     }
 
+    data class LocalVideoInfo(
+        val file: File,
+        val title: String,
+        val coverUrl: String
+    )
+
+    /**
+     * 统一检测并校验本地是否存在对应 videoId 的完整已下载视频：
+     * 1. 优先查校验 candidatePath；
+     * 2. 查询 downloads 表中状态为 COMPLETED 的记录并核验文件非空可读；
+     * 3. 若失效或未记录，扫描各下载目录寻找并回写更新数据库；
+     * 4. 若彻底丢失，更新数据库状态避免误判，返回 null。
+     */
+    suspend fun findLocalCompletedVideo(videoId: String, candidatePath: String? = null): LocalVideoInfo? = withContext(Dispatchers.IO) {
+        if (videoId.isBlank()) return@withContext null
+
+        // 1. 若候选路径非空且文件真实存在可读
+        if (!candidatePath.isNullOrBlank()) {
+            try {
+                val f = File(candidatePath)
+                if (f.exists() && f.isFile && f.canRead() && f.length() > 0L) {
+                    val record = downloadDao.getDownloadByVideoId(videoId)
+                    return@withContext LocalVideoInfo(
+                        file = f,
+                        title = record?.title ?: f.nameWithoutExtension,
+                        coverUrl = record?.coverUrl ?: ""
+                    )
+                }
+            } catch (_: Exception) {}
+        }
+
+        // 2. 检查数据库 COMPLETED 记录
+        val record = downloadDao.getDownloadByVideoId(videoId)
+        if (record != null && record.status == DownloadEntity.STATUS_COMPLETED) {
+            val file = File(record.savePath)
+            if (file.exists() && file.isFile && file.canRead() && file.length() > 0L) {
+                return@withContext LocalVideoInfo(
+                    file = file,
+                    title = record.title,
+                    coverUrl = record.coverUrl
+                )
+            } else {
+                ZakoLog.w(TAG, "Record exists for $videoId with status COMPLETED, but file missing or empty at: ${record.savePath}")
+            }
+        }
+
+        // 3. 扫描各下载目录挽救寻找
+        val targetDir = getDownloadDir()
+        val appDir = File(context.getExternalFilesDir(null), "downloads")
+        val dirsToScan = listOfNotNull(targetDir, appDir).distinct()
+
+        for (dir in dirsToScan) {
+            if (!dir.exists() || !dir.isDirectory) continue
+            val files = dir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4", ignoreCase = true) } ?: emptyList()
+            val matchedFile = files.firstOrNull { f ->
+                val fn = f.name
+                val parsedId = if (fn.contains("-")) {
+                    fn.substringBeforeLast(".mp4").substringAfterLast("-").trim()
+                } else {
+                    fn.substringBeforeLast(".mp4").trim()
+                }
+                parsedId.equals(videoId, ignoreCase = true) || fn.contains(videoId)
+            }
+
+            if (matchedFile != null && matchedFile.canRead() && matchedFile.length() > 0L) {
+                val title = record?.title ?: matchedFile.nameWithoutExtension
+                val cover = record?.coverUrl ?: ""
+                val updated = (record ?: DownloadEntity(
+                    videoId = videoId,
+                    title = title,
+                    coverUrl = cover,
+                    savePath = matchedFile.absolutePath,
+                    totalBytes = matchedFile.length(),
+                    downloadedBytes = matchedFile.length(),
+                    status = DownloadEntity.STATUS_COMPLETED,
+                    createdAt = matchedFile.lastModified(),
+                    completedAt = matchedFile.lastModified()
+                )).copy(
+                    savePath = matchedFile.absolutePath,
+                    status = DownloadEntity.STATUS_COMPLETED,
+                    totalBytes = matchedFile.length(),
+                    downloadedBytes = matchedFile.length()
+                )
+                downloadDao.insertOrUpdate(updated)
+                ZakoLog.i(TAG, "Found local video in directory scan for $videoId: ${matchedFile.absolutePath}, updated database.")
+                return@withContext LocalVideoInfo(
+                    file = matchedFile,
+                    title = updated.title,
+                    coverUrl = updated.coverUrl
+                )
+            }
+        }
+
+        // 4. 若最终未找到有效文件，但数据库仍标为 COMPLETED，则标记为 FAILED 防止持续误判
+        if (record != null && record.status == DownloadEntity.STATUS_COMPLETED) {
+            ZakoLog.w(TAG, "Local video file for $videoId not found in any download dirs, updating COMPLETED state to FAILED.")
+            downloadDao.insertOrUpdate(record.copy(status = DownloadEntity.STATUS_FAILED))
+        }
+
+        null
+    }
+
     suspend fun cacheCoverLocally(videoId: String, sourceUrl: String): String = withContext(Dispatchers.IO) {
         if (sourceUrl.isEmpty()) return@withContext ""
         val coverFile = getCoverFile(videoId)

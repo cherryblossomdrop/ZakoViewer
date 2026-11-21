@@ -28,6 +28,8 @@ data class SettingsUiState(
     val savedCustomThemes: List<String> = emptyList(),
     val isLongPressShareUnlocked: Boolean = false,
     val isLongPressShareEnabled: Boolean = false,
+    val autoSelectCdn: Boolean = true,
+    val defaultCdnIndex: Int = 0,
     val showMigrationDialog: Boolean = false,
     val pendingNewDownloadPath: String = "",
     val filesToMigrateCount: Int = 0,
@@ -61,7 +63,9 @@ class SettingsViewModel(
                     settingsRepository.coverBlurFlow,
                     settingsRepository.appIconFollowThemeFlow,
                     settingsRepository.longPressShareUnlockedFlow,
-                    settingsRepository.longPressShareEnabledFlow
+                    settingsRepository.longPressShareEnabledFlow,
+                    settingsRepository.autoSelectCdnFlow,
+                    settingsRepository.defaultCdnIndexFlow
                 )
             ) { args: Array<Any> ->
                 @Suppress("UNCHECKED_CAST")
@@ -79,6 +83,8 @@ class SettingsViewModel(
                     appIconFollowTheme = args[10] as Boolean,
                     isLongPressShareUnlocked = args[11] as Boolean,
                     isLongPressShareEnabled = args[12] as Boolean,
+                    autoSelectCdn = args[13] as Boolean,
+                    defaultCdnIndex = args[14] as Int,
                     cacheSizeFormatted = _uiState.value.cacheSizeFormatted
                 )
             }.collect { state ->
@@ -137,6 +143,14 @@ class SettingsViewModel(
 
     fun setLongPressShareEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setLongPressShareEnabled(enabled) }
+    }
+
+    fun setAutoSelectCdn(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAutoSelectCdn(enabled) }
+    }
+
+    fun setDefaultCdnIndex(index: Int) {
+        viewModelScope.launch { settingsRepository.setDefaultCdnIndex(index) }
     }
 
     fun requestChangeDownloadPath(newPath: String, currentDefaultPath: String) {

@@ -237,13 +237,33 @@ fun PlayerScreen(
                             Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = Color.White)
                         }
 
-                        Text(
-                            text = state.video?.title ?: "",
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                        )
+                        ) {
+                            Text(
+                                text = state.video?.title ?: "",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            if (state.isLocalPlayback) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
+                                ) {
+                                    Text(
+                                        text = "本地",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
 
                         // 画面比例切换 (适应屏幕、填充、16:9、4:3) - 方正圆角画框矢量图标
                         IconButton(onClick = {
@@ -269,7 +289,7 @@ fun PlayerScreen(
                                 Icon(imageVector = Icons.Default.MoreVert, contentDescription = "更多选项", tint = Color.White)
                             }
 
-                            // 5 项功能菜单
+                            // 功能菜单
                             DropdownMenu(
                                 expanded = state.showMoreMenu,
                                 onDismissRequest = { viewModel.showMoreMenu(false) }
@@ -298,24 +318,14 @@ fun PlayerScreen(
                                     onClick = { viewModel.openWithExternalPlayer(context) }
                                 )
 
-                                // 4. 对 CDN 节点进行测速
-                                DropdownMenuItem(
-                                    text = { Text(if (state.isCdnTesting) "测速中..." else "对 CDN 节点进行测速") },
-                                    leadingIcon = { Icon(imageVector = Icons.Rounded.NetworkCheck, contentDescription = null) },
-                                    onClick = {
-                                        viewModel.triggerCdnSpeedTest()
-                                        ZakoToast.show("正在并发测试全部 CDN 节点速率与延迟")
-                                    }
-                                )
-
-                                // 5. 选择 CDN 节点播放
+                                // 4. 选择 CDN 节点播放
                                 DropdownMenuItem(
                                     text = { Text("选择 CDN 节点播放") },
                                     leadingIcon = { Icon(imageVector = Icons.Default.AltRoute, contentDescription = null) },
                                     onClick = { viewModel.showSelectCdnDialog() }
                                 )
 
-                                // 6. 切换播放内核 (系统 / MPV)
+                                // 5. 切换播放内核 (系统 / MPV)
                                 DropdownMenuItem(
                                     text = {
                                         Column {
@@ -470,15 +480,27 @@ fun PlayerScreen(
         }
     }
 
-    // Modal Sheet / Dialog: 选择 CDN 节点播放 (若已执行测速，实时标注对应结果)
+    // Modal Sheet / Dialog: 选择 CDN 节点播放 (打开即自动并发测速并展示实时指标，测速完成后自动优选)
     if (state.showCdnDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissCdnDialog() },
-            title = { Text("选择 CDN 播放节点") },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("选择 CDN 播放节点")
+                    if (state.isCdnTesting) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            },
             text = {
                 Column {
                     Text(
-                        text = "选择最流畅的视频流媒体镜像节点（已实时标注测速结果）：",
+                        text = if (state.isCdnTesting) "正在并发对所有线路测速，完成后将自动切至最优节点..." else "已测速完成并按质量排序，点击任意节点可手动切换：",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -486,7 +508,7 @@ fun PlayerScreen(
 
                     LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                         items(state.cdnNodes) { node ->
-                            val isCurrent = node.url == state.currentCdnNode?.url
+                            val isCurrent = !state.isLocalPlayback && node.url == state.currentCdnNode?.url
                             ListItem(
                                 headlineContent = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -513,7 +535,7 @@ fun PlayerScreen(
                                 },
                                 modifier = Modifier.clickable { viewModel.selectCdnNode(node) }
                             )
-                            Divider()
+                            HorizontalDivider()
                         }
                     }
                 }

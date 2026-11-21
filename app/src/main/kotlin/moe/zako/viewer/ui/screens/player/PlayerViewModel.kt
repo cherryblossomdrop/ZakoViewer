@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import moe.zako.viewer.core.cdn.CdnNode
 import moe.zako.viewer.core.cdn.CdnSmartRouter
+import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.core.external.ExternalLauncher
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.core.player.AspectRatioMode
@@ -23,6 +24,7 @@ import moe.zako.viewer.data.repository.HistoryRepository
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.data.source.cosav.CosApiClient
 import moe.zako.viewer.data.source.cosav.CosVideoItem
+import moe.zako.viewer.ui.components.ZakoToast
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -38,6 +40,7 @@ data class PlayerUiState(
     val cdnNodes: List<CdnNode> = emptyList(),
     val currentCdnNode: CdnNode? = null,
     val isCdnTesting: Boolean = false,
+    val isLocalPlayback: Boolean = false,
     val showControls: Boolean = true,
     val showMoreMenu: Boolean = false,
     val showCdnDialog: Boolean = false,
@@ -69,7 +72,8 @@ class PlayerViewModel(
     private val favoriteRepository: FavoriteRepository,
     private val historyRepository: HistoryRepository,
     private val settingsRepository: SettingsRepository,
-    private val downloadDao: DownloadDao? = null
+    private val downloadDao: DownloadDao? = null,
+    private val downloadManager: DownloadManager = DownloadManager.getInstance(player.context)
 ) : ViewModel() {
     companion object {
         private const val TAG = "PlayerViewModel"
@@ -80,6 +84,7 @@ class PlayerViewModel(
 
     private var playbackJob: Job? = null
     private var speedTestJob: Job? = null
+    private var userManuallySelectedCdn = false
     @Volatile private var isExited = false
 
     init {
@@ -163,35 +168,16 @@ class PlayerViewModel(
         playbackJob?.cancel()
         playbackJob = viewModelScope.launch {
             try {
-                // 1. 优先检查本地是否存在已下载的完整视频文件
-                var localFile: File? = if (initialLocalPath.isNotBlank()) File(initialLocalPath) else null
-                val downloadRecord = downloadDao?.getDownloadByVideoId(videoId)
+                // 1. 优先检测本地是否已有完整已下载视频（统一检测与校验）
+                val localInfo = downloadManager.findLocalCompletedVideo(videoId, initialLocalPath)
 
-                if ((localFile == null || !localFile.exists() || localFile.length() == 0L) && downloadRecord != null) {
-                    if (downloadRecord.status == DownloadEntity.STATUS_COMPLETED) {
-                        val recordFile = File(downloadRecord.savePath)
-                        if (recordFile.exists() && recordFile.length() > 0L) {
-                            localFile = recordFile
-                        }
-                    }
-                }
-
-                if (localFile != null && localFile.exists() && localFile.length() > 0L) {
-                    val title = downloadRecord?.title ?: "本地视频"
-                    val cover = downloadRecord?.coverUrl ?: ""
+                if (localInfo != null) {
+                    val localFile = localInfo.file
+                    val title = localInfo.title
+                    val localCover = localInfo.coverUrl
                     ZakoLog.i(TAG, "Playing local downloaded video directly: ${localFile.absolutePath} for $videoId")
-                    _uiState.update {
-                        it.copy(
-                            video = CosVideoItem(
-                                id = videoId,
-                                title = title,
-                                cover = cover,
-                                photo = cover
-                            )
-                        )
-                    }
 
-                    // 查询历史播放进度以支持续播
+                    // 读取历史播放进度
                     val existingHistory = historyRepository.getHistory(videoId)
                     val resumePos = if (existingHistory != null && existingHistory.playbackPositionMs > 1000L &&
                         (existingHistory.totalDurationMs <= 0L || existingHistory.playbackPositionMs < existingHistory.totalDurationMs - 3000L)) {
@@ -200,11 +186,32 @@ class PlayerViewModel(
                         0L
                     }
 
+                    // 保护历史网络封面：若已有历史网络封面则优先保留，避免被本地路径覆盖
+                    val preservedCover = if (existingHistory?.coverUrl?.startsWith("http", ignoreCase = true) == true) {
+                        existingHistory.coverUrl
+                    } else if (localCover.startsWith("http", ignoreCase = true)) {
+                        localCover
+                    } else {
+                        ""
+                    }
+
+                    _uiState.update {
+                        it.copy(
+                            isLocalPlayback = true,
+                            video = CosVideoItem(
+                                id = videoId,
+                                title = title,
+                                cover = preservedCover,
+                                photo = preservedCover
+                            )
+                        )
+                    }
+
                     // 记录历史
                     historyRepository.recordWatch(
                         videoId = videoId,
                         title = title,
-                        coverUrl = cover,
+                        coverUrl = preservedCover,
                         duration = "",
                         isVip = false,
                         positionMs = resumePos,
@@ -213,17 +220,39 @@ class PlayerViewModel(
 
                     if (isExited || !isActive) return@launch
 
-                    // 强制直接加载本地文件播放，恢复历史进度
+                    // 直接起播本地文件，跳过 CDN 测速与本地流代理
                     player.loadVideo(
                         url = localFile.absolutePath,
                         title = title,
                         headers = emptyMap(),
                         resumePos = resumePos
                     )
+
+                    // 后台异步静默拉取详情（简介、标签、CDN线路列表等，离线或失败不影响本地播放）
+                    launch(Dispatchers.IO) {
+                        try {
+                            val detail = apiClient.getVideoDetail(videoId)
+                            if (detail != null && !isExited) {
+                                _uiState.update { current ->
+                                    val mergedCover = if (detail.displayCover.startsWith("http", ignoreCase = true)) {
+                                        detail.displayCover
+                                    } else current.video?.cover ?: ""
+                                    current.copy(
+                                        video = detail.copy(cover = mergedCover, photo = mergedCover)
+                                    )
+                                }
+                                val lines = detail.allVideoLines.ifEmpty { detail.allMp4Lines }
+                                if (lines.isNotEmpty()) {
+                                    cdnSmartRouter.initializeNodes(lines)
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
                     return@launch
                 }
 
-                // 2. 本地文件不存在时，请求在线视频流
+                // 2. 本地文件未命中，按数据源设置进入在线 CDN 路由流程
+                _uiState.update { it.copy(isLocalPlayback = false) }
                 val detail = apiClient.getVideoDetail(videoId)
                 _uiState.update { it.copy(video = detail) }
 
@@ -237,12 +266,22 @@ class PlayerViewModel(
                         val isMpv = player.state.value.engine == PlayerEngine.MPV ||
                                 (player.state.value.engine == PlayerEngine.AUTO && moe.zako.viewer.core.player.MPVLib.isReady())
 
-                        // 自动选线：若有多条线路并发测速选出最快节点
-                        val targetNode = if (lines.size > 1) {
+                        // 读取数据源设置
+                        val autoSelectCdn = settingsRepository.autoSelectCdnFlow.first()
+                        val defaultCdnIndex = settingsRepository.defaultCdnIndexFlow.first()
+
+                        val targetNode = if (autoSelectCdn && lines.size > 1) {
+                            ZakoLog.i(TAG, "Auto-selecting fastest CDN node for $videoId among ${lines.size} lines")
                             cdnSmartRouter.autoSelectFastestNode(lines)
                         } else {
                             cdnSmartRouter.initializeNodes(lines)
-                            cdnSmartRouter.selectedNode.value ?: CdnNode(0, "线路 1", lines.first())
+                            val targetIdx = defaultCdnIndex.coerceIn(0, (lines.size - 1).coerceAtLeast(0))
+                            val chosen = cdnSmartRouter.nodesFlow.value.getOrNull(targetIdx)
+                                ?: cdnSmartRouter.nodesFlow.value.firstOrNull()
+                                ?: CdnNode(0, "线路 1", lines.first())
+                            cdnSmartRouter.selectNode(chosen)
+                            ZakoLog.i(TAG, "Using default CDN node: ${chosen.name} (${chosen.url})")
+                            chosen
                         }
 
                         // 检查测速期间是否已退出或被取消
@@ -275,10 +314,11 @@ class PlayerViewModel(
                             0L
                         }
 
+                        val coverToSave = vid.displayCover.ifEmpty { vid.cover ?: "" }
                         historyRepository.recordWatch(
                             videoId = vid.id,
                             title = vid.title,
-                            coverUrl = vid.cover ?: "",
+                            coverUrl = coverToSave,
                             positionMs = resumePos,
                             totalDurationMs = existingHistory?.totalDurationMs ?: 0L
                         )
@@ -353,17 +393,32 @@ class PlayerViewModel(
             }
             settingsRepository.setPlayerEngine(key)
 
+            val currentPos = player.state.value.currentPositionMs
+            val activeUrl = player.state.value.activeUrl
+            val isLocal = _uiState.value.isLocalPlayback || activeUrl.startsWith("/") || File(activeUrl).exists()
+
+            if (isLocal) {
+                player.loadVideo(
+                    url = activeUrl,
+                    title = _uiState.value.video?.title ?: "本地视频",
+                    headers = emptyMap(),
+                    resumePos = currentPos
+                )
+                return@launch
+            }
+
             val vid = _uiState.value.video ?: return@launch
             val lines = vid.allVideoLines.ifEmpty { vid.allMp4Lines }
-            val isLocal = player.state.value.activeUrl.startsWith("/") || File(player.state.value.activeUrl).exists()
-            if (!isLocal && lines.isNotEmpty()) {
+            if (lines.isNotEmpty()) {
                 val isMpv = engine == PlayerEngine.MPV || (engine == PlayerEngine.AUTO && moe.zako.viewer.core.player.MPVLib.isReady())
                 val headers = mapOf(
                     "User-Agent" to "Mozilla/5.0 (Linux; Android 14)",
                     "Referer" to "https://api.cos-dkop.net/"
                 )
+                val targetNode = _uiState.value.currentCdnNode ?: cdnSmartRouter.selectedNode.value
+                val chosenUrl = targetNode?.url ?: lines.first()
                 val streamUrl = if (isMpv) {
-                    lines.first()
+                    chosenUrl
                 } else {
                     val streamBuffer = MultiNodeStreamBuffer.getInstance(player.context)
                     streamBuffer.onBufferProgress = { bufferedMs, _, _ ->
@@ -371,14 +426,15 @@ class PlayerViewModel(
                     }
                     streamBuffer.startBuffering(
                         videoId = vid.id,
-                        cdnUrls = lines,
+                        cdnUrls = listOf(chosenUrl) + lines.filter { it != chosenUrl },
                         headers = headers
                     )
                 }
                 player.loadVideo(
                     url = streamUrl,
                     title = vid.title,
-                    headers = headers
+                    headers = headers,
+                    resumePos = currentPos
                 )
             }
         }
@@ -563,42 +619,114 @@ class PlayerViewModel(
         _uiState.update { it.copy(showMoreMenu = false) }
     }
 
-    // 4. 对 CDN 节点进行测速
-    fun triggerCdnSpeedTest() {
+    // 4. 选择 CDN 节点播放 (弹窗打开即自动并发测速并自动选优，支持随时手动选线覆盖)
+    fun showSelectCdnDialog() {
+        _uiState.update { it.copy(showMoreMenu = false, showCdnDialog = true) }
+        userManuallySelectedCdn = false
+
         speedTestJob?.cancel()
         speedTestJob = viewModelScope.launch {
-            _uiState.update { it.copy(showMoreMenu = false) }
-            val lines = _uiState.value.video?.allVideoLines ?: emptyList()
-            if (lines.isNotEmpty()) {
+            try {
+                // 确保获取到所有可用的在线 CDN 线路
+                var lines = _uiState.value.video?.allVideoLines?.ifEmpty { _uiState.value.video?.allMp4Lines } ?: emptyList()
+                if (lines.isEmpty()) {
+                    val detail = apiClient.getVideoDetail(videoId)
+                    if (detail != null) {
+                        _uiState.update { current ->
+                            val mergedCover = if (detail.displayCover.startsWith("http", ignoreCase = true)) {
+                                detail.displayCover
+                            } else current.video?.cover ?: ""
+                            current.copy(video = detail.copy(cover = mergedCover, photo = mergedCover))
+                        }
+                        lines = detail.allVideoLines.ifEmpty { detail.allMp4Lines }
+                    }
+                }
+
+                if (lines.isEmpty()) {
+                    ZakoLog.w(TAG, "No CDN lines available for speed test")
+                    return@launch
+                }
+
+                if (_uiState.value.cdnNodes.isEmpty() || _uiState.value.cdnNodes.size != lines.size) {
+                    cdnSmartRouter.initializeNodes(lines)
+                }
+
+                // 并发测速与质量排序
                 val fastest = cdnSmartRouter.autoSelectFastestNode(lines)
-                if (isActive && !isExited) {
-                    selectCdnNode(fastest)
+
+                // 若测速期间用户未手动选择，且当前弹窗仍开着，自动无缝切到最优节点
+                if (!userManuallySelectedCdn && isActive && !isExited && _uiState.value.showCdnDialog) {
+                    val activeUrl = player.state.value.activeUrl
+                    if (_uiState.value.isLocalPlayback || activeUrl != fastest.url) {
+                        val currentPos = player.state.value.currentPositionMs
+                        switchPlayToCdnNode(fastest, resumePos = currentPos)
+                        ZakoToast.show("测速完成，已自动选优切至: ${fastest.name}")
+                    }
+                }
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    ZakoLog.w(TAG, "Speed test in dialog error: ${e.message}")
                 }
             }
         }
     }
 
-    // 5. 选择 CDN 节点播放 (弹窗选择)
-    fun showSelectCdnDialog() {
-        _uiState.update { it.copy(showMoreMenu = false, showCdnDialog = true) }
-    }
-
     fun dismissCdnDialog() {
+        speedTestJob?.cancel()
+        cdnSmartRouter.cancelTesting()
         _uiState.update { it.copy(showCdnDialog = false) }
     }
 
     fun selectCdnNode(node: CdnNode) {
-        cdnSmartRouter.selectNode(node)
-        val title = _uiState.value.video?.title ?: ""
-        player.loadVideo(
-            url = node.url,
-            title = title,
-            headers = mapOf(
+        userManuallySelectedCdn = true
+        val activeUrl = player.state.value.activeUrl
+        val currentPos = player.state.value.currentPositionMs
+
+        if (!_uiState.value.isLocalPlayback && activeUrl == node.url) {
+            _uiState.update { it.copy(showCdnDialog = false) }
+            return
+        }
+
+        switchPlayToCdnNode(node, resumePos = currentPos)
+        _uiState.update { it.copy(showCdnDialog = false) }
+        ZakoToast.show("已切至: ${node.name}")
+    }
+
+    private fun switchPlayToCdnNode(node: CdnNode, resumePos: Long) {
+        viewModelScope.launch {
+            cdnSmartRouter.selectNode(node)
+            _uiState.update { it.copy(isLocalPlayback = false, currentCdnNode = node) }
+            val title = _uiState.value.video?.title ?: "视频播放"
+            val headers = mapOf(
                 "User-Agent" to "Mozilla/5.0 (Linux; Android 14)",
                 "Referer" to "https://api.cos-dkop.net/"
             )
-        )
-        _uiState.update { it.copy(showCdnDialog = false) }
+            val isMpv = player.state.value.engine == PlayerEngine.MPV ||
+                    (player.state.value.engine == PlayerEngine.AUTO && moe.zako.viewer.core.player.MPVLib.isReady())
+            val lines = _uiState.value.video?.allVideoLines?.ifEmpty { _uiState.value.video?.allMp4Lines } ?: listOf(node.url)
+            val streamUrl = if (isMpv) {
+                node.url
+            } else {
+                val streamBuffer = MultiNodeStreamBuffer.getInstance(player.context)
+                streamBuffer.onBufferProgress = { bufferedMs, _, _ ->
+                    player.updateBufferedPosition(bufferedMs)
+                }
+                streamBuffer.startBuffering(
+                    videoId = videoId,
+                    cdnUrls = listOf(node.url) + lines.filter { it != node.url },
+                    headers = headers
+                )
+            }
+
+            if (isExited || !isActive) return@launch
+
+            player.loadVideo(
+                url = streamUrl,
+                title = title,
+                headers = headers,
+                resumePos = resumePos
+            )
+        }
     }
 
     fun savePlaybackProgress() {
@@ -606,7 +734,8 @@ class PlayerViewModel(
         val dur = player.state.value.durationMs
         val vid = _uiState.value.video
         val title = vid?.title ?: ""
-        val cover = vid?.cover ?: ""
+        val rawCover = vid?.cover ?: ""
+        val cover = if (rawCover.startsWith("http", ignoreCase = true)) rawCover else ""
         if (pos > 0L) {
             try {
                 runBlocking(Dispatchers.IO) {

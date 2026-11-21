@@ -258,7 +258,8 @@ fun ZakoNavHost(
                                 favoriteRepository = app.favoriteRepository,
                                 historyRepository = app.historyRepository,
                                 settingsRepository = app.settingsRepository,
-                                downloadDao = app.database.downloadDao()
+                                downloadDao = app.database.downloadDao(),
+                                downloadManager = app.downloadManager
                             )
                         }
                         PlayerScreen(

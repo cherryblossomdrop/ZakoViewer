@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import moe.zako.viewer.data.local.dao.SearchHistoryDao
@@ -179,6 +180,16 @@ class SettingsRepository(private val context: Context) {
         val KEY_LONG_PRESS_SHARE_UNLOCKED = booleanPreferencesKey("long_press_share_unlocked")
         val KEY_LONG_PRESS_SHARE_ENABLED = booleanPreferencesKey("long_press_share_enabled")
         val KEY_LAYOUT_MODE = stringPreferencesKey("layout_mode")
+        val KEY_AUTO_SELECT_CDN = booleanPreferencesKey("auto_select_cdn")
+        val KEY_DEFAULT_CDN_INDEX = intPreferencesKey("default_cdn_index")
+    }
+
+    val autoSelectCdnFlow: Flow<Boolean> = context.dataStore.data.map {
+        it[KEY_AUTO_SELECT_CDN] ?: true // 默认开启自动测速选线
+    }
+
+    val defaultCdnIndexFlow: Flow<Int> = context.dataStore.data.map {
+        it[KEY_DEFAULT_CDN_INDEX] ?: 0 // 默认使用线路 1 (索引 0)
     }
 
     val layoutModeFlow: Flow<LayoutMode> = context.dataStore.data.map {
@@ -361,6 +372,14 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setLongPressShareEnabled(enabled: Boolean) {
         context.dataStore.edit { it[KEY_LONG_PRESS_SHARE_ENABLED] = enabled }
+    }
+
+    suspend fun setAutoSelectCdn(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_AUTO_SELECT_CDN] = enabled }
+    }
+
+    suspend fun setDefaultCdnIndex(index: Int) {
+        context.dataStore.edit { it[KEY_DEFAULT_CDN_INDEX] = index.coerceAtLeast(0) }
     }
 
     suspend fun setLayoutMode(mode: LayoutMode) {

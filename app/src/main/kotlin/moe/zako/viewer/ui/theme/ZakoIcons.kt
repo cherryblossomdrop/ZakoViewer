@@ -119,36 +119,36 @@ object ZakoIcons {
         ).apply {
             path(
                 stroke = SolidColor(Color.White),
-                strokeLineWidth = 2.2f,
+                strokeLineWidth = 2.0f,
                 strokeLineCap = StrokeCap.Round,
                 strokeLineJoin = StrokeJoin.Round
             ) {
                 // 左上外扩
-                moveTo(3f, 9f)
-                lineTo(3f, 3f)
-                lineTo(9f, 3f)
-                moveTo(3.5f, 3.5f)
+                moveTo(3.5f, 9.5f)
+                lineTo(3.5f, 3.5f)
+                lineTo(9.5f, 3.5f)
+                moveTo(4f, 4f)
                 lineTo(9.5f, 9.5f)
 
                 // 右上外扩
-                moveTo(15f, 3f)
-                lineTo(21f, 3f)
-                lineTo(21f, 9f)
-                moveTo(20.5f, 3.5f)
+                moveTo(14.5f, 3.5f)
+                lineTo(20.5f, 3.5f)
+                lineTo(20.5f, 9.5f)
+                moveTo(20f, 4f)
                 lineTo(14.5f, 9.5f)
 
                 // 右下外扩
-                moveTo(21f, 15f)
-                lineTo(21f, 21f)
-                lineTo(15f, 21f)
-                moveTo(20.5f, 20.5f)
+                moveTo(20.5f, 14.5f)
+                lineTo(20.5f, 20.5f)
+                lineTo(14.5f, 20.5f)
+                moveTo(20f, 20f)
                 lineTo(14.5f, 14.5f)
 
                 // 左下外扩
-                moveTo(9f, 21f)
-                lineTo(3f, 21f)
-                lineTo(3f, 15f)
-                moveTo(3.5f, 20.5f)
+                moveTo(9.5f, 20.5f)
+                lineTo(3.5f, 20.5f)
+                lineTo(3.5f, 14.5f)
+                moveTo(4f, 20f)
                 lineTo(9.5f, 14.5f)
             }
         }.build()
@@ -167,7 +167,7 @@ object ZakoIcons {
         ).apply {
             path(
                 stroke = SolidColor(Color.White),
-                strokeLineWidth = 2.2f,
+                strokeLineWidth = 2.0f,
                 strokeLineCap = StrokeCap.Round,
                 strokeLineJoin = StrokeJoin.Round
             ) {
@@ -176,28 +176,28 @@ object ZakoIcons {
                 lineTo(9.5f, 9.5f)
                 lineTo(9.5f, 3.5f)
                 moveTo(9.5f, 9.5f)
-                lineTo(3.5f, 3.5f)
+                lineTo(4f, 4f)
 
                 // 右上内收
                 moveTo(14.5f, 3.5f)
                 lineTo(14.5f, 9.5f)
                 lineTo(20.5f, 9.5f)
                 moveTo(14.5f, 9.5f)
-                lineTo(20.5f, 3.5f)
+                lineTo(20f, 4f)
 
                 // 右下内收
                 moveTo(20.5f, 14.5f)
                 lineTo(14.5f, 14.5f)
                 lineTo(14.5f, 20.5f)
                 moveTo(14.5f, 14.5f)
-                lineTo(20.5f, 20.5f)
+                lineTo(20f, 20f)
 
                 // 左下内收
                 moveTo(9.5f, 20.5f)
                 lineTo(9.5f, 14.5f)
                 lineTo(3.5f, 14.5f)
                 moveTo(9.5f, 14.5f)
-                lineTo(3.5f, 20.5f)
+                lineTo(4f, 20f)
             }
         }.build()
     }

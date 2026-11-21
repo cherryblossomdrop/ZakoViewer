@@ -44,6 +44,7 @@ import moe.zako.viewer.core.player.MPVView
 import moe.zako.viewer.core.player.PlayerEngine
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.GestureFeedbackOverlays
+import moe.zako.viewer.ui.components.PlayerControlDefaults
 import moe.zako.viewer.ui.components.SpeedBadge
 import moe.zako.viewer.ui.components.WavyProgressSlider
 import moe.zako.viewer.ui.components.playerGestureDetector
@@ -206,7 +207,9 @@ fun PlayerScreen(
                     imageVector = Icons.Default.Lock,
                     contentDescription = "解锁屏幕",
                     tint = Color.White,
-                    modifier = Modifier.padding(14.dp).size(28.dp)
+                    modifier = Modifier
+                        .padding(PlayerControlDefaults.LockContainerPadding)
+                        .size(PlayerControlDefaults.LockIconSize)
                 )
             }
         }
@@ -235,13 +238,23 @@ fun PlayerScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = handleBack) {
-                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = Color.White)
+                        IconButton(
+                            onClick = handleBack,
+                            modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "返回",
+                                tint = Color.White,
+                                modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
+                            )
                         }
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = PlayerControlDefaults.ControlSpacing)
                         ) {
                             Text(
                                 text = state.video?.title ?: "",
@@ -257,34 +270,58 @@ fun PlayerScreen(
                                         imageVector = Icons.Outlined.OfflinePin,
                                         contentDescription = "本地视频",
                                         tint = LocalContentColor.current,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
                                     )
                                 }
                             }
                         }
 
                         // 画面比例切换 (适应屏幕、填充、16:9、4:3) - 方正圆角画框矢量图标
-                        IconButton(onClick = {
-                            val nextMode = viewModel.cycleAspectRatio()
-                            ZakoToast.show("画面比例: ${nextMode.label}")
-                        }) {
+                        IconButton(
+                            onClick = {
+                                val nextMode = viewModel.cycleAspectRatio()
+                                ZakoToast.show("画面比例: ${nextMode.label}")
+                            },
+                            modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
+                        ) {
                             Icon(
                                 imageVector = ZakoIcons.AspectRatio,
                                 contentDescription = "画面比例 (${state.playerState.aspectRatio.label})",
                                 tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
                             )
                         }
 
-                        // 屏幕方向旋转 (横竖屏切换)
-                        IconButton(onClick = { viewModel.toggleOrientation() }) {
-                            Icon(imageVector = Icons.Default.ScreenRotation, contentDescription = "旋转屏幕", tint = Color.White)
+                        // 屏幕方向旋转 (横竖屏切换) - 斜向异形图标通过居中盒模型进行视觉减重补偿至 21.dp
+                        IconButton(
+                            onClick = { viewModel.toggleOrientation() },
+                            modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
+                        ) {
+                            Box(
+                                modifier = Modifier.size(PlayerControlDefaults.ControlIconSize),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ScreenRotation,
+                                    contentDescription = "旋转屏幕",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(PlayerControlDefaults.CompensatedIconSize)
+                                )
+                            }
                         }
 
                         // “更多选项” 菜单 (⋮)
                         Box {
-                            IconButton(onClick = { viewModel.showMoreMenu(true) }) {
-                                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "更多选项", tint = Color.White)
+                            IconButton(
+                                onClick = { viewModel.showMoreMenu(true) },
+                                modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "更多选项",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
+                                )
                             }
 
                             // 功能菜单
@@ -387,7 +424,9 @@ fun PlayerScreen(
                         imageVector = Icons.Default.LockOpen,
                         contentDescription = "锁定屏幕",
                         tint = Color.White,
-                        modifier = Modifier.padding(14.dp).size(28.dp)
+                        modifier = Modifier
+                            .padding(PlayerControlDefaults.LockContainerPadding)
+                            .size(PlayerControlDefaults.LockIconSize)
                     )
                 }
 
@@ -437,16 +476,19 @@ fun PlayerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { viewModel.togglePlayPause() }) {
+                                IconButton(
+                                    onClick = { viewModel.togglePlayPause() },
+                                    modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
+                                ) {
                                     Icon(
                                         imageVector = if (state.playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                         contentDescription = "播放/暂停",
                                         tint = Color.White,
-                                        modifier = Modifier.size(28.dp)
+                                        modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
                                     )
                                 }
 
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(PlayerControlDefaults.ControlSpacing))
 
                                 val displayPosMs = if (isScrubbing) (scrubProgress * state.playerState.durationMs).toLong() else state.playerState.currentPositionMs
                                 val displayPosFormatted = moe.zako.viewer.core.player.VideoPlayerState.formatTime(displayPosMs)
@@ -459,11 +501,14 @@ fun PlayerScreen(
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(PlayerControlDefaults.ControlSpacing)
                             ) {
                                 // 播放倍速切换按钮 - 动态倍速矢量徽标
                                 val currentSpeed = if (state.playerState.isSpeedBoosted) state.playerState.boostSpeed else state.playerState.normalSpeed
-                                IconButton(onClick = { viewModel.showSpeedDialog(true) }) {
+                                IconButton(
+                                    onClick = { viewModel.showSpeedDialog(true) },
+                                    modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
+                                ) {
                                     SpeedBadge(
                                         speed = currentSpeed,
                                         tint = Color.White
@@ -471,12 +516,15 @@ fun PlayerScreen(
                                 }
 
                                 // 退出全屏按钮（控制栏右下角退出全屏入口）
-                                IconButton(onClick = handleBack) {
+                                IconButton(
+                                    onClick = handleBack,
+                                    modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
+                                ) {
                                     Icon(
                                         imageVector = ZakoIcons.FullscreenExit,
                                         contentDescription = "退出全屏",
                                         tint = Color.White,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
                                     )
                                 }
                             }

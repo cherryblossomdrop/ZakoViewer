@@ -71,6 +71,7 @@ import moe.zako.viewer.ui.components.SpeedBadge
 import moe.zako.viewer.ui.components.VideoCard
 import moe.zako.viewer.ui.components.WavyProgressSlider
 import moe.zako.viewer.ui.components.ZakoToast
+import moe.zako.viewer.ui.components.PlayerBrightnessHelper
 import moe.zako.viewer.ui.components.playerGestureDetector
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 import moe.zako.viewer.ui.theme.ZakoIcons
@@ -130,6 +131,7 @@ fun VideoDetailScreen(
                 viewModel.player.detachSurface()
             } catch (_: Exception) {}
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            PlayerBrightnessHelper.restoreWindowBrightness(activity)
             activity?.window?.let { w ->
                 WindowCompat.getInsetsController(w, w.decorView).show(WindowInsetsCompat.Type.systemBars())
             }
@@ -480,9 +482,6 @@ fun DetailEmbeddedPlayer(
     val context = LocalContext.current
     val activity = context as? Activity
 
-    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
-    val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
-
     // 播放期间保持屏幕常亮
     DisposableEffect(state.isInlinePlaying) {
         if (state.isInlinePlaying) {
@@ -493,44 +492,31 @@ fun DetailEmbeddedPlayer(
         }
     }
 
+    val gestureModifier = if (state.isInlinePlaying) {
+        Modifier.playerGestureDetector(
+            isLocked = playerState.isLocked,
+            onSingleTap = { viewModel.toggleControls() },
+            onDoubleTapLeft = { viewModel.onDoubleTapLeft() },
+            onDoubleTapCenter = { viewModel.onDoubleTapCenter() },
+            onDoubleTapRight = { viewModel.onDoubleTapRight() },
+            onLongPressStart = { viewModel.onLongPressStart() },
+            onLongPressEnd = { viewModel.onLongPressEnd() },
+            onSeekDrag = { deltaMs -> viewModel.onSeekGesture(deltaMs) },
+            onSeekDragEnd = { viewModel.onSeekGestureEnd() },
+            onBrightnessDrag = { percent -> viewModel.onBrightnessGesture(percent) },
+            onBrightnessDragEnd = { viewModel.onBrightnessGestureEnd() },
+            onVolumeDrag = { percent -> viewModel.onVolumeGesture(percent) },
+            onVolumeDragEnd = { viewModel.onVolumeGestureEnd() }
+        )
+    } else {
+        Modifier
+    }
+
     Box(
         modifier = modifier
             .then(if (isFullscreen) Modifier.fillMaxSize() else Modifier.aspectRatio(16f / 9f))
             .background(Color.Black)
-            .then(
-                if (state.isInlinePlaying) {
-                    Modifier.playerGestureDetector(
-                        isLocked = playerState.isLocked,
-                        onSingleTap = { viewModel.toggleControls() },
-                        onDoubleTapLeft = { viewModel.onDoubleTapLeft() },
-                        onDoubleTapCenter = { viewModel.onDoubleTapCenter() },
-                        onDoubleTapRight = { viewModel.onDoubleTapRight() },
-                        onLongPressStart = { viewModel.onLongPressStart() },
-                        onLongPressEnd = { viewModel.onLongPressEnd() },
-                        onSeekDrag = { deltaMs -> viewModel.onSeekGesture(deltaMs) },
-                        onSeekDragEnd = { viewModel.onSeekGestureEnd() },
-                        onBrightnessDrag = { percent -> viewModel.onBrightnessGesture(percent) },
-                        onBrightnessDragEnd = { viewModel.onBrightnessGestureEnd() },
-                        onVolumeDrag = { percent -> viewModel.onVolumeGesture(percent) },
-                        onVolumeDragEnd = { viewModel.onVolumeGestureEnd() },
-                        currentBrightness = activity?.window?.attributes?.screenBrightness ?: -1f,
-                        currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat(),
-                        maxVolume = maxVolume,
-                        setBrightness = { newB ->
-                            activity?.let { act ->
-                                val lp = act.window.attributes
-                                lp.screenBrightness = newB
-                                act.window.attributes = lp
-                            }
-                        },
-                        setVolume = { newVol ->
-                            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                        }
-                    )
-                } else {
-                    Modifier
-                }
-            )
+            .then(gestureModifier)
     ) {
         // 1. MPV SurfaceView: 保持在稳定的组合树最底层节点中，绝不被条件分支卸载或替换
         key(playerState.engine) {

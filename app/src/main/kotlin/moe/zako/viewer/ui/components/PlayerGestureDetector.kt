@@ -1,11 +1,18 @@
 package moe.zako.viewer.ui.components
 
+import android.content.Context
+import android.media.AudioManager
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -13,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+@Composable
 fun Modifier.playerGestureDetector(
     isLocked: Boolean,
     onSingleTap: () -> Unit,
@@ -26,14 +34,28 @@ fun Modifier.playerGestureDetector(
     onBrightnessDrag: (percent: Int) -> Unit,
     onBrightnessDragEnd: () -> Unit,
     onVolumeDrag: (percent: Int) -> Unit,
-    onVolumeDragEnd: () -> Unit,
-    currentBrightness: Float,
-    currentVolume: Float,
-    maxVolume: Int,
-    setBrightness: (Float) -> Unit,
-    setVolume: (Int) -> Unit
+    onVolumeDragEnd: () -> Unit
 ): Modifier {
     if (isLocked) return this
+
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    val audioManager = remember(context) {
+        context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    }
+
+    val currentOnSingleTap by rememberUpdatedState(onSingleTap)
+    val currentOnDoubleTapLeft by rememberUpdatedState(onDoubleTapLeft)
+    val currentOnDoubleTapCenter by rememberUpdatedState(onDoubleTapCenter)
+    val currentOnDoubleTapRight by rememberUpdatedState(onDoubleTapRight)
+    val currentOnLongPressStart by rememberUpdatedState(onLongPressStart)
+    val currentOnLongPressEnd by rememberUpdatedState(onLongPressEnd)
+    val currentOnSeekDrag by rememberUpdatedState(onSeekDrag)
+    val currentOnSeekDragEnd by rememberUpdatedState(onSeekDragEnd)
+    val currentOnBrightnessDrag by rememberUpdatedState(onBrightnessDrag)
+    val currentOnBrightnessDragEnd by rememberUpdatedState(onBrightnessDragEnd)
+    val currentOnVolumeDrag by rememberUpdatedState(onVolumeDrag)
+    val currentOnVolumeDragEnd by rememberUpdatedState(onVolumeDragEnd)
 
     return this.pointerInput(isLocked) {
         coroutineScope {
@@ -43,7 +65,6 @@ fun Modifier.playerGestureDetector(
 
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
-                val downTime = System.currentTimeMillis()
                 val downPos = down.position
                 val screenWidth = size.width
                 val screenHeight = size.height
@@ -51,13 +72,15 @@ fun Modifier.playerGestureDetector(
                 var isDrag = false
                 var isLongPress = false
                 var dragType = 0 // 0: None, 1: Seek (horizontal), 2: Brightness (vert left), 3: Volume (vert right)
-                var totalDragX = 0f
-                var totalDragY = 0f
-
                 var wasConsumed = down.isConsumed
 
-                val initialBrightness = if (currentBrightness < 0f) 0.5f else currentBrightness
-                val initialVolume = currentVolume
+                // 拖拽手势内部状态：判定为 dragType 时实时读取最新真实数据源，绝不捕获过期闭包
+                var startBrightness = 0.5f
+                var startVolumeFloat = 0f
+                var minVolume = 0
+                var maxVolume = 15
+                var volumeRange = 15
+                var lastSetVolumeInt = -1
 
                 // Watch for long press
                 val longPressJob = launch {
@@ -66,7 +89,7 @@ fun Modifier.playerGestureDetector(
                         isLongPress = true
                         singleTapJob?.cancel()
                         lastTapTime = 0L
-                        onLongPressStart()
+                        currentOnLongPressStart()
                     }
                 }
 
@@ -108,8 +131,17 @@ fun Modifier.playerGestureDetector(
                             } else {
                                 if (downPos.x < screenWidth * 0.5f) {
                                     dragType = 2 // Brightness (Left)
+                                    // 实时读取最新基准亮度（优先窗口属性，未设置则读系统真实亮度）
+                                    startBrightness = PlayerBrightnessHelper.getCurrentBrightness(activity)
                                 } else {
                                     dragType = 3 // Volume (Right)
+                                    // 实时读取系统最新媒体音量
+                                    val volState = PlayerVolumeHelper.getVolumeState(audioManager)
+                                    startVolumeFloat = volState.currentVolume.toFloat()
+                                    minVolume = volState.minVolume
+                                    maxVolume = volState.maxVolume
+                                    volumeRange = volState.range
+                                    lastSetVolumeInt = volState.currentVolume
                                 }
                             }
                         }
@@ -117,28 +149,33 @@ fun Modifier.playerGestureDetector(
 
                     if (isDrag) {
                         change.consume()
-                        totalDragX = dragX
-                        totalDragY = dragY
 
                         when (dragType) {
                             1 -> {
-                                val seekDeltaMs = (totalDragX * 90).toLong()
-                                onSeekDrag(seekDeltaMs)
+                                val seekDeltaMs = (dragX * 90).toLong()
+                                currentOnSeekDrag(seekDeltaMs)
                             }
                             2 -> {
                                 val dragRange = (screenHeight * 0.7f).coerceAtLeast(100f)
-                                val newB = (initialBrightness + (-totalDragY / dragRange)).coerceIn(0.01f, 1.0f)
-                                setBrightness(newB)
-                                onBrightnessDrag((newB * 100).toInt())
+                                val newB = (startBrightness + (-dragY / dragRange)).coerceIn(0.01f, 1.0f)
+                                PlayerBrightnessHelper.setWindowBrightness(activity, newB)
+                                val percent = (newB * 100).roundToInt().coerceIn(1, 100)
+                                currentOnBrightnessDrag(percent)
                             }
                             3 -> {
                                 val dragRange = (screenHeight * 0.7f).coerceAtLeast(100f)
-                                val deltaFraction = -totalDragY / dragRange
-                                val newVolFloat = (initialVolume + deltaFraction * maxVolume).coerceIn(0f, maxVolume.toFloat())
-                                val newVolInt = newVolFloat.roundToInt().coerceIn(0, maxVolume)
-                                setVolume(newVolInt)
-                                val percent = ((newVolFloat / maxVolume) * 100).roundToInt().coerceIn(0, 100)
-                                onVolumeDrag(percent)
+                                val deltaFraction = -dragY / dragRange
+                                val targetVolFloat = (startVolumeFloat + deltaFraction * volumeRange)
+                                    .coerceIn(minVolume.toFloat(), maxVolume.toFloat())
+                                val targetVolInt = targetVolFloat.roundToInt().coerceIn(minVolume, maxVolume)
+                                if (targetVolInt != lastSetVolumeInt) {
+                                    PlayerVolumeHelper.setStreamVolume(audioManager, targetVolInt)
+                                    lastSetVolumeInt = targetVolInt
+                                }
+                                val percent = (((targetVolFloat - minVolume) / volumeRange) * 100)
+                                    .roundToInt()
+                                    .coerceIn(0, 100)
+                                currentOnVolumeDrag(percent)
                             }
                         }
                     }
@@ -150,12 +187,12 @@ fun Modifier.playerGestureDetector(
                     singleTapJob?.cancel()
                     lastTapTime = 0L
                 } else if (isLongPress) {
-                    onLongPressEnd()
+                    currentOnLongPressEnd()
                 } else if (isDrag) {
                     when (dragType) {
-                        1 -> onSeekDragEnd()
-                        2 -> onBrightnessDragEnd()
-                        3 -> onVolumeDragEnd()
+                        1 -> currentOnSeekDragEnd()
+                        2 -> currentOnBrightnessDragEnd()
+                        3 -> currentOnVolumeDragEnd()
                     }
                 } else {
                     // Tap or Double Tap
@@ -167,9 +204,9 @@ fun Modifier.playerGestureDetector(
                         singleTapJob?.cancel()
                         lastTapTime = 0L
                         when {
-                            downPos.x < screenWidth * 0.35f -> onDoubleTapLeft()
-                            downPos.x > screenWidth * 0.65f -> onDoubleTapRight()
-                            else -> onDoubleTapCenter()
+                            downPos.x < screenWidth * 0.35f -> currentOnDoubleTapLeft()
+                            downPos.x > screenWidth * 0.65f -> currentOnDoubleTapRight()
+                            else -> currentOnDoubleTapCenter()
                         }
                     } else {
                         lastTapTime = tapTime
@@ -178,7 +215,7 @@ fun Modifier.playerGestureDetector(
                         singleTapJob = launch {
                             delay(doubleTapTimeout)
                             lastTapTime = 0L
-                            onSingleTap()
+                            currentOnSingleTap()
                         }
                     }
                 }

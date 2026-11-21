@@ -48,6 +48,7 @@ import moe.zako.viewer.ui.components.PlaybackSpeedDialog
 import moe.zako.viewer.ui.components.PlayerControlDefaults
 import moe.zako.viewer.ui.components.SpeedBadge
 import moe.zako.viewer.ui.components.WavyProgressSlider
+import moe.zako.viewer.ui.components.PlayerBrightnessHelper
 import moe.zako.viewer.ui.components.playerGestureDetector
 import moe.zako.viewer.ui.theme.ZakoIcons
 import moe.zako.viewer.ui.theme.OverlayBlack
@@ -64,10 +65,6 @@ fun PlayerScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     val state by viewModel.uiState.collectAsState()
-    val configuration = LocalConfiguration.current
-
-    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
-    val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
 
     // Screen Orientation and Immersive Fullscreen handling
     LaunchedEffect(state.isLandscape) {
@@ -91,6 +88,7 @@ fun PlayerScreen(
             isExiting = true
             viewModel.onExit()
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            PlayerBrightnessHelper.restoreWindowBrightness(activity)
             activity?.window?.let { w ->
                 WindowCompat.getInsetsController(w, w.decorView).show(WindowInsetsCompat.Type.systemBars())
             }
@@ -108,6 +106,7 @@ fun PlayerScreen(
         onDispose {
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            PlayerBrightnessHelper.restoreWindowBrightness(activity)
             activity?.window?.let { w ->
                 WindowCompat.getInsetsController(w, w.decorView).show(WindowInsetsCompat.Type.systemBars())
             }
@@ -135,20 +134,7 @@ fun PlayerScreen(
                 onBrightnessDrag = { percent -> viewModel.onBrightnessGesture(percent) },
                 onBrightnessDragEnd = { viewModel.onBrightnessGestureEnd() },
                 onVolumeDrag = { percent -> viewModel.onVolumeGesture(percent) },
-                onVolumeDragEnd = { viewModel.onVolumeGestureEnd() },
-                currentBrightness = activity?.window?.attributes?.screenBrightness ?: -1f,
-                currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat(),
-                maxVolume = maxVolume,
-                setBrightness = { newB ->
-                    activity?.let { act ->
-                        val lp = act.window.attributes
-                        lp.screenBrightness = newB
-                        act.window.attributes = lp
-                    }
-                },
-                setVolume = { newVol ->
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                }
+                onVolumeDragEnd = { viewModel.onVolumeGestureEnd() }
             )
     ) {
         // 1. MPV SurfaceView Core

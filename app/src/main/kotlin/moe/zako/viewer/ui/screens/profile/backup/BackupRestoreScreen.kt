@@ -1,7 +1,9 @@
 ﻿package moe.zako.viewer.ui.screens.profile.backup
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -19,7 +21,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.core.storage.PublicStorageHelper
 import moe.zako.viewer.ui.components.ZakoToast
@@ -41,7 +45,242 @@ fun BackupRestoreScreen(
         }
     }
 
-    // 备份导出成功结果弹窗（替代纯 Toast 提示）
+    // 在导入恢复或大文件导出期间，保持屏幕常亮
+    val isBusy = state.isRestoring || state.isExporting
+    DisposableEffect(isBusy) {
+        val window = (context as? Activity)?.window
+        if (isBusy) {
+            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    // 1. 不可误触关闭的进度弹窗（支持分阶段实时进度与常亮防护）
+    if (isBusy) {
+        AlertDialog(
+            onDismissRequest = { /* 正在恢复/导出中，禁止任意关闭以防破坏数据 */ },
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            ),
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.5.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (state.isRestoring) "正在恢复备份…" else "正在导出备份…",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // 防退出与大文件耗时耐性提醒文案
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (state.isRestoring) {
+                                    "若备份包含视频文件，体积较大、耗时可能较长，请耐心等待，期间请勿退出或关闭应用。"
+                                } else if (state.includeDownloadedVideos) {
+                                    "正在打包离线视频与数据，体积较大、耗时可能较长，请耐心等待，期间请勿退出或关闭应用。"
+                                } else {
+                                    "正在整理并导出应用数据，请稍候，期间请勿退出或关闭应用。"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+
+                    // 当前所处阶段
+                    if (state.progressStage.isNotBlank()) {
+                        Text(
+                            text = state.progressStage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    // 进度条与百分比
+                    if (state.progressPercent != null) {
+                        val percent = state.progressPercent!!
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            LinearProgressIndicator(
+                                progress = { percent },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                            )
+                            Text(
+                                text = "${(percent * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.align(Alignment.End)
+                            )
+                        }
+                    } else {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                        )
+                    }
+
+                    // 详细子进度/文件信息
+                    if (state.progressDetail.isNotBlank()) {
+                        Text(
+                            text = state.progressDetail,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {} // 运行时不提供确认按钮，强制等待完成
+        )
+    }
+
+    // 2. 恢复结果反馈弹窗（汇总本次恢复的数量与封面补全状态）
+    state.restoreResult?.let { result ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissRestoreResult() },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (result.success) Icons.Default.CheckCircle else Icons.Default.Error,
+                        contentDescription = null,
+                        tint = if (result.success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(if (result.success) "备份恢复成功" else "备份恢复失败")
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (result.success) {
+                        Text(
+                            text = "已成功将备份中的全部数据还原至本地：",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("收藏夹目录数", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${result.folderCount} 个", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("收藏视频总数", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${result.favoriteItemCount} 部", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("历史观看记录", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${result.historyCount} 条", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("稍后再看列表", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${result.watchLaterCount} 部", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                }
+                                if (result.videoCount > 0) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("还原视频文件", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text("${result.videoCount} 个", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("视频封面状态", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    val coverText = if (result.coverCount > 0) "已恢复 ${result.coverCount} 张" else "已就绪 (按需自动补全)"
+                                    Text(coverText, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "恢复过程中发生错误：",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = result.errorMessage ?: "未知错误",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                        Text(
+                            text = "临时解压文件已被自动安全清理，未对现有数据造成不可逆破坏。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.dismissRestoreResult() }) {
+                    Text(if (result.success) "确定" else "关闭")
+                }
+            }
+        )
+    }
+
+    // 3. 备份导出成功结果弹窗（替代纯 Toast 提示）
     if (showExportResultDialog && state.exportResult != null) {
         val result = state.exportResult!!
         AlertDialog(

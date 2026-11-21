@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.ui.components.FolderTreeDialog
@@ -375,7 +376,7 @@ fun FavoritesScreen(
                                     .clipToBounds()
                             ) {
                                 AsyncImage(
-                                    model = item.coverUrl,
+                                    model = CoverCacheManager.getCoverModel(LocalContext.current, item.videoId, item.coverUrl),
                                     contentDescription = item.title,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier

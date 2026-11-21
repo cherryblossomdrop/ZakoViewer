@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.repository.SettingsRepository
+import moe.zako.viewer.ui.components.ZakoToast
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
@@ -15,7 +17,12 @@ data class DownloadsUiState(
     val activeList: List<DownloadEntity> = emptyList(),
     val currentStoragePath: String = "",
     val isMultiSelectMode: Boolean = false,
-    val selectedIds: Set<String> = emptySet()
+    val selectedIds: Set<String> = emptySet(),
+    val showMigrationDialog: Boolean = false,
+    val isMigrating: Boolean = false,
+    val pendingNewDownloadPath: String = "",
+    val filesToMigrateCount: Int = 0,
+    val migrationProgressText: String = ""
 )
 
 class DownloadsViewModel(
@@ -67,8 +74,100 @@ class DownloadsViewModel(
     }
 
     fun updateCustomStoragePath(newPath: String) {
+        requestChangeDownloadPath(newPath, _uiState.value.currentStoragePath)
+    }
+
+    fun requestChangeDownloadPath(newPath: String, currentDefaultPath: String) {
+        val oldPath = _uiState.value.currentStoragePath.ifEmpty { currentDefaultPath }
+        if (newPath == oldPath || newPath.isBlank()) {
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val completed = _uiState.value.completedList
+            val targetCanonical = try { File(newPath).canonicalPath } catch (_: Exception) { File(newPath).absolutePath }
+            val existingFiles = completed.filter { entity ->
+                val f = File(entity.savePath)
+                if (f.exists() && f.isFile && f.length() > 0) {
+                    val srcCanonical = try { f.parentFile?.canonicalPath } catch (_: Exception) { f.parentFile?.absolutePath }
+                    srcCanonical != targetCanonical
+                } else {
+                    false
+                }
+            }
+            if (existingFiles.isNotEmpty()) {
+                _uiState.update {
+                    it.copy(
+                        showMigrationDialog = true,
+                        pendingNewDownloadPath = newPath,
+                        filesToMigrateCount = existingFiles.size
+                    )
+                }
+            } else {
+                downloadManager.migrateDownloadsDirectory(newPath) { _, _, _ -> }
+            }
+        }
+    }
+
+    fun confirmMigration() {
+        val newPath = _uiState.value.pendingNewDownloadPath
+        if (newPath.isBlank()) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update {
+                it.copy(
+                    isMigrating = true,
+                    migrationProgressText = "准备迁移..."
+                )
+            }
+            val result = downloadManager.migrateDownloadsDirectory(newPath) { current, total, fileName ->
+                _uiState.update {
+                    it.copy(
+                        migrationProgressText = "正在迁移 ($current/$total): $fileName"
+                    )
+                }
+            }
+            _uiState.update {
+                it.copy(
+                    showMigrationDialog = false,
+                    isMigrating = false,
+                    pendingNewDownloadPath = "",
+                    filesToMigrateCount = 0
+                )
+            }
+            if (result.errorMessage != null) {
+                ZakoToast.show(result.errorMessage)
+            } else {
+                ZakoToast.show("已迁移 ${result.successCount} 个视频至新目录")
+            }
+        }
+    }
+
+    fun skipMigrationAndSetPath() {
+        val newPath = _uiState.value.pendingNewDownloadPath
         viewModelScope.launch {
-            settingsRepository.setDownloadPath(newPath)
+            if (newPath.isNotBlank()) {
+                settingsRepository.setDownloadPath(newPath)
+                downloadManager.reconcileLocalDownloadFiles()
+            }
+            _uiState.update {
+                it.copy(
+                    showMigrationDialog = false,
+                    isMigrating = false,
+                    pendingNewDownloadPath = "",
+                    filesToMigrateCount = 0
+                )
+            }
+        }
+    }
+
+    fun dismissMigrationDialog() {
+        _uiState.update {
+            it.copy(
+                showMigrationDialog = false,
+                isMigrating = false,
+                pendingNewDownloadPath = "",
+                filesToMigrateCount = 0
+            )
         }
     }
 

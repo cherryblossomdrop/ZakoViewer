@@ -3,6 +3,8 @@
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import moe.zako.viewer.ZakoApplication
+import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.data.local.dao.DownloadDao
 import moe.zako.viewer.data.repository.SettingsRepository
@@ -36,7 +38,8 @@ data class SettingsUiState(
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
-    private val downloadDao: DownloadDao? = null
+    private val downloadDao: DownloadDao? = null,
+    private val downloadManager: DownloadManager? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -144,9 +147,15 @@ class SettingsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val dao = downloadDao
             val downloads = dao?.getAllDownloadsList() ?: emptyList()
+            val targetCanonical = try { File(newPath).canonicalPath } catch (_: Exception) { File(newPath).absolutePath }
             val existingFiles = downloads.filter { entity ->
                 val f = File(entity.savePath)
-                f.exists() && f.isFile && f.length() > 0
+                if (f.exists() && f.isFile && f.length() > 0) {
+                    val srcCanonical = try { f.parentFile?.canonicalPath } catch (_: Exception) { f.parentFile?.absolutePath }
+                    srcCanonical != targetCanonical
+                } else {
+                    false
+                }
             }
             if (existingFiles.isNotEmpty()) {
                 _uiState.update {
@@ -157,7 +166,8 @@ class SettingsViewModel(
                     )
                 }
             } else {
-                settingsRepository.setDownloadPath(newPath)
+                val mgr = downloadManager ?: DownloadManager.getInstance(ZakoApplication.instance)
+                mgr.migrateDownloadsDirectory(newPath) { _, _, _ -> }
             }
         }
     }
@@ -165,8 +175,6 @@ class SettingsViewModel(
     fun confirmMigration() {
         val newPath = _uiState.value.pendingNewDownloadPath
         if (newPath.isBlank()) return
-        val targetDir = File(newPath)
-        if (!targetDir.exists()) targetDir.mkdirs()
 
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update {
@@ -175,33 +183,14 @@ class SettingsViewModel(
                     migrationProgressText = "准备迁移..."
                 )
             }
-            val dao = downloadDao
-            val downloads = dao?.getAllDownloadsList() ?: emptyList()
-            val existingFiles = downloads.filter { entity ->
-                val f = File(entity.savePath)
-                f.exists() && f.isFile && f.length() > 0
-            }
-            var successCount = 0
-            for ((idx, entity) in existingFiles.withIndex()) {
-                val src = File(entity.savePath)
-                val dest = File(targetDir, src.name)
+            val mgr = downloadManager ?: DownloadManager.getInstance(ZakoApplication.instance)
+            val result = mgr.migrateDownloadsDirectory(newPath) { current, total, fileName ->
                 _uiState.update {
                     it.copy(
-                        migrationProgressText = "正在迁移 (${idx + 1}/${existingFiles.size}): ${src.name}"
+                        migrationProgressText = "正在迁移 ($current/$total): $fileName"
                     )
                 }
-                try {
-                    src.copyTo(dest, overwrite = true)
-                    if (dest.exists() && dest.length() == src.length()) {
-                        src.delete()
-                        dao?.updateSavePath(entity.videoId, dest.absolutePath)
-                        successCount++
-                    }
-                } catch (e: Exception) {
-                    ZakoLog.e("SettingsViewModel", "Failed to migrate ${src.name}", e)
-                }
             }
-            settingsRepository.setDownloadPath(newPath)
             _uiState.update {
                 it.copy(
                     showMigrationDialog = false,
@@ -210,7 +199,11 @@ class SettingsViewModel(
                     filesToMigrateCount = 0
                 )
             }
-            ZakoToast.show("已迁移 $successCount 个视频文件至新目录")
+            if (result.errorMessage != null) {
+                ZakoToast.show(result.errorMessage)
+            } else {
+                ZakoToast.show("已迁移 ${result.successCount} 个视频至新目录")
+            }
         }
     }
 
@@ -219,6 +212,8 @@ class SettingsViewModel(
         viewModelScope.launch {
             if (newPath.isNotBlank()) {
                 settingsRepository.setDownloadPath(newPath)
+                val mgr = downloadManager ?: DownloadManager.getInstance(ZakoApplication.instance)
+                mgr.reconcileLocalDownloadFiles()
             }
             _uiState.update {
                 it.copy(

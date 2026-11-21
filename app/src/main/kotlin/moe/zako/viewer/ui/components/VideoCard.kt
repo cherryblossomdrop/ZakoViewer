@@ -17,11 +17,13 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 import moe.zako.viewer.ui.theme.VipGold
@@ -52,8 +54,9 @@ fun VideoCard(
                     .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                     .background(Color.Black)
             ) {
+                val context = LocalContext.current
                 AsyncImage(
-                    model = video.displayCover,
+                    model = CoverCacheManager.getCoverModel(context, video.id, video.displayCover),
                     contentDescription = video.title,
                     modifier = Modifier
                         .fillMaxSize()

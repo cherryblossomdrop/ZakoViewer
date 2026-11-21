@@ -386,7 +386,8 @@ fun ZakoNavHost(
                 val viewModel: SettingsViewModel = viewModel {
                     SettingsViewModel(
                         settingsRepository = app.settingsRepository,
-                        downloadDao = app.database.downloadDao()
+                        downloadDao = app.database.downloadDao(),
+                        downloadManager = app.downloadManager
                     )
                 }
                 SettingsDownloadScreen(

@@ -2,6 +2,7 @@
 
 import android.content.Context
 import android.content.Intent
+import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.ZakoDatabase
@@ -18,6 +19,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
 
 class DownloadManager private constructor(private val context: Context) {
@@ -45,9 +47,7 @@ class DownloadManager private constructor(private val context: Context) {
         .build()
 
     fun getCoverFile(videoId: String): File {
-        val coversDir = File(context.filesDir, "download_covers")
-        if (!coversDir.exists()) coversDir.mkdirs()
-        return File(coversDir, "$videoId.jpg")
+        return CoverCacheManager.getCoverFile(context, videoId)
     }
 
     suspend fun cacheCoverLocally(videoId: String, sourceUrl: String): String = withContext(Dispatchers.IO) {
@@ -56,27 +56,7 @@ class DownloadManager private constructor(private val context: Context) {
         if (coverFile.exists() && coverFile.length() > 0L) {
             return@withContext coverFile.absolutePath
         }
-        if (File(sourceUrl).exists()) {
-            return@withContext sourceUrl
-        }
-        if (sourceUrl.startsWith("http://", ignoreCase = true) || sourceUrl.startsWith("https://", ignoreCase = true)) {
-            try {
-                val req = Request.Builder()
-                    .url(sourceUrl)
-                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14)")
-                    .build()
-                okHttpClient.newCall(req).execute().use { resp ->
-                    if (resp.isSuccessful) {
-                        val bytes = resp.body?.bytes()
-                        if (bytes != null && bytes.isNotEmpty()) {
-                            coverFile.writeBytes(bytes)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                ZakoLog.w(TAG, "Failed to download cover for $videoId: ${e.message}")
-            }
-        }
+        CoverCacheManager.ensureCoverPersisted(context, videoId, sourceUrl)
         if (coverFile.exists() && coverFile.length() > 0L) coverFile.absolutePath else sourceUrl
     }
 
@@ -134,36 +114,33 @@ class DownloadManager private constructor(private val context: Context) {
                         }
                         if (videoId.isEmpty()) continue
 
+                        val matchedFav = allFavorites.find { it.videoId == videoId }
+                        val matchedHist = allHistory.find { it.videoId == videoId }
+                        val matchedLater = allWatchLater.find { it.videoId == videoId }
+
+                        val title = matchedFav?.title
+                            ?: matchedHist?.title
+                            ?: matchedLater?.title
+                            ?: if (fileName.contains("-")) fileName.substringBeforeLast(".mp4").substringBeforeLast("-").trim() else fileName.substringBeforeLast(".mp4").trim()
+
+                        val sourceCover = matchedFav?.coverUrl
+                            ?: matchedHist?.coverUrl
+                            ?: matchedLater?.coverUrl
+                            ?: ""
+
                         val existing = downloadDao.getDownloadByVideoId(videoId)
-                        val cachedCover = getCoverFile(videoId)
                         if (existing == null) {
-                            val matchedFav = allFavorites.find { it.videoId == videoId }
-                            val matchedHist = allHistory.find { it.videoId == videoId }
-                            val matchedLater = allWatchLater.find { it.videoId == videoId }
-
-                            val title = matchedFav?.title
-                                ?: matchedHist?.title
-                                ?: matchedLater?.title
-                                ?: if (fileName.contains("-")) fileName.substringBeforeLast(".mp4").substringBeforeLast("-").trim() else fileName.substringBeforeLast(".mp4").trim()
-
-                            val sourceCover = matchedFav?.coverUrl
-                                ?: matchedHist?.coverUrl
-                                ?: matchedLater?.coverUrl
-                                ?: ""
-
-                            val coverUrl = if (cachedCover.exists() && cachedCover.length() > 0L) {
-                                cachedCover.absolutePath
-                            } else {
-                                if (sourceCover.isNotEmpty()) {
-                                    scope.launch { cacheCoverLocally(videoId, sourceCover) }
-                                }
+                            val cleanSourceCover = if (sourceCover.startsWith("http://", true) || sourceCover.startsWith("https://", true)) {
                                 sourceCover
+                            } else {
+                                ""
                             }
+                            CoverCacheManager.ensureCoverPersistedAsync(context, videoId, cleanSourceCover, file.absolutePath)
 
                             val newEntity = DownloadEntity(
                                 videoId = videoId,
                                 title = title.ifEmpty { "视频 $videoId" },
-                                coverUrl = coverUrl,
+                                coverUrl = cleanSourceCover,
                                 savePath = file.absolutePath,
                                 totalBytes = file.length(),
                                 downloadedBytes = file.length(),
@@ -184,11 +161,19 @@ class DownloadManager private constructor(private val context: Context) {
                                     completedAt = existing.completedAt ?: file.lastModified()
                                 )
                             }
-                            if (cachedCover.exists() && cachedCover.length() > 0L && existing.coverUrl != cachedCover.absolutePath) {
-                                updated = updated.copy(coverUrl = cachedCover.absolutePath)
-                            } else if (!cachedCover.exists() && existing.coverUrl.isNotBlank()) {
-                                scope.launch { cacheCoverLocally(videoId, existing.coverUrl) }
+                            // 净化数据库中的死路径，保留有效网络 URL
+                            if (existing.coverUrl.startsWith("/data/user/") || existing.coverUrl.startsWith("/data/data/") ||
+                                (existing.coverUrl.startsWith("/") && !File(existing.coverUrl).exists())
+                            ) {
+                                val cleanUrl = if (sourceCover.startsWith("http://", true) || sourceCover.startsWith("https://", true)) {
+                                    sourceCover
+                                } else {
+                                    ""
+                                }
+                                updated = updated.copy(coverUrl = cleanUrl)
                             }
+                            val cand = if (updated.coverUrl.isNotBlank()) updated.coverUrl else sourceCover
+                            CoverCacheManager.ensureCoverPersistedAsync(context, videoId, cand, file.absolutePath)
                             if (updated != existing) {
                                 downloadDao.insertOrUpdate(updated)
                             }
@@ -315,17 +300,17 @@ class DownloadManager private constructor(private val context: Context) {
             val sanitizedName = title.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(60)
             val outputFile = File(targetDir, "$sanitizedName-$videoId.mp4")
 
-            val cachedCover = getCoverFile(videoId)
-            val initialCover = if (cachedCover.exists() && cachedCover.length() > 0L) {
-                cachedCover.absolutePath
-            } else {
+            // 保持数据库中存储原始网络 URL，不使用本地沙盒路径覆盖；封面由 CoverCacheManager 统一管理
+            val cleanCoverUrl = if (coverUrl.startsWith("http://", true) || coverUrl.startsWith("https://", true)) {
                 coverUrl
+            } else {
+                ""
             }
 
             val entity = DownloadEntity(
                 videoId = videoId,
                 title = title,
-                coverUrl = initialCover,
+                coverUrl = cleanCoverUrl,
                 savePath = outputFile.absolutePath,
                 status = DownloadEntity.STATUS_DOWNLOADING,
                 createdAt = System.currentTimeMillis(),
@@ -333,18 +318,8 @@ class DownloadManager private constructor(private val context: Context) {
             )
             downloadDao.insertOrUpdate(entity)
 
-            // 离线缓存封面到本地存储
-            if (!cachedCover.exists() && coverUrl.isNotBlank()) {
-                scope.launch {
-                    val localCover = cacheCoverLocally(videoId, coverUrl)
-                    if (localCover.isNotEmpty() && File(localCover).exists()) {
-                        val current = downloadDao.getDownloadByVideoId(videoId)
-                        if (current != null) {
-                            downloadDao.insertOrUpdate(current.copy(coverUrl = localCover))
-                        }
-                    }
-                }
-            }
+            // 离线持久化封面到统一目录
+            CoverCacheManager.ensureCoverPersistedAsync(context, videoId, coverUrl, outputFile.absolutePath)
 
             // Start foreground service
             try {
@@ -571,4 +546,142 @@ class DownloadManager private constructor(private val context: Context) {
             downloadDao.deleteByVideoIds(videoIds)
         }
     }
+
+    /**
+     * 切换下载目录时安全迁移已有视频文件
+     */
+    suspend fun migrateDownloadsDirectory(
+        newPath: String,
+        onProgress: (current: Int, total: Int, fileName: String) -> Unit
+    ): MigrationResult = withContext(Dispatchers.IO) {
+        if (newPath.isBlank()) {
+            return@withContext MigrationResult(0, 0, "目标路径不能为空")
+        }
+        val targetDir = File(newPath)
+        if (!targetDir.exists() && !targetDir.mkdirs()) {
+            return@withContext MigrationResult(0, 0, "无法创建目标目录，请检查文件写入权限")
+        }
+
+        // 1. 检查新目录写入权限
+        val testFile = File(targetDir, ".write_test_${System.currentTimeMillis()}")
+        val canWrite = try {
+            if (testFile.createNewFile()) {
+                testFile.delete()
+                true
+            } else {
+                false
+            }
+        } catch (_: Exception) {
+            false
+        }
+        if (!canWrite) {
+            return@withContext MigrationResult(0, 0, "新目录无写入权限，请重新授权或选择其他目录")
+        }
+
+        // 2. 优雅暂停所有正在下载的任务
+        val allDownloads = downloadDao.getAllDownloadsList()
+        for (d in allDownloads) {
+            if (d.status == DownloadEntity.STATUS_DOWNLOADING) {
+                pauseDownload(d.videoId)
+            }
+        }
+
+        // 3. 统计待迁移文件
+        val targetCanonical = try { targetDir.canonicalPath } catch (_: Exception) { targetDir.absolutePath }
+        val existingFiles = allDownloads.mapNotNull { entity ->
+            val f = File(entity.savePath)
+            if (f.exists() && f.isFile && f.length() > 0L) {
+                entity to f
+            } else {
+                null
+            }
+        }.filter { (_, f) ->
+            val srcCanonical = try { f.parentFile?.canonicalPath } catch (_: Exception) { f.parentFile?.absolutePath }
+            srcCanonical != targetCanonical
+        }
+
+        if (existingFiles.isEmpty()) {
+            settingsRepository.setDownloadPath(newPath)
+            reconcileLocalDownloadFiles()
+            return@withContext MigrationResult(0, 0, null)
+        }
+
+        // 4. 存储空间检查
+        val totalBytesNeeded = existingFiles.sumOf { (_, f) -> f.length() }
+        val usableSpace = targetDir.usableSpace
+        if (usableSpace in 1 until totalBytesNeeded) {
+            val neededMb = totalBytesNeeded / (1024 * 1024)
+            val usableMb = usableSpace / (1024 * 1024)
+            return@withContext MigrationResult(
+                0,
+                existingFiles.size,
+                "新目录可用存储空间不足（可用: ${usableMb}MB，所需: ${neededMb}MB）"
+            )
+        }
+
+        // 5. 流式迁移 (64KB 缓冲块)
+        var successCount = 0
+        val buffer = ByteArray(65536)
+
+        for ((idx, pair) in existingFiles.withIndex()) {
+            val (entity, srcFile) = pair
+            val currentNumber = idx + 1
+            onProgress(currentNumber, existingFiles.size, srcFile.name)
+
+            val destFile = File(targetDir, srcFile.name)
+
+            // 若新目录已存在同名且大小一致的文件，直接重用并对齐数据库记录
+            if (destFile.exists() && destFile.length() == srcFile.length()) {
+                downloadDao.updateSavePath(entity.videoId, destFile.absolutePath)
+                try { srcFile.delete() } catch (_: Exception) {}
+                successCount++
+                continue
+            }
+
+            val tmpFile = File(targetDir, "${srcFile.name}.migrating_tmp")
+            try {
+                if (tmpFile.exists()) tmpFile.delete()
+
+                srcFile.inputStream().use { input ->
+                    FileOutputStream(tmpFile).use { output ->
+                        var read: Int
+                        while (input.read(buffer).also { read = it } != -1) {
+                            output.write(buffer, 0, read)
+                        }
+                        output.flush()
+                    }
+                }
+
+                if (tmpFile.exists() && tmpFile.length() == srcFile.length()) {
+                    if (destFile.exists()) destFile.delete()
+                    if (tmpFile.renameTo(destFile)) {
+                        downloadDao.updateSavePath(entity.videoId, destFile.absolutePath)
+                        srcFile.delete()
+                        successCount++
+                    } else {
+                        ZakoLog.e(TAG, "Failed to rename temp file to ${destFile.name}")
+                        tmpFile.delete()
+                    }
+                } else {
+                    ZakoLog.e(TAG, "Migrated file size mismatch for ${srcFile.name}")
+                    tmpFile.delete()
+                }
+            } catch (e: Exception) {
+                ZakoLog.e(TAG, "Failed migrating file ${srcFile.name}: ${e.message}", e)
+                try { if (tmpFile.exists()) tmpFile.delete() } catch (_: Exception) {}
+            }
+        }
+
+        // 6. 更新配置并刷新
+        settingsRepository.setDownloadPath(newPath)
+        reconcileLocalDownloadFiles()
+
+        MigrationResult(successCount, existingFiles.size, null)
+    }
 }
+
+data class MigrationResult(
+    val successCount: Int,
+    val totalCount: Int,
+    val errorMessage: String? = null
+)

@@ -6,18 +6,18 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 ## 📊 工程源码规模统计
 
-本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.33**）代码规模统计如下：
+本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.34**）代码规模统计如下：
 
 | 语言 / 类型 | 模块数 | 源码行数 | 核心架构与工程职责 |
 | :--- | :---: | :---: | :--- |
-| **Kotlin (`.kt`)** | 71 | 21,202 | 业务决策中枢、Jetpack Compose 表现层、Room 响应式数据库、下载引擎、播放路由与 Scoped Storage 适配 |
+| **Kotlin (`.kt`)** | 71 | 21,487 | 业务决策中枢、Jetpack Compose 表现层、Room 响应式数据库、下载引擎、播放路由与 Scoped Storage 适配 |
 | **C++ / JNI (`.cpp`)** | 1 | 561 | libmpv 原生硬件加速渲染、跨语言 JNI 互斥锁、异步 Seek 屏障与原生日志捕获 |
-| **Gradle 构建 (`.kts`)** | 3 | 146 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
+| **Gradle 构建 (`.kts`)** | 3 | 151 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
 | **资源配置 (`.xml`)** | 26 | 338 | 跨版本清单配置、多主题矢量图形及自适应图标资源 |
 | **构建配置 (CMake / Props)** | 2 | 30 | CMake 原生链接编排与 Gradle 运行期优化参数 |
 | **CI/CD 工作流 (`.yml`)** | 1 | 112 | 自动化 GitHub Release 发版与纯源码无污染归档流水线 |
 | **项目开发规范 (`.md`)** | 1 | 17 | 自动化版本递增、Commit 规范、发版发布与编译验证准则 (`AGENTS.md`) |
-| **总计** | **105** | **22,406** | **全项目共计约 2.24 万行高质量工程源码** |
+| **总计** | **105** | **22,696** | **全项目共计约 2.27 万行高质量工程源码** |
 
 ---
 
@@ -38,6 +38,7 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 ### 3. 🛡️ MPV 原生播放器内核与渲染管线 (libmpv Native Pipeline)
 - **libmpv 原生硬件加速**：基于高性能 libmpv 底层驱动音视频管线，支持 GPU 渲染输出直通与多格式硬件解码加速；
+- **Surface 引用缓存与起播零冗余绑定**：重构 `ZakoPlayer` 渲染管道，维护活动 Surface 实例，起播与切片完全跳过重复的 EGL 重建与无效尺寸设置；严格遵循 MPV 现代规范弃用旧版 `video-aspect-override` 整数指令，消除起播停顿与控制台废弃警告；
 - **JNI 互斥锁与生命周期同步**：底层跨语言交互引入互斥锁（Mutex）与异步 Seek 屏障，严密协同 Surface 生命周期，杜绝引擎热切换与跨线程竞争崩溃；
 - **渲染死锁与起播保护**：深度优化视频输出绑定与配置管线，规避重复初始化与渲染死锁，保障无缝起播体验；
 - **本地微型反向代理网关**：内置支持流式 HTTP Range 请求的专用本地代理网关，高效适配原生播放内核与网络分片拉取。
@@ -62,7 +63,7 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 - **工业级批量操纵**：支持跨层级批量多选移动、重命名、复制与快速检索，内置高度封装的树状文件夹拾取器（`FolderTreeDialog`）。
 
 ### 7. 💾 Scoped Storage 公共空间零妥协直出与全流程防打断安全屏障 (Zero-Compromise Scoped Storage)
-- **公共存储免 Root 直达**：备份归档（`Download/ZakoViewer/Backups/`）与诊断日志（`Download/ZakoViewer/Logs/`）深度适配 Android 10+ `MediaStore.Downloads` 与低版本外部存储，用户在系统文件管理器中直接可见可用；
+- **公共存储免 Root 直达与跨版本日志物理隔离**：备份归档（`Download/ZakoViewer/Backups/`）与诊断日志（`Download/ZakoViewer/Logs/`）深度适配 Android 10+ `MediaStore.Downloads` 与低版本外部存储；日志系统内置编译期构建时间戳与全链路版本标识，冷启动自动感知版本跃迁并原子归档旧版日志，导出自动注入软硬件诊断头；
 - **防误触中断与全局唤醒锁（WakeLock）**：大体积视频备份导出与导入恢复期间，自动激活不可关闭阻断层与 `FLAG_KEEP_SCREEN_ON` 常亮保护，彻底阻止休眠或返回键中断数据写入；
 - **分阶段流式解压与结果卡片**：毫秒级进度回调（已读字节数、百分比、封面/视频解压数精准计数），恢复完毕结构化卡片汇总资产数据，并在 `try/finally` 中严格清理临时缓存，杜绝存储膨胀。
 

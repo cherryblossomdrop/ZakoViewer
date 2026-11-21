@@ -76,6 +76,7 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private var loadJob: Job? = null
+    private var lastLoadMoreTimestamp: Long = 0L
 
     init {
         viewModelScope.launch {
@@ -275,7 +276,10 @@ class HomeViewModel(
     }
 
     fun loadMore() {
-        if (!_uiState.value.isLoading && _uiState.value.hasMore && _uiState.value.layoutMode == LayoutMode.WATERFALL) {
+        val now = System.currentTimeMillis()
+        if (now - lastLoadMoreTimestamp < 500L) return
+        if (!_uiState.value.isLoading && !_uiState.value.isRefreshing && _uiState.value.hasMore && _uiState.value.layoutMode == LayoutMode.WATERFALL && _uiState.value.videos.isNotEmpty()) {
+            lastLoadMoreTimestamp = now
             loadVideos(refresh = false)
         }
     }

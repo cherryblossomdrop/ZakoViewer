@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.core.logger.ZakoLogger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -98,7 +99,16 @@ class CosApiClient(
             .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) Chrome/120.0.0.0")
             .build()
 
-        val response = client.newCall(request).execute()
+        val call = client.newCall(request)
+        val response = try {
+            call.execute()
+        } catch (e: Exception) {
+            if (e is CancellationException) {
+                call.cancel()
+                throw e
+            }
+            throw e
+        }
         ZakoLog.d(TAG, "Response code: ${response.code} for $fullUrl")
         if (!response.isSuccessful) {
             throw IllegalStateException("API error: HTTP ${response.code}")
@@ -167,6 +177,7 @@ class CosApiClient(
             ZakoLog.i(TAG, "getVideoRecommend returned ${list.size} items")
             list
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             ZakoLog.e(TAG, "getVideoRecommend error", e)
             emptyList()
         }
@@ -181,6 +192,7 @@ class CosApiClient(
             json = executeGet("/video/videoinfo?id=$id")
             gson.fromJson(json, CosVideoItem::class.java)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             ZakoLogger.e(TAG, "Failed to parse video detail for ID $id. Raw response body:\n$json", e)
             null
         }

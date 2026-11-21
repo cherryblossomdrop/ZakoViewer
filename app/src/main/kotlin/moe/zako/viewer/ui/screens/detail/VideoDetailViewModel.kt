@@ -21,6 +21,7 @@ import moe.zako.viewer.data.repository.HistoryRepository
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.data.source.cosav.CosApiClient
 import moe.zako.viewer.data.source.cosav.CosVideoItem
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -110,6 +111,7 @@ class VideoDetailViewModel(
                                 val extraItems = searchRes.items.filter { it.id != detail.id && related.none { r -> r.id == it.id } }
                                 related.addAll(extraItems)
                             } catch (e: Exception) {
+                                if (e is CancellationException) throw e
                                 ZakoLog.w(TAG, "Failed to supplement related videos by keyword $supplementKeyword", e)
                             }
                         }
@@ -119,6 +121,7 @@ class VideoDetailViewModel(
                                 val extraRecs = recs.filter { it.id != detail.id && related.none { r -> r.id == it.id } }
                                 related.addAll(extraRecs)
                             } catch (e: Exception) {
+                                if (e is CancellationException) throw e
                                 ZakoLog.w(TAG, "Failed to supplement related videos by recommendations", e)
                             }
                         }
@@ -139,6 +142,7 @@ class VideoDetailViewModel(
                     _uiState.update { it.copy(isLoading = false, errorMessage = "视频信息为空") }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 ZakoLogger.e(TAG, "Failed to load video detail for ID $videoId", e)
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
             }
@@ -407,6 +411,7 @@ class VideoDetailViewModel(
                 )
                 player.play()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 ZakoLog.e(TAG, "Error starting inline playback for $videoId", e)
             }
         }

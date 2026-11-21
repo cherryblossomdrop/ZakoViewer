@@ -337,9 +337,8 @@ class PlayerViewModel(
                     }
                 }
             } catch (e: Exception) {
-                if (e !is CancellationException) {
-                    ZakoLog.e(TAG, "Error starting playback for $videoId", e)
-                }
+                if (e is CancellationException) throw e
+                ZakoLog.e(TAG, "Error starting playback for $videoId", e)
             }
         }
     }
@@ -674,9 +673,8 @@ class PlayerViewModel(
                     }
                 }
             } catch (e: Exception) {
-                if (e !is CancellationException) {
-                    ZakoLog.w(TAG, "Speed test in dialog error: ${e.message}")
-                }
+                if (e is CancellationException) throw e
+                ZakoLog.w(TAG, "Speed test in dialog error: ${e.message}")
             }
         }
     }
@@ -759,6 +757,7 @@ class PlayerViewModel(
                 }
                 ZakoLog.i(TAG, "Saved playback progress for $videoId: ${pos}ms / ${dur}ms")
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 ZakoLog.w(TAG, "Failed to save playback progress for $videoId", e)
             }
         }

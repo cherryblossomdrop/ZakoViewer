@@ -104,8 +104,11 @@ fun HomeScreen(
         derivedStateOf {
             if (state.layoutMode != LayoutMode.WATERFALL) return@derivedStateOf false
             val totalItems = staggeredGridState.layoutInfo.totalItemsCount
-            val lastVisible = staggeredGridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            totalItems > 0 && lastVisible >= totalItems - 4
+            val visibleItems = staggeredGridState.layoutInfo.visibleItemsInfo
+            val lastVisible = visibleItems.lastOrNull()?.index ?: 0
+            // 避免冷启动首屏项目较少（如 10-12 项）且用户尚未开始滑动时，首屏渲染立刻误判触底发起重复请求
+            val isNotAtTop = staggeredGridState.firstVisibleItemIndex > 0 || staggeredGridState.firstVisibleItemScrollOffset > 20
+            totalItems > 0 && isNotAtTop && lastVisible >= totalItems - 4
         }
     }
 

@@ -1,5 +1,8 @@
 import java.util.Properties
 import java.io.FileInputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 plugins {
     alias(libs.plugins.android.application)
@@ -17,12 +20,16 @@ android {
         FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
     }
 
+    val buildTime = SimpleDateFormat("yyyyMMdd-HHmm", Locale.getDefault()).format(Date())
+
     defaultConfig {
         applicationId = "moe.zako.viewer"
         minSdk = 26
         targetSdk = 34
-        versionCode = 37
-        versionName = "1.2.33"
+        versionCode = 38
+        versionName = "1.2.34"
+
+        buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

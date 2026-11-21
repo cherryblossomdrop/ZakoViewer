@@ -37,6 +37,7 @@ fun LogViewerScreen(
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
     val logs by ZakoLog.logsFlow.collectAsState()
+    val includeHistory by ZakoLog.includeHistoryFlow.collectAsState()
     var exportedResult by remember { mutableStateOf<ExportResult?>(null) }
     var isExporting by remember { mutableStateOf(false) }
 
@@ -154,7 +155,7 @@ fun LogViewerScreen(
                             coroutineScope.launch(Dispatchers.IO) {
                                 isExporting = true
                                 try {
-                                    val result = ZakoLog.exportToPublicDownloads(context)
+                                    val result = ZakoLog.exportToPublicDownloads(context, includeHistory = includeHistory)
                                     withContext(Dispatchers.Main) {
                                         exportedResult = result
                                     }
@@ -221,6 +222,46 @@ fun LogViewerScreen(
                         modifier = Modifier.size(16.dp)
                     )
                 }
+            }
+
+            // 版本状态与历史版本日志隔离控制
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                ) {
+                    Text(
+                        text = "当前版本: ${ZakoLog.CURRENT_VERSION_TAG}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+
+                FilterChip(
+                    selected = includeHistory,
+                    onClick = { ZakoLog.setIncludeHistory(!includeHistory) },
+                    label = {
+                        Text(
+                            text = if (includeHistory) "已包含历史日志" else "仅当前版本日志",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (includeHistory) Icons.Default.History else Icons.Default.FilterList,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                )
             }
 
             LazyColumn(

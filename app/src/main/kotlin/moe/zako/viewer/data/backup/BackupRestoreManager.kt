@@ -258,22 +258,57 @@ class BackupRestoreManager(
 
             // Map old folder IDs to new folder IDs to preserve infinite tree relationships
             val oldToNewFolderIdMap = mutableMapOf<Long, Long>()
+            val existingFolders = db.favoriteDao().getAllFoldersList().toMutableList()
+            val existingRootFolder = existingFolders.firstOrNull { it.parentId == null }
             val sortedFolders = bundle.folders.sortedBy { it.parentId ?: 0L }
 
             for (folder in sortedFolders) {
-                val newParentId = folder.parentId?.let { oldToNewFolderIdMap[it] }
-                val newId = db.favoriteDao().insertFolder(
-                    folder.copy(id = 0, parentId = newParentId, updatedAt = System.currentTimeMillis())
-                )
-                oldToNewFolderIdMap[folder.id] = newId
+                if (folder.parentId == null) {
+                    // 根收藏夹：合并至本地既有的默认根目录「我的收藏」，严禁产生重复根收藏夹
+                    if (existingRootFolder != null) {
+                        oldToNewFolderIdMap[folder.id] = existingRootFolder.id
+                        ZakoLog.i(TAG, "Merged backup root folder '${folder.name}' with existing root folder id=${existingRootFolder.id}")
+                    } else {
+                        val newId = db.favoriteDao().insertFolder(
+                            folder.copy(id = 0, parentId = null, updatedAt = System.currentTimeMillis())
+                        )
+                        val inserted = folder.copy(id = newId, parentId = null)
+                        existingFolders.add(inserted)
+                        oldToNewFolderIdMap[folder.id] = newId
+                    }
+                } else {
+                    val newParentId = folder.parentId?.let { oldToNewFolderIdMap[it] }
+                    val matchedExisting = existingFolders.find { it.parentId == newParentId && it.name == folder.name }
+                    if (matchedExisting != null) {
+                        oldToNewFolderIdMap[folder.id] = matchedExisting.id
+                        ZakoLog.i(TAG, "Merged backup subfolder '${folder.name}' with existing folder id=${matchedExisting.id}")
+                    } else {
+                        val newId = db.favoriteDao().insertFolder(
+                            folder.copy(id = 0, parentId = newParentId, updatedAt = System.currentTimeMillis())
+                        )
+                        val inserted = folder.copy(id = newId, parentId = newParentId)
+                        existingFolders.add(inserted)
+                        oldToNewFolderIdMap[folder.id] = newId
+                    }
+                }
             }
 
-            // Restore favorite items metadata
+            // Restore favorite items metadata with deduplication per folder
+            val existingItems = db.favoriteDao().getAllItemsList()
+            val existingItemKeys = existingItems.map { "${it.videoId}_${it.folderId}" }.toMutableSet()
             val newItems = bundle.favoriteItems.mapNotNull { item ->
                 val newFolderId = oldToNewFolderIdMap[item.folderId] ?: return@mapNotNull null
-                item.copy(id = 0, folderId = newFolderId)
+                val key = "${item.videoId}_${newFolderId}"
+                if (existingItemKeys.contains(key)) {
+                    null // Already in this folder, deduplicate
+                } else {
+                    existingItemKeys.add(key)
+                    item.copy(id = 0, folderId = newFolderId)
+                }
             }
-            db.favoriteDao().insertItems(newItems)
+            if (newItems.isNotEmpty()) {
+                db.favoriteDao().insertItems(newItems)
+            }
 
             // Restore watch history
             for (h in bundle.watchHistory) {

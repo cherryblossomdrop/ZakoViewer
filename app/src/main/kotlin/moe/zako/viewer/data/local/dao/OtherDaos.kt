@@ -18,6 +18,9 @@ interface WatchHistoryDao {
     @Query("SELECT * FROM watch_history ORDER BY watchedAt DESC")
     suspend fun getAllHistoryList(): List<WatchHistoryEntity>
 
+    @Query("SELECT * FROM watch_history WHERE videoId = :videoId LIMIT 1")
+    suspend fun getHistoryByVideoId(videoId: String): WatchHistoryEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(history: WatchHistoryEntity)
 

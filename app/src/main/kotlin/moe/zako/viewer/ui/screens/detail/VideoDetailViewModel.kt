@@ -23,6 +23,10 @@ import moe.zako.viewer.data.source.cosav.CosApiClient
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.isActive
 
 data class VideoDetailUiState(
     val video: CosVideoItem? = null,
@@ -78,6 +82,8 @@ class VideoDetailViewModel(
     private val cdnSmartRouter: CdnSmartRouter = CdnSmartRouter()
     private val _uiState = MutableStateFlow(VideoDetailUiState())
     val uiState: StateFlow<VideoDetailUiState> = _uiState.asStateFlow()
+
+    private var speedTestJob: Job? = null
 
     init {
         loadDetail()
@@ -578,11 +584,15 @@ class VideoDetailViewModel(
     }
 
     fun triggerCdnSpeedTest() {
-        viewModelScope.launch {
+        speedTestJob?.cancel()
+        speedTestJob = viewModelScope.launch {
             _uiState.update { it.copy(showMoreMenu = false) }
             val lines = _uiState.value.video?.allVideoLines ?: emptyList()
             if (lines.isNotEmpty()) {
-                cdnSmartRouter.autoSelectFastestNode(lines)
+                val fastest = cdnSmartRouter.autoSelectFastestNode(lines)
+                if (isActive) {
+                    selectCdnNode(fastest)
+                }
             }
         }
     }
@@ -653,10 +663,34 @@ class VideoDetailViewModel(
         _uiState.update { it.copy(showMoreMenu = false) }
     }
 
+    private fun savePlaybackProgress() {
+        val pos = player.state.value.currentPositionMs
+        val dur = player.state.value.durationMs
+        val vid = _uiState.value.video
+        val title = vid?.title ?: ""
+        val cover = vid?.displayCover ?: ""
+        if (pos > 0L) {
+            try {
+                runBlocking(Dispatchers.IO) {
+                    historyRepository.recordWatch(
+                        videoId = videoId,
+                        title = title,
+                        coverUrl = cover,
+                        positionMs = pos,
+                        totalDurationMs = dur
+                    )
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         try {
-            MultiNodeStreamBuffer.getInstance(player.context).stopBuffering(videoId)
+            savePlaybackProgress()
+            speedTestJob?.cancel()
+            cdnSmartRouter.cancelTesting()
+            MultiNodeStreamBuffer.stopIfActive(videoId)
             player.release()
         } catch (_: Exception) {}
     }

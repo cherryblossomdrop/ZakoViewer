@@ -85,10 +85,7 @@ fun PlayerScreen(
     val handleBack: () -> Unit = {
         if (!isExiting) {
             isExiting = true
-            try {
-                viewModel.player.pause()
-                viewModel.player.detachSurface()
-            } catch (_: Exception) {}
+            viewModel.onExit()
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             activity?.window?.let { w ->
                 WindowCompat.getInsetsController(w, w.decorView).show(WindowInsetsCompat.Type.systemBars())
@@ -175,7 +172,6 @@ fun PlayerScreen(
                     },
                     onRelease = { view ->
                         view.visibility = android.view.View.GONE
-                        viewModel.player.detachSurface()
                     },
                     modifier = Modifier.align(Alignment.Center)
                 )

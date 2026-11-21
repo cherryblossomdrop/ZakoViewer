@@ -25,6 +25,8 @@ class HistoryRepository(
 ) {
     fun getAllHistory(): Flow<List<WatchHistoryEntity>> = watchHistoryDao.getAllHistoryFlow()
 
+    suspend fun getHistory(videoId: String): WatchHistoryEntity? = watchHistoryDao.getHistoryByVideoId(videoId)
+
     fun searchHistory(query: String): Flow<List<WatchHistoryEntity>> =
         watchHistoryDao.searchHistoryFlow(query)
 

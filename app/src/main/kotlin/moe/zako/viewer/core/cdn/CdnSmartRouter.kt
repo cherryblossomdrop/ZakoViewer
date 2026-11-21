@@ -72,4 +72,8 @@ class CdnSmartRouter(
         ZakoLog.i(TAG, "Manually selected CDN node: ${node.name}")
         _selectedNode.value = node
     }
+
+    fun cancelTesting() {
+        _isTesting.value = false
+    }
 }

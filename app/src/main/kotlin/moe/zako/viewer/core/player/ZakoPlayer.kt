@@ -54,7 +54,7 @@ data class VideoPlayerState(
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
     val engine: PlayerEngine = PlayerEngine.MPV,
-    val hwDecMode: HwDecMode = HwDecMode.MEDIACODEC
+    val hwDecMode: HwDecMode = HwDecMode.MEDIACODEC_COPY
 ) {
     val progress: Float
         get() = if (durationMs > 0) (currentPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
@@ -105,6 +105,20 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
     private var activeHeaders: Map<String, String> = emptyMap()
     private var isMediaPlayerPrepared = false
     private var pendingResumePositionMs = 0L
+    private var lastSurfaceWidth = 0
+    private var lastSurfaceHeight = 0
+
+    fun setSurfaceSize(width: Int, height: Int) {
+        if (width > 0 && height > 0) {
+            lastSurfaceWidth = width
+            lastSurfaceHeight = height
+            if (isMpvActive()) {
+                try {
+                    MPVLib.setPropertyString("android-surface-size", "${width}x$height")
+                } catch (_: Throwable) {}
+            }
+        }
+    }
 
     private var lastSeekTimestamp = 0L
     private var lastBufferingToastTimestamp = 0L
@@ -185,11 +199,21 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
             MPVLib.setOptionString("gpu-api", "opengl")
             MPVLib.setOptionString("opengl-es", "yes")
             MPVLib.setOptionString("ao", "audiotrack,opensles")
-            MPVLib.setOptionString("hwdec", hwdec.code)
+
+            // vo=gpu 模式下必须搭配 mediacodec-copy（或软解 no），不要使用零拷贝的 mediacodec 直接输出，以保证 OpenGL ES 纹理正常采样
+            val effectiveHwdec = when (hwdec) {
+                HwDecMode.MEDIACODEC -> "mediacodec-copy"
+                HwDecMode.MEDIACODEC_COPY -> "mediacodec-copy"
+                HwDecMode.AUTO -> "mediacodec-copy"
+                HwDecMode.OFF -> "no"
+            }
+            MPVLib.setOptionString("hwdec", effectiveHwdec)
             MPVLib.setOptionString("hwdec-codecs", "all")
             MPVLib.setOptionString("vd-lavc-fast", "yes")
             MPVLib.setOptionString("vd-lavc-threads", "0")
             MPVLib.setOptionString("vd-lavc-dr", "yes")
+            MPVLib.setOptionString("force-window", "yes")
+            MPVLib.setOptionString("msg-level", "all=warn,vo=v,vd=v")
 
             // Streaming buffer & demuxer caching (NextPlayerCloud reference)
             MPVLib.setOptionString("cache", "yes")
@@ -225,8 +249,16 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
         _state.value = _state.value.copy(hwDecMode = mode)
         if (MPVLib.isLoaded()) {
             try {
-                MPVLib.setOptionString("hwdec", mode.code)
-                MPVLib.setPropertyString("hwdec", mode.code)
+                val effectiveHwdec = when (mode) {
+                    HwDecMode.MEDIACODEC -> "mediacodec-copy"
+                    HwDecMode.MEDIACODEC_COPY -> "mediacodec-copy"
+                    HwDecMode.AUTO -> "mediacodec-copy"
+                    HwDecMode.OFF -> "no"
+                }
+                MPVLib.setOptionString("hwdec", effectiveHwdec)
+                if (MPVLib.isReady()) {
+                    MPVLib.setPropertyString("hwdec", effectiveHwdec)
+                }
             } catch (e: Exception) {
                 ZakoLog.e(TAG, "Failed to set hwdec mode", e)
             }
@@ -253,6 +285,13 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                     }
                     ZakoLog.d(TAG, "attachSurface: binding surface to MPVLib")
                     MPVLib.attachSurface(surface)
+                    try {
+                        MPVLib.setPropertyString("force-window", "yes")
+                        MPVLib.setPropertyString("vo", "gpu")
+                        if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0) {
+                            MPVLib.setPropertyString("android-surface-size", "${lastSurfaceWidth}x${lastSurfaceHeight}")
+                        }
+                    } catch (_: Throwable) {}
                 } catch (e: Throwable) {
                     ZakoLog.e(TAG, "attachSurface MPVLib error", e)
                 }
@@ -340,6 +379,13 @@ class ZakoPlayer(val context: Context) : MPVLib.EventObserver {
                 attachedSurface?.let { surf ->
                     if (surf.isValid) {
                         MPVLib.attachSurface(surf)
+                        try {
+                            MPVLib.setPropertyString("force-window", "yes")
+                            MPVLib.setPropertyString("vo", "gpu")
+                            if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0) {
+                                MPVLib.setPropertyString("android-surface-size", "${lastSurfaceWidth}x${lastSurfaceHeight}")
+                            }
+                        } catch (_: Throwable) {}
                     }
                 }
                 if (headers.isNotEmpty()) {

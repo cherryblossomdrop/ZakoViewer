@@ -162,6 +162,9 @@ fun PlayerScreen(
                         onSurfaceDestroyedListener = {
                             viewModel.player.detachSurface()
                         }
+                        onSurfaceChangedListener = { _, width, height ->
+                            viewModel.player.setSurfaceSize(width, height)
+                        }
                         if (holder.surface.isValid) {
                             viewModel.player.attachSurface(holder.surface, holder)
                         }

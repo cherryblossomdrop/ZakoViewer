@@ -1,12 +1,10 @@
 ﻿package moe.zako.viewer.ui.screens.profile.about
 
 import android.content.Intent
-import moe.zako.viewer.ui.components.ZakoToast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -19,8 +17,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.logger.ZakoLog
+import moe.zako.viewer.core.storage.ExportResult
+import moe.zako.viewer.ui.components.ZakoToast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,7 +30,39 @@ fun LogViewerScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val logs by ZakoLog.logsFlow.collectAsState()
+    var exportedResult by remember { mutableStateOf<ExportResult?>(null) }
+    var isExporting by remember { mutableStateOf(false) }
+
+    if (exportedResult != null) {
+        val result = exportedResult!!
+        AlertDialog(
+            onDismissRequest = { exportedResult = null },
+            title = { Text("日志导出成功") },
+            text = { Text("日志文件已保存到公共目录：\n${result.displayPath}") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_STREAM, result.uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "分享日志文件"))
+                        exportedResult = null
+                    }
+                ) {
+                    Text("分享")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { exportedResult = null }) {
+                    Text("关闭")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -40,28 +74,38 @@ fun LogViewerScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { ZakoLog.clear() }) {
+                    IconButton(onClick = {
+                        ZakoLog.clear()
+                        ZakoToast.show("运行日志已清空")
+                    }) {
                         Icon(imageVector = Icons.Default.Delete, contentDescription = "清空日志")
                     }
-                    IconButton(onClick = {
-                        try {
-                            val logFile = ZakoLog.exportToFile(context)
-                            val uri = FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                logFile
-                            )
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    IconButton(
+                        enabled = !isExporting,
+                        onClick = {
+                            coroutineScope.launch(Dispatchers.IO) {
+                                isExporting = true
+                                try {
+                                    val result = ZakoLog.exportToPublicDownloads(context)
+                                    withContext(Dispatchers.Main) {
+                                        exportedResult = result
+                                        ZakoToast.show("已保存到 ${result.displayPath}")
+                                    }
+                                } catch (e: Exception) {
+                                    withContext(Dispatchers.Main) {
+                                        ZakoToast.show("导出失败: ${e.message}")
+                                    }
+                                } finally {
+                                    isExporting = false
+                                }
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "导出/分享日志文件"))
-                        } catch (e: Exception) {
-                            ZakoToast.show("导出失败: ${e.message}")
                         }
-                    }) {
-                        Icon(imageVector = Icons.Default.Share, contentDescription = "导出日志")
+                    ) {
+                        if (isExporting) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(imageVector = Icons.Default.Share, contentDescription = "导出日志")
+                        }
                     }
                 }
             )

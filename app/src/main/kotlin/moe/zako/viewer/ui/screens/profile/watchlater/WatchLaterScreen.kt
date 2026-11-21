@@ -82,7 +82,7 @@ fun WatchLaterScreen(
                             val isCoverBlurEnabled = LocalCoverBlurEnabled.current
                             val context = LocalContext.current
                             AsyncImage(
-                                model = CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl),
+                                model = CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .width(100.dp)

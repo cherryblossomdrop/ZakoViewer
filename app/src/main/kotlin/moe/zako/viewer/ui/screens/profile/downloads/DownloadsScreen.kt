@@ -601,7 +601,7 @@ fun CompletedDownloadItem(
 
     // 优先加载本地持久化封面，缺失时自动补全
     val coverModel = remember(item.videoId, item.coverUrl) {
-        CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl)
+        CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true)
     }
 
     Card(
@@ -719,7 +719,7 @@ fun ActiveDownloadItem(
 
     // 优先加载本地持久化封面，缺失时自动补全
     val coverModel = remember(item.videoId, item.coverUrl) {
-        CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl)
+        CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true)
     }
 
     Card(

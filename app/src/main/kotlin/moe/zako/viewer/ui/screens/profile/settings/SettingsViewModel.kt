@@ -240,7 +240,12 @@ class SettingsViewModel(
     // --- 应用缓存统计与清理 ---
     fun calculateCacheSize(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            val totalSize = getFolderSize(context.cacheDir) + getFolderSize(context.externalCacheDir)
+            val downloadDir = try {
+                DownloadManager.getInstance(context).getDownloadDir().canonicalFile
+            } catch (_: Exception) {
+                null
+            }
+            val totalSize = getFolderSize(context.cacheDir, downloadDir) + getFolderSize(context.externalCacheDir, downloadDir)
             _uiState.update { it.copy(cacheSizeFormatted = formatBytes(totalSize)) }
         }
     }
@@ -248,6 +253,12 @@ class SettingsViewModel(
     fun clearAppCache(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val downloadDir = try {
+                    DownloadManager.getInstance(context).getDownloadDir().canonicalFile
+                } catch (_: Exception) {
+                    null
+                }
+
                 // 1. Coil 内存缓存与磁盘缓存彻底清理
                 try {
                     coil.Coil.imageLoader(context).apply {
@@ -261,11 +272,11 @@ class SettingsViewModel(
                     moe.zako.viewer.core.player.MultiNodeStreamBuffer.getInstance(context).clearCache()
                 } catch (_: Exception) {}
 
-                // 3. context.cacheDir 彻底递归清理子文件（保留目录本身）
-                deleteDirContents(context.cacheDir)
+                // 3. context.cacheDir 彻底递归清理子文件（保留目录本身，严格排除已下载视频目录）
+                deleteDirContents(context.cacheDir, downloadDir)
 
-                // 4. context.externalCacheDir 彻底递归清理子文件（保留目录本身）
-                deleteDirContents(context.externalCacheDir)
+                // 4. context.externalCacheDir 彻底递归清理子文件（保留目录本身，严格排除已下载视频目录）
+                deleteDirContents(context.externalCacheDir, downloadDir)
 
                 // 5. 刷新缓存显示为 0.00 B
                 _uiState.update { it.copy(cacheSizeFormatted = "0.00 B") }
@@ -280,22 +291,39 @@ class SettingsViewModel(
         }
     }
 
-    private fun getFolderSize(file: File?): Long {
+    private fun getFolderSize(file: File?, excludedDir: File?): Long {
         if (file == null || !file.exists()) return 0L
-        if (file.isFile) return file.length()
+        val canonical = try { file.canonicalFile } catch (_: Exception) { file.absoluteFile }
+        if (excludedDir != null && (canonical == excludedDir || canonical.startsWith(excludedDir))) {
+            return 0L
+        }
+        if (file.isFile) {
+            if (file.name == "temp_restore_file") return 0L
+            return file.length()
+        }
         var size = 0L
         val files = file.listFiles() ?: return 0L
         for (f in files) {
-            size += if (f.isDirectory) getFolderSize(f) else f.length()
+            size += if (f.isDirectory) getFolderSize(f, excludedDir) else {
+                if (f.name == "temp_restore_file") 0L else f.length()
+            }
         }
         return size
     }
 
-    private fun deleteDirContents(dir: File?) {
+    private fun deleteDirContents(dir: File?, excludedDir: File?) {
         if (dir == null || !dir.exists() || !dir.isDirectory) return
+        val canonical = try { dir.canonicalFile } catch (_: Exception) { dir.absoluteFile }
+        if (excludedDir != null && (canonical == excludedDir || canonical.startsWith(excludedDir))) {
+            return
+        }
         dir.listFiles()?.forEach { file ->
+            val fileCanonical = try { file.canonicalFile } catch (_: Exception) { file.absoluteFile }
+            if (excludedDir != null && (fileCanonical == excludedDir || fileCanonical.startsWith(excludedDir))) {
+                return@forEach
+            }
             if (file.isDirectory) {
-                deleteDirContents(file)
+                deleteDirContents(file, excludedDir)
                 file.delete()
             } else {
                 file.delete()

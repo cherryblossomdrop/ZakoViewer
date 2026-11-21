@@ -1,5 +1,7 @@
 ﻿package moe.zako.viewer.data.repository
 
+import moe.zako.viewer.ZakoApplication
+import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.data.local.dao.FavoriteDao
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
@@ -132,6 +134,9 @@ class FavoriteRepository(private val favoriteDao: FavoriteDao) {
                 isVip = isVip
             )
         )
+        try {
+            CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, coverUrl)
+        } catch (_: Exception) {}
     }
 
     suspend fun deleteItems(itemIds: List<Long>) {

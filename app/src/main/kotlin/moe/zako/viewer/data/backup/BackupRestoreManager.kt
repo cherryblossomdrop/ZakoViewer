@@ -5,6 +5,8 @@ import com.google.gson.Gson
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.core.logger.ZakoLog
+import moe.zako.viewer.core.storage.ExportResult
+import moe.zako.viewer.core.storage.PublicStorageHelper
 import moe.zako.viewer.data.local.ZakoDatabase
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
@@ -66,14 +68,11 @@ class BackupRestoreManager(
     }
 
     /**
-     * Exports full backup. If includeDownloadedVideos is true, packages JSON + video files into a .zip.
      * Exports full backup. 导出的备份文件统一采用 .zip 格式，且强制打包 covers/{videoId}.jpg 与 backup.json；
      * 若 includeDownloadedVideos 为 true，一并打包已下载的 .mp4 文件。
+     * 直接导出至公共 Download/ZakoViewer/Backups/ 目录，不残留私有缓存。
      */
-    suspend fun exportBackup(includeDownloadedVideos: Boolean): File = withContext(Dispatchers.IO) {
-        val backupDir = File(context.cacheDir, "backups")
-        if (!backupDir.exists()) backupDir.mkdirs()
-
+    suspend fun exportBackup(includeDownloadedVideos: Boolean): ExportResult = withContext(Dispatchers.IO) {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val folders = db.favoriteDao().getAllFoldersList()
         val items = db.favoriteDao().getAllItemsList()
@@ -111,66 +110,32 @@ class BackupRestoreManager(
             }
         }
 
-        // 统一采用 ZIP 归档格式导出备份
-        val zipFileName = if (includeDownloadedVideos) {
-            "ZakoViewer_FullBackup_$timeStamp.zip"
-        } else {
-            "ZakoViewer_Backup_$timeStamp.zip"
-        }
-        val zipFile = File(backupDir, zipFileName)
-        val zipOut = ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile)))
-        zipOut.use { zos ->
-            zos.setLevel(Deflater.NO_COMPRESSION)
+        // 统一采用 ZIP 归档格式导出备份至公共 Download/ZakoViewer/Backups/
+        val zipFileName = "ZakoViewer_Backup_$timeStamp.zip"
 
-            // Entry 1: metadata json
-            zos.putNextEntry(ZipEntry("backup.json"))
-            val jsonBytes = jsonContent.toByteArray(Charsets.UTF_8)
-            zos.write(jsonBytes)
-            zos.closeEntry()
+        val exportResult = PublicStorageHelper.createPublicDownloadOutputStream(
+            context = context,
+            subDir = "ZakoViewer/Backups",
+            fileName = zipFileName,
+            mimeType = "application/zip"
+        ) { outputStream ->
+            val zipOut = ZipOutputStream(BufferedOutputStream(outputStream))
+            zipOut.use { zos ->
+                zos.setLevel(Deflater.NO_COMPRESSION)
 
-            // Entry 2+: covers/{videoId}.jpg 流式写入 ZIP
-            val buffer = ByteArray(BUFFER_SIZE)
-            for (videoId in allVideoIds) {
-                val coverFile = CoverCacheManager.getCoverFile(context, videoId)
-                if (coverFile.exists() && coverFile.length() > 0L) {
-                    zos.putNextEntry(ZipEntry("covers/$videoId.jpg"))
-                    coverFile.inputStream().use { fis ->
-                        var bytesRead: Int
-                        while (fis.read(buffer).also { bytesRead = it } != -1) {
-                            zos.write(buffer, 0, bytesRead)
-                        }
-                    }
-                    zos.closeEntry()
-                }
-            }
+                // Entry 1: metadata json
+                zos.putNextEntry(ZipEntry("backup.json"))
+                val jsonBytes = jsonContent.toByteArray(Charsets.UTF_8)
+                zos.write(jsonBytes)
+                zos.closeEntry()
 
-            // Entry 3+: downloaded video files (仅在勾选时打入)
-            if (includeDownloadedVideos) {
-                val videoFiles = mutableSetOf<File>()
-                val downloadManager = DownloadManager.getInstance(context)
-                val primaryDownloadsDir = downloadManager.getDownloadDir()
-                if (primaryDownloadsDir.exists() && primaryDownloadsDir.isDirectory) {
-                    primaryDownloadsDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4", ignoreCase = true) }?.let {
-                        videoFiles.addAll(it)
-                    }
-                }
-                val appDownloadsDir = File(context.getExternalFilesDir(null), "downloads")
-                if (appDownloadsDir.exists() && appDownloadsDir.isDirectory) {
-                    appDownloadsDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4", ignoreCase = true) }?.let {
-                        videoFiles.addAll(it)
-                    }
-                }
-                for (dl in downloads) {
-                    val f = File(dl.savePath)
-                    if (f.exists() && f.isFile && f.name.endsWith(".mp4", ignoreCase = true)) {
-                        videoFiles.add(f)
-                    }
-                }
-
-                for (file in videoFiles) {
-                    if (file.isFile) {
-                        zos.putNextEntry(ZipEntry("videos/${file.name}"))
-                        file.inputStream().use { fis ->
+                // Entry 2+: covers/{videoId}.jpg 流式写入 ZIP
+                val buffer = ByteArray(BUFFER_SIZE)
+                for (videoId in allVideoIds) {
+                    val coverFile = CoverCacheManager.getCoverFile(context, videoId)
+                    if (coverFile.exists() && coverFile.length() > 0L) {
+                        zos.putNextEntry(ZipEntry("covers/$videoId.jpg"))
+                        coverFile.inputStream().use { fis ->
                             var bytesRead: Int
                             while (fis.read(buffer).also { bytesRead = it } != -1) {
                                 zos.write(buffer, 0, bytesRead)
@@ -179,10 +144,56 @@ class BackupRestoreManager(
                         zos.closeEntry()
                     }
                 }
+
+                // Entry 3+: downloaded video files (仅在勾选时打入)
+                if (includeDownloadedVideos) {
+                    val videoFiles = mutableSetOf<File>()
+                    val downloadManager = DownloadManager.getInstance(context)
+                    val primaryDownloadsDir = downloadManager.getDownloadDir()
+                    if (primaryDownloadsDir.exists() && primaryDownloadsDir.isDirectory) {
+                        primaryDownloadsDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4", ignoreCase = true) }?.let {
+                            videoFiles.addAll(it)
+                        }
+                    }
+                    val appDownloadsDir = File(context.getExternalFilesDir(null), "downloads")
+                    if (appDownloadsDir.exists() && appDownloadsDir.isDirectory) {
+                        appDownloadsDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4", ignoreCase = true) }?.let {
+                            videoFiles.addAll(it)
+                        }
+                    }
+                    for (dl in downloads) {
+                        val f = File(dl.savePath)
+                        if (f.exists() && f.isFile && f.name.endsWith(".mp4", ignoreCase = true)) {
+                            videoFiles.add(f)
+                        }
+                    }
+
+                    for (file in videoFiles) {
+                        if (file.isFile) {
+                            zos.putNextEntry(ZipEntry("videos/${file.name}"))
+                            file.inputStream().use { fis ->
+                                var bytesRead: Int
+                                while (fis.read(buffer).also { bytesRead = it } != -1) {
+                                    zos.write(buffer, 0, bytesRead)
+                                }
+                            }
+                            zos.closeEntry()
+                        }
+                    }
+                }
             }
         }
-        ZakoLog.i(TAG, "Exported ZIP backup to: ${zipFile.absolutePath}")
-        zipFile
+
+        // 清理可能遗留的历史 cache/backups 临时文件
+        try {
+            val legacyBackupDir = File(context.cacheDir, "backups")
+            if (legacyBackupDir.exists()) {
+                legacyBackupDir.deleteRecursively()
+            }
+        } catch (_: Exception) {}
+
+        ZakoLog.i(TAG, "Exported ZIP backup to public downloads: ${exportResult.displayPath}")
+        exportResult
     }
 
     /**

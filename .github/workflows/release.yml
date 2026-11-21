@@ -35,21 +35,18 @@ jobs:
           fi
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Package Source Code
-        run: |
-          TAG="${{ steps.vars.outputs.tag }}"
-          ZIP_NAME="ZakoViewer-${TAG}-source.zip"
-          echo "Packaging source code for ${TAG}..."
-          git archive --format=zip --prefix="ZakoViewer-${TAG}/" -o "${ZIP_NAME}" HEAD
-          echo "Package created: ${ZIP_NAME}"
-          ls -lh "${ZIP_NAME}"
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
           name: Release ${{ steps.vars.outputs.tag }}
-          files: ZakoViewer-${{ steps.vars.outputs.tag }}-source.zip
           generate_release_notes: true
           draft: false
           prerelease: false
+
+      - name: Cleanup Redundant Asset If Exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.vars.outputs.tag }}"
+          gh release delete-asset "$TAG" "ZakoViewer-${TAG}-source.zip" --yes || true

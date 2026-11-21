@@ -30,5 +30,5 @@
 每次执行发版并推送到 GitHub 时，须按以下顺序操作：
 1. 确认 `versionCode` / `versionName` 已按本次发版更新，并按文档同步规则视情况更新 `README.md`。
 2. 确认工作区不包含 `.apk` 或敏感配置文件后，提交改动并推送当前分支到 GitHub。
-3. 基于最新提交创建并推送对应的语义化版本 Tag（如 `git tag vX.Y.Z && git push origin vX.Y.Z`），由 GitHub Actions 自动创建对应版本的 Release 并附上完整源码压缩包（不包含构建好的 APK）。
+3. 基于最新提交创建并推送对应的语义化版本 Tag（如 `git tag vX.Y.Z && git push origin vX.Y.Z`），由 GitHub Actions 自动创建对应版本的 Release 并生成更新日志（GitHub 官方将自动附带纯净源码包，严禁额外编译或上传 APK）。
 

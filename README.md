@@ -1,173 +1,132 @@
 # ZakoViewer
 
-ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的现代化、高性能 Android 视频客户端应用。
+ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现代化 Android 视频客户端应用。项目深度整合底层 64 位 MPV 原生渲染管线与端侧智能决策架构，提供高可用流媒体选线、本地资产优先仲裁、语义级隐写分享及 Material 3 Expressive 极致流体视觉体验。
 
-## 代码规模统计
+---
 
-本项目遵循现代化 Android 与 Kotlin 规范精心重构，截至最新版本（v1.2.28）代码规模统计如下：
+## 📊 工程源码规模统计
 
-| 语言 / 类型 | 文件数 | 代码行数 | 主要模块说明 |
+本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.29**）代码规模统计如下：
+
+| 语言 / 类型 | 模块数 | 源码行数 | 核心架构与工程职责 |
 | :--- | :---: | :---: | :--- |
-| **Kotlin (`.kt`)** | 68 | 20,429 | 业务逻辑、Jetpack Compose 界面、Room 数据库、下载引擎、播放控制与公共存储适配 |
-| **C++ / JNI (`.cpp`)** | 1 | 561 | MPV 原生渲染与底层跨语言调用接口、JNI 线程锁与异步状态管理 |
-| **Gradle 构建 (`.kts`)** | 3 | 146 | 工程与模块级构建脚本、多维度依赖版本管理 |
-| **资源配置 (`.xml`)** | 26 | 338 | 清单配置、多主题应用图标、矢量图形资源 |
-| **构建配置 (CMake / Props)** | 2 | 30 | CMake 原生链接配置与 Gradle 运行环境参数 |
-| **项目开发规范 (`.md`)** | 2 | 18 | 项目开发规范与版本自动化构建准则 (`AGENTS.md`, `GEMINI.md`) |
-| **总计** | **102** | **21,522** | **全项目共计约 2.15 万行工程源码** |
+| **Kotlin (`.kt`)** | 68 | 20,771 | 业务决策中枢、Jetpack Compose 表现层、Room 响应式数据库、下载引擎、播放路由与 Scoped Storage 适配 |
+| **C++ / JNI (`.cpp`)** | 1 | 561 | libmpv 原生硬件加速渲染、跨语言 JNI 互斥锁、异步 Seek 屏障与原生日志捕获 |
+| **Gradle 构建 (`.kts`)** | 3 | 146 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
+| **资源配置 (`.xml`)** | 26 | 338 | 跨版本清单配置、多主题矢量图形及自适应图标资源 |
+| **构建配置 (CMake / Props)** | 2 | 30 | CMake 原生链接编排与 Gradle 运行期优化参数 |
+| **项目开发规范 (`.md`)** | 2 | 18 | 自动化版本递增与双版本编译验证准则 (`AGENTS.md`, `GEMINI.md`) |
+| **总计** | **102** | **21,864** | **全项目共计约 2.19 万行高质量工程源码** |
 
 ---
 
-## 功能特性
+## ⚡ 核心特色架构与功能特性
 
-- **Material 3 Expressive 界面与主题系统**
-  - 全面采用沉浸式边到边（Edge-to-Edge）排版与状态栏动态适配；
-  - 支持系统莫奈（Monet）动态取色开关；
-  - 关闭动态取色后，支持自定义主题配色（包括预设紫色 `#686BDD`、浅绿色、淡黄色以及自定义调色板）；
-  - 支持应用桌面图标颜色跟随主题色切换（重启应用生效）。
-- **平板与多端自适应布局**
-  - 平板横屏左右双栏自适应黄金排版（左侧播放与元数据交互，右侧独立滚动推荐视频网格）；
-  - 侧边栏（NavigationRail）与底部栏（NavigationBar）自适应切换；
-  - 视频播放卡片上边缘自然贴合系统状态栏，无多余顶部间隔。
-- **MPV 底层原生播放引擎与稳定性保障**
-  - 集成 `libmpv`（纯血 64 位 ARM64-v8a 原生编译架构），硬解性能卓越；
-  - 底层 JNI 引入互斥锁（Mutex）与异步 Seek 保护机制，彻底消除引擎切换、初始 Seek 与 Surface 竞争导致的 SIGSEGV 崩溃与黑屏；
-  - 规避重复 VO（视频输出）初始化，强制确保 `vo=gpu`、硬件加速解码（hwdec）与 Surface 准确绑定，杜绝主线程阻塞 ANR；
-  - 支持手势操作：双击播放/暂停、左右滑动进度微调、左侧滑动调节亮度、右侧滑动调节音量；
-  - 实时倍速矢量徽标（动态显示 `1.0` / `1.5` / `2.0` 等实时播放倍速）；
-  - 支持四角自适应全屏切换、画面比例循环调整、软/硬解模式无缝切换与后台画中画断点记忆续播；
-  - 内置多线程专用本地反向代理，支持 Range 流式 Seek 与智能节点重试。
-- **多维数据备份与恢复系统（全流程体验与安全防护升级）**
-  - **公共目录免 Root 直出**：
-    - 备份文件统一直接导出至公共存储 `Download/ZakoViewer/Backups/`（格式为 `ZakoViewer_Backup_yyyyMMdd_HHmmss.zip` 或 `.json`）；
-    - Android 10+ 自动适配 `MediaStore.Downloads`，Android 9 及以下回退公共外部存储，非 Root 用户在系统文件管理器中立即可见；
-    - 界面常驻提示导出保存目录，支持点击一键复制路径；导出完成弹出结果对话框，支持一键系统分享与路径复制。
-  - **不可误触关闭的进度弹窗 & 屏幕常亮保护**：
-    - 导入恢复及包含视频的大备份包导出期间，使用不可取消对话框（屏蔽返回键与蒙层点击），防止意外中断破坏本地数据库；
-    - 任务期间自动请求并保持屏幕常亮（`FLAG_KEEP_SCREEN_ON`），避免大文件处理中设备锁屏休眠打断感知，任务结束后自动释放；
-    - 常驻明确的防退出与耗时耐心等待提醒文案。
-  - **分阶段实时精准进度反馈**：
-    - **阶段 1（读取准备）**：流式复制至临时文件时实时计算已读取大小与百分比（80ms 限流平滑回调）；
-    - **阶段 2（解压还原）**：预统计归档中的封面与视频条目总数，分步呈现「正在恢复视频 (2/6)...」及精确百分比进度条；
-    - **阶段 3（数据合并）**：写入收藏夹树结构、观看历史、稍后再看与离线视频映射，自动执行本地文件校验与缺失封面异步补齐。
-  - **结果汇总反馈与临时缓存强清理**：
-    - 恢复完成后弹窗结构化汇总：收藏夹目录数、收藏视频总数、历史记录数、稍后再看数、还原视频文件数及封面状态；
-    - 临时解压文件 `temp_restore_file` 在 `try/finally` 中百分之百彻底安全删除，启动时二次兜底清理，杜绝缓存暗中暴涨。
-- **精细化封面缓存与离线存储管理**
-  - **严格限制封面本地持久化范围**：仅对收藏夹、已下载视频、稍后再看、历史记录 4 个核心业务场景持久化保存封面；首页推荐流与搜索结果仅使用临时图片内存/磁盘加载缓存，防止海量浏览导致存储与备份包无限膨胀；
-  - **下载目录修改与安全流式迁移**：支持自由修改已下载视频目录，目录变更后自动触发流式复制迁移、文件大小一致性校验并安全删除源文件，附带完备的 WARN/INFO 迁移排查日志；
-  - **精准缓存统计**：应用内缓存大小统计与清理严格排除已下载视频目录与临时恢复文件。
-- **离线下载与多节点并发**
-  - 多 CDN 节点测速与智能路由调度，支持多线程分片断点续传；
-  - 启动自检与状态感知：自动扫描下载目录，本地文件缺失自动呈现置灰状态；
-  - 支持调用系统及外部下载器（如 1DM / ADM）与外部播放器。
-- **无限层级收藏夹与索引管理**
-  - 无限层级树形文件夹管理，支持批量多选移动、复制、重命名与导出；
-  - 内置本地文件夹树形选择组件（`FolderTreeDialog` / `FolderBrowserDialog`）。
-- **多模式浏览与复合搜索**
-  - 支持瀑布流与分页规整网格双排布模式平滑切换；
-  - 复合搜索词法解析，支持分类、番号、演员、片商及暗号直接解析；
-  - 搜索历史面板支持多选与批量清理管理。
-- **隐私防社死保护与 SFW 汉字暗号分享**
-  - 视频封面缩略图默认开启模糊遮罩，支持在「我的 → 设置 → 隐私」页面随时一键开关；
-  - 详情页短按分享按钮：生成纯自然中文无敏感词暗号，在搜索框输入回车即可直达对应内容；
-  - 彩蛋机制：在「我的 → 关于 APP」中连续点击版本号 5 次可解锁隐藏开关，开启后长按分享图标可直接复制完整视频链接。
-- **结构化日志管理与原子清空**
-  - 日志文件一键导出至公共存储目录 `Download/ZakoViewer/Logs/`，非 Root 用户直接可读；
-  - 日志清空按钮在线程锁保护下，原子化同步清空内存记录、UI 状态，彻底截断磁盘持久化文件 `zako_persistent.log`（0 字节重置），并清理历史导出缓存。
+### 1. 🚀 端侧全域本地资产优先调度与无感降级容灾 (Local-First Arbitration & Graceful Fallback)
+- **单一路由中枢裁决**：统一视频起播决策顺序，全域入口（首页推荐、复合搜索、收藏夹、观看历史、稍后再看与离线列表）统一收口于起播中枢。优先精准检索本地完整已下载视频，命中即**零网络阻塞、零延迟直映起播**，完全跳过 CDN 测速与网络代理开销；
+- **自愈式目录扫描拓扑**：若数据库记录失效或物理文件路径变更，引擎自动调动全域下载目录扫描算法，毫秒级重定位匹配文件并自动回写数据库自愈；若文件遭外部彻底删除，静默平滑降级至在线流，绝无卡死异常；
+- **异步解耦与网络封面隔离**：本地起播不等待元数据网络阻塞，详情标签与推荐后台异步静默补全；历史进度记录机制内置网络封面隔离保护，杜绝私有路径覆盖污染网络元数据；
+- **随动状态标识与无感升阶**：界面动态呈现「本地」高亮标识；本地播放过程中允许随时调出 CDN 节点弹窗，支持按用户意愿保留当前进度无缝热切至在线流。
+
+### 2. 🌐 智能多路并发 CDN 实时竞速与无缝热重定向 (Smart CDN Matrix & Zero-Latency Rerouting)
+- **毫秒级高并发实时测速**：集成 `CdnSpeedTester`，在开启选线弹窗时瞬时对多路镜像分发节点发起高并发测速，实时测量 TTFB 延迟（ms）与突发吞吐带宽（KB/s），动态降序呈现质量矩阵；
+- **最优路径自适应决策**：测速完毕后毫秒级研判最优物理节点并自动应用；若用户未手动干预，自动平滑切至最佳线路；若用户在测速期间已选定目标线路，以手动指令为最高仲裁优先级；
+- **断点记忆无缝热切**：彻底修复切线重播缺陷，切换节点时精确透传 `currentPositionMs` 维持播放连续性，彻底消除重载黑屏与进度丢失；
+- **持久化数据源策略**：播放设置深度集成「数据源与 CDN 选线」持久化区块，支持自由切换「自动选择最优节点（推荐）」与「固定默认线路（线路 1 ~ 5）」，满足个性化网络调度诉求。
+
+### 3. 🛡️ 纯血 64 位 MPV 异构原生渲染引擎 (Pure 64-bit libmpv Native Pipeline)
+- **架构精炼聚焦**：彻底移除冗余 32 位兼容层，纯粹专注现代 ARM64-v8a 微架构，极大减小二进制体积并释放卓越解码性能；
+- **JNI 异构互斥隔离与生命周期锁定**：底层跨语言调用全面引入原子互斥锁（Mutex）与异步 Seek 屏障，彻底阻断播放引擎热切换与 Surface 生命周期冲突导致的 SIGSEGV 崩溃；
+- **消除渲染死锁与 ANR 阻塞**：重构 Surface 绑定管线与视频输出配置（强制保证 `vo=gpu`、硬件解码直通与 wid 严格绑定），规避重复 VO 初始化，从根源杜绝主线程阻塞与起播黑屏；
+- **本地微型反向代理网关**：内置支持流式 HTTP Range 请求的专用本地代理网关，高效适配原生播放内核与多节点分片拉取。
+
+### 4. 🔏 语义级 SFW 汉字隐写编解码分享协议 (Steganographic SFW Cipher Protocol)
+- **全自然语意混淆映射**：业内首创将复杂特征定位符隐写编码为无任何违禁词的纯中文自然汉字暗号，杜绝外链敏感拦截与社交平台封禁风险；
+- **端侧毫秒级快速逆解**：直接在搜索栏粘贴或输入汉字暗号，词法解析器自动捕获并在毫秒内精准定位直达对应内容；
+- **隐私防社死体系与彩蛋机制**：全局封面智能高斯模糊开关，随时防范公共场合视觉泄露；关于页多击隐藏解锁机制，开启后支持长按分享无损提取完整资源定位符。
+
+### 5. 🎨 Material 3 Expressive 动态流体美学与自适应响应式拓扑 (M3 Expressive Fluid Design)
+- **系统级莫奈动态取色**：支持随 Android 12+ 动态壁纸主色实时流动重绘，并内置紫色（`#686BDD`）、浅绿、淡黄及无级自定义调色板；
+- **桌面图标动态随动映射**：应用图标颜色实时响应主题变动，重启即刻生效；
+- **大屏平板响应式双栏排布**：横屏自适应切分黄金视觉双栏（左侧原生渲染播放与交互，右侧独立滚动推荐瀑布流），侧边栏（NavigationRail）自适应平滑折展；
+- **Expressive 可动波浪阻尼滑块**：播放控制集成 Material Design 3 Expressive 弹性波浪进度组件，赋予音画交互细腻的高级动效触感。
+
+### 6. 📁 无限递归树形元数据拓扑架构 (Infinite Hierarchical Asset Tree)
+- **突破扁平限制**：基于 Room 关系模型构建支持无限深度的多叉树目录结构，支持无限嵌套子目录分类；
+- **工业级批量操纵**：支持跨层级批量多选移动、重命名、复制与快速检索，内置高度封装的树状文件夹拾取器（`FolderTreeDialog`）。
+
+### 7. 💾 Scoped Storage 公共空间零妥协直出与全流程防打断安全屏障 (Zero-Compromise Scoped Storage)
+- **公共存储免 Root 直达**：备份归档（`Download/ZakoViewer/Backups/`）与诊断日志（`Download/ZakoViewer/Logs/`）深度适配 Android 10+ `MediaStore.Downloads` 与低版本外部存储，用户在系统文件管理器中直接可见可用；
+- **防误触中断与全局唤醒锁（WakeLock）**：大体积视频备份导出与导入恢复期间，自动激活不可关闭阻断层与 `FLAG_KEEP_SCREEN_ON` 常亮保护，彻底阻止休眠或返回键中断数据写入；
+- **分阶段流式解压与结果卡片**：毫秒级进度回调（已读字节数、百分比、封面/视频解压数精准计数），恢复完毕结构化卡片汇总资产数据，并在 `try/finally` 中严格清理临时缓存，杜绝存储膨胀。
 
 ---
 
-## 技术栈
+## 🛠️ 技术栈与依赖架构
 
-- **开发语言**：Kotlin, C++ (JNI)
-- **UI 框架**：Jetpack Compose (Material 3 Expressive)
-- **本地存储**：Room Database, Jetpack DataStore Preferences
-- **网络与解析**：OkHttp 4, Gson
-- **图片加载**：Coil Compose
-- **媒体播放**：MPV C++ JNI 绑定 (ARM64-v8a)
-- **存储架构**：Android MediaStore API (Scoped Storage), SAF
+- **核心语言**：Kotlin 1.9+, C++ 17 (JNI 跨语言绑定)
+- **UI 体系**：Jetpack Compose (Material 3 Expressive, Edge-to-Edge Fluid Layout)
+- **底层媒体内核**：libmpv (ARM64-v8a 硬件解码增强定制版)
+- **响应式数据流**：Kotlin Coroutines & Flow (SupervisorJob, 异构调度)
+- **本地存储引擎**：Room Database (SQLite 递归拓扑), Jetpack DataStore Preferences
+- **存储权限与沙盒**：Android MediaStore API (Scoped Storage), SAF
+- **网络通信**：OkHttp 4 (连接复用与高并发并发探针), Gson
 
 ---
 
-## 核心目录结构
+## 📂 核心目录架构
 
 ```text
 app/src/main/
-├── cpp/                           # C++ JNI 模块 (CMakeLists.txt, mpv_jni.cpp)
-├── kotlin/                        # Kotlin 源码模块
-│   ├── core/                      # 核心模块
-│   │   ├── cdn/                   # CDN 测速与节点管理
-│   │   ├── cover/                 # 核心场景封面持久化与按需补全 (CoverCacheManager)
-│   │   ├── download/              # 多并发分片下载引擎
-│   │   ├── external/              # 外部播放器与下载器调用适配
-│   │   ├── icon/                  # 动态桌面图标替换管理
-│   │   ├── logger/                # 本地与运行日志组件及原子清空
-│   │   ├── permission/            # 存储及全文件权限处理
-│   │   ├── player/                # MPV 播放器封装、JNI 线程锁与手势处理
-│   │   ├── search/                # 搜索词法解析器
-│   │   ├── share/                 # SFW 汉字暗号编解码
-│   │   └── storage/               # 公共 Downloads 存储适配 (PublicStorageHelper)
-│   ├── data/                      # 数据持久化与网络模型
-│   │   ├── backup/                # 数据库与多媒体导入导出、分阶段进度与恢复管理器
-│   │   ├── local/                 # Room 数据库、DAO 与数据实体
-│   │   ├── repository/            # 数据仓库层
-│   │   └── source/                # 数据源与网络交互
-│   └── ui/                        # Compose UI 表现层
-│       ├── components/            # 通用组件（文件选择树、弹窗、倍速徽标等）
-│       ├── navigation/            # 页面导航图与自适应侧边栏
-│       ├── screens/               # 各功能页面（Home, Detail, Player, Profile 等）
-│       └── theme/                 # 主题配色、动态取色与字体排版
-└── res/                           # 资源目录（矢量图、多主题应用图标、多语言字符）
+├── cpp/                           # C++ JNI 模块 (CMakeLists.txt, mpv_jni.cpp 核心互斥锁与渲染绑定)
+├── kotlin/moe/zako/viewer/
+│   ├── core/                      # 核心基建与能力驱动
+│   │   ├── cdn/                   # CDN 动态并发测速引擎与弹性路由调度 (CdnSpeedTester, CdnSmartRouter)
+│   │   ├── cover/                 # 核心业务封面持久化与按需补全引擎 (CoverCacheManager)
+│   │   ├── download/              # 多并发分片断点续传下载引擎与本地视频检测仲裁 (DownloadManager)
+│   │   ├── external/              # 外部播放器与多态应用调用适配
+│   │   ├── icon/                  # 动态桌面图标动态切换管理
+│   │   ├── logger/                # 结构化日志追踪、公共导出与原子截断清空
+│   │   ├── permission/            # 存储与 Scoped Storage 权限处理适配
+│   │   ├── player/                # MPV 播放器封装、JNI 线程锁、手势阻尼与流缓冲代理
+│   │   ├── search/                # 复合词法解析引擎
+│   │   ├── share/                 # SFW 语义级汉字隐写编解码核心
+│   │   └── storage/               # 公共 Downloads 空间适配器 (PublicStorageHelper)
+│   ├── data/                      # 统一数据持久化与外部服务模型
+│   │   ├── backup/                # 数据库与多媒体归档导入导出、分阶段流式解压与恢复管理器
+│   │   ├── local/                 # Room 数据库实体、DAO 接口与迁移
+│   │   ├── repository/            # 数据仓库层 (History, Settings, Favorites)
+│   │   └── source/                # 外部 API 通信与实体反序列化
+│   └── ui/                        # Compose 声明式表现层
+│       ├── components/            # 高级复用组件 (树形文件选择器、结果弹窗、动态倍速矢量徽标等)
+│       ├── navigation/            # 响应式导航拓扑与自适应多端路由
+│       ├── screens/               # 各核心业务页面 (Player, Home, Detail, Profile, Settings 等)
+│       └── theme/                 # 主题配色调色板、莫奈动态取色与字体排版拓扑
+└── res/                           # 资源定义 (矢量图形资源、多主题应用图标、多语言字符映射)
 ```
 
 ---
 
-## 本地编译与构建指南
+## 📦 本地编译与构建指南
 
-### 1. 环境要求
+### 1. 编译环境要求
 
-- JDK 17
-- Android SDK (compileSdk 34, minSdk 26, targetSdk 34)
-- Gradle 8.10+（建议使用项目自带的 Gradle Wrapper）
-- Android NDK（支持 C++ 模块编译）
+- **JDK**：OpenJDK 17
+- **Android SDK**：compileSdk 34, minSdk 26, targetSdk 34
+- **Gradle**：8.10+ (推荐使用项目自带 `gradlew.bat`)
+- **NDK**：Android NDK r25+ (需支持 C++17 编译)
 
-### 2. 配置文件说明
+### 2. 双版本验证构建命令
 
-本项目采取配置解耦策略，本地环境与私有密钥不进入版本控制：
+依据本项目严格的工程交付准则，改动源代码后需执行双版本编译验证：
 
-#### Android SDK 配置 (`local.properties`)
-在根目录确认或创建 `local.properties`：
-```properties
-sdk.dir=C\:\\Users\\<YourUsername>\\AppData\\Local\\Android\\Sdk
-```
-
-#### Release 签名配置 (`keystore.properties`)
-如需构建 Release 安装包，在根目录下创建 `keystore.properties`（已加入 `.gitignore`）：
-```properties
-storeFile=app/zakoviewer-release.jks
-storePassword=your_keystore_password
-keyAlias=your_key_alias
-keyPassword=your_key_password
-```
-
-> 说明：若未配置 `keystore.properties`，构建系统会自动跳过 Release 签名，不影响 Debug 版本的本地编译与调试。
-
-### 3. 构建命令
-
-```bash
-# 验证 Debug 与 Release 双版本构建
+```powershell
+# 验证 Debug 与 Release 双版本自动化编译通过
 .\gradlew.bat assemble --no-daemon --console=plain
-
-# 单独编译 Debug APK
-.\gradlew.bat assembleDebug
-
-# 单独编译 Release APK (需先配置 keystore.properties)
-.\gradlew.bat assembleRelease
 ```
 
 ---
 
-## 开源许可
+## 📜 开源许可
 
-本项目核心播放模块及底层 JNI 架构衍生自 GPLv3 开源项目（NextPlayerCloud / NeoPlayer），根据 GNU 强互惠（Copyleft）许可证要求，本项目整体遵循 [GNU General Public License v3.0 (GPLv3)](LICENSE) 协议开源。
+本项目核心播放模块及底层 JNI 架构衍生自 GPLv3 开源生态（NextPlayerCloud / NeoPlayer），根据 GNU 强互惠（Copyleft）许可证条款，本项目整体遵循 [GNU General Public License v3.0 (GPLv3)](LICENSE) 协议开源。

@@ -7,7 +7,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.ui.components.FolderBrowserDialog
@@ -19,6 +18,8 @@ import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.ObserveStoragePermissionOnResume
 import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
 import java.io.File
 
 /**
@@ -145,16 +146,16 @@ fun DownloadsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.Lg, vertical = Spacing.Sm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = AppIcons.SdCard,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(IconSize.Sm),
                         tint = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.Sm))
                     Text(
                         text = "保存目录: ${state.currentStoragePath}",
                         style = MaterialTheme.typography.bodySmall,
@@ -190,8 +191,8 @@ fun DownloadsScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(Spacing.Md),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.Sm)
                     ) {
                         items(state.completedList, key = { it.videoId }) { item ->
                             val isSelected = state.selectedIds.contains(item.videoId)
@@ -224,8 +225,8 @@ fun DownloadsScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(Spacing.Md),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.Sm)
                     ) {
                         items(state.activeList, key = { it.videoId }) { item ->
                             val isSelected = state.selectedIds.contains(item.videoId)

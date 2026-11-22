@@ -3,6 +3,7 @@
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,13 +12,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,8 +27,11 @@ import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.components.clearFocusOnScroll
 import moe.zako.viewer.ui.components.clearFocusOnTap
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.BorderWidth
 import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.ExtraTextStyles
 import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.LogLevelColors
 import moe.zako.viewer.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +42,7 @@ fun LogViewerScreen(
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
+    val isDark = isSystemInDarkTheme()
     val logs by ZakoLog.logsFlow.collectAsState()
     val includeHistory by ZakoLog.includeHistoryFlow.collectAsState()
     var exportedResult by remember { mutableStateOf<ExportResult?>(null) }
@@ -186,7 +188,7 @@ fun LogViewerScreen(
                         }
                     ) {
                         if (isExporting) {
-                            CircularProgressIndicator(modifier = Modifier.size(IconSize.Md), strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(IconSize.Md), strokeWidth = BorderWidth.Thick)
                         } else {
                             Icon(imageVector = AppIcons.Share, contentDescription = "导出日志")
                         }
@@ -199,7 +201,7 @@ fun LogViewerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFF0F0F0F))
+                .background(if (isDark) LogLevelColors.BackgroundDark else LogLevelColors.BackgroundLight)
                 .clearFocusOnScroll()
                 .clearFocusOnTap()
         ) {
@@ -299,18 +301,11 @@ fun LogViewerScreen(
                 verticalArrangement = Arrangement.spacedBy(Spacing.Xs)
             ) {
                 items(filteredLogs) { log ->
-                    val color = when (log.level) {
-                        "ERROR" -> Color(0xFFFF5252)
-                        "WARN" -> Color(0xFFFFD740)
-                        "INFO" -> Color(0xFF69F0AE)
-                        else -> Color(0xFFE0E0E0)
-                    }
+                    val color = LogLevelColors.colorFor(log.level, isDark)
                     Text(
                         text = log.formatted(),
                         color = color,
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        lineHeight = 14.sp
+                        style = ExtraTextStyles.MonospaceLog
                     )
                 }
             }

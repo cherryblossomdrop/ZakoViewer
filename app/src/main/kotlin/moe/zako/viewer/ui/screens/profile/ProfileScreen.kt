@@ -4,11 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,10 +12,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import moe.zako.viewer.ui.screens.profile.settings.SettingsViewModel
-import moe.zako.viewer.ui.theme.ZakoIcons
+import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.ProfileTokens
+import moe.zako.viewer.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,23 +59,23 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = PaddingValues(top = 4.dp, bottom = 28.dp)
+                .padding(horizontal = Spacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.Expanded),
+            contentPadding = PaddingValues(top = Spacing.Xs, bottom = Spacing.XxlCompact)
         ) {
             // 1. 顶部大卡片快捷区 (历史记录 + 离线下载)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.Md)
                 ) {
                     // 历史记录
                     Card(
                         modifier = Modifier
                             .weight(1f)
-                            .height(112.dp)
+                            .height(ProfileTokens.HeroCardHeight)
                             .clickable { onNavigateToHistory() },
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(CornerRadius.MediumLarge),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                         )
@@ -86,7 +83,7 @@ fun ProfileScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(16.dp),
+                                .padding(Spacing.Lg),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(
@@ -95,16 +92,16 @@ fun ProfileScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.History,
+                                    imageVector = AppIcons.History,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(26.dp)
+                                    modifier = Modifier.size(IconSize.LargeAction)
                                 )
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    imageVector = AppIcons.ArrowForward,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(IconSize.Intermediate)
                                 )
                             }
                             Column {
@@ -113,7 +110,7 @@ fun ProfileScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Spacer(modifier = Modifier.height(2.dp))
+                                Spacer(modifier = Modifier.height(Spacing.Xxs))
                                 Text(
                                     text = "查看历史记录",
                                     style = MaterialTheme.typography.bodySmall,
@@ -127,9 +124,9 @@ fun ProfileScreen(
                     Card(
                         modifier = Modifier
                             .weight(1f)
-                            .height(112.dp)
+                            .height(ProfileTokens.HeroCardHeight)
                             .clickable { onNavigateToDownloads() },
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(CornerRadius.MediumLarge),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                         )
@@ -137,7 +134,7 @@ fun ProfileScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(16.dp),
+                                .padding(Spacing.Lg),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(
@@ -146,16 +143,16 @@ fun ProfileScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.Download,
+                                    imageVector = AppIcons.Download,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(26.dp)
+                                    modifier = Modifier.size(IconSize.LargeAction)
                                 )
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    imageVector = AppIcons.ArrowForward,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(IconSize.Intermediate)
                                 )
                             }
                             Column {
@@ -164,7 +161,7 @@ fun ProfileScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Spacer(modifier = Modifier.height(2.dp))
+                                Spacer(modifier = Modifier.height(Spacing.Xxs))
                                 Text(
                                     text = "管理离线内容",
                                     style = MaterialTheme.typography.bodySmall,
@@ -178,47 +175,57 @@ fun ProfileScreen(
 
             // 2. 分组 1: 内容与偏好 (MD3 Expressive 紧凑分组)
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.Xxs)) {
                     Text(
                         text = "内容与偏好",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
                     )
 
                     ProfileItemCard(
-                        icon = ZakoIcons.WatchLater,
+                        icon = AppIcons.WatchLater,
                         title = "稍后再看",
-                        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 4.dp),
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Lg,
+                            topEnd = CornerRadius.Lg,
+                            bottomStart = CornerRadius.Xs,
+                            bottomEnd = CornerRadius.Xs
+                        ),
                         onClick = onNavigateToWatchLater
                     )
 
                     ProfileItemCard(
-                        icon = Icons.Outlined.Palette,
+                        icon = AppIcons.Palette,
                         title = "外观设置",
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(CornerRadius.Xs),
                         onClick = onNavigateToAppearance
                     )
 
                     ProfileItemCard(
-                        icon = Icons.Outlined.PlayCircle,
+                        icon = AppIcons.PlayCircle,
                         title = "播放设置",
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(CornerRadius.Xs),
                         onClick = onNavigateToPlayback
                     )
 
                     ProfileItemCard(
-                        icon = Icons.Outlined.Security,
+                        icon = AppIcons.Security,
                         title = "隐私设置",
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(CornerRadius.Xs),
                         onClick = onNavigateToPrivacy
                     )
 
                     ProfileItemCard(
-                        icon = Icons.Outlined.Share,
+                        icon = AppIcons.Share,
                         title = "分享设置",
-                        shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Xs,
+                            topEnd = CornerRadius.Xs,
+                            bottomStart = CornerRadius.Lg,
+                            bottomEnd = CornerRadius.Lg
+                        ),
                         onClick = onNavigateToShare
                     )
                 }
@@ -226,40 +233,50 @@ fun ProfileScreen(
 
             // 3. 分组 2: 数据与应用 (MD3 Expressive 紧凑分组)
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.Xxs)) {
                     Text(
                         text = "数据与应用",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
                     )
 
                     ProfileItemCard(
-                        icon = Icons.Outlined.Sync,
+                        icon = AppIcons.Sync,
                         title = "同步备份",
-                        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 4.dp),
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Lg,
+                            topEnd = CornerRadius.Lg,
+                            bottomStart = CornerRadius.Xs,
+                            bottomEnd = CornerRadius.Xs
+                        ),
                         onClick = onNavigateToBackupRestore
                     )
 
                     ProfileItemCard(
-                        icon = Icons.Outlined.FolderOpen,
+                        icon = AppIcons.FolderOpen,
                         title = "下载设置",
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(CornerRadius.Xs),
                         onClick = onNavigateToSettingsDownload
                     )
 
                     ProfileItemCard(
-                        icon = Icons.Outlined.CleaningServices,
+                        icon = AppIcons.CleaningServices,
                         title = "清理缓存",
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(CornerRadius.Xs),
                         onClick = { showClearCacheConfirmDialog = true }
                     )
 
                     ProfileItemCard(
-                        icon = Icons.Outlined.Info,
+                        icon = AppIcons.Info,
                         title = "关于",
-                        shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Xs,
+                            topEnd = CornerRadius.Xs,
+                            bottomStart = CornerRadius.Lg,
+                            bottomEnd = CornerRadius.Lg
+                        ),
                         onClick = onNavigateToAbout
                     )
                 }
@@ -270,7 +287,7 @@ fun ProfileScreen(
     if (showClearCacheConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheConfirmDialog = false },
-            icon = { Icon(Icons.Default.CleaningServices, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            icon = { Icon(AppIcons.CleaningServices, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             title = { Text("清理缓存") },
             text = {
                 Text(
@@ -303,7 +320,7 @@ fun ProfileItemCard(
     title: String,
     subtitle: String? = null,
     trailingText: String? = null,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(12.dp),
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(CornerRadius.Md),
     onClick: () -> Unit
 ) {
     Surface(
@@ -317,17 +334,17 @@ fun ProfileItemCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 13.dp),
+                .padding(horizontal = Spacing.Lg, vertical = Spacing.ListItemVertical),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(IconSize.MediumLarge)
             )
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.Lg))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -336,7 +353,7 @@ fun ProfileItemCard(
                     fontWeight = FontWeight.Medium
                 )
                 if (!subtitle.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(Spacing.Xxs))
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
@@ -350,15 +367,15 @@ fun ProfileItemCard(
                     text = trailingText,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 8.dp)
+                    modifier = Modifier.padding(end = Spacing.Sm)
                 )
             }
 
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                imageVector = AppIcons.ArrowForwardIos,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                modifier = Modifier.size(15.dp)
+                modifier = Modifier.size(IconSize.Chevron)
             )
         }
     }

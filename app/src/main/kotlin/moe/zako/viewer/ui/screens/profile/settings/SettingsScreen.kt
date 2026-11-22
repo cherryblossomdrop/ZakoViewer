@@ -8,9 +8,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.core.storage.PublicStorageHelper
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.Spacing
 
 /**
  * 设置主菜单页 (统一改名为“设置”)
@@ -51,28 +52,38 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = Spacing.Lg, vertical = Spacing.Sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.Md)
         ) {
             // 分组 1: 个性化与隐私
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.MicroItem)) {
                     SettingsCategoryItem(
                         icon = AppIcons.Palette,
                         title = "外观设置",
-                        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 4.dp),
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Lg,
+                            topEnd = CornerRadius.Lg,
+                            bottomStart = CornerRadius.Xs,
+                            bottomEnd = CornerRadius.Xs
+                        ),
                         onClick = onNavigateToAppearance
                     )
                     SettingsCategoryItem(
                         icon = AppIcons.Security,
                         title = "隐私设置",
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(CornerRadius.Xs),
                         onClick = onNavigateToPrivacy
                     )
                     SettingsCategoryItem(
                         icon = AppIcons.Share,
                         title = "分享设置",
-                        shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Xs,
+                            topEnd = CornerRadius.Xs,
+                            bottomStart = CornerRadius.Lg,
+                            bottomEnd = CornerRadius.Lg
+                        ),
                         onClick = onNavigateToShare
                     )
                 }
@@ -80,17 +91,27 @@ fun SettingsScreen(
 
             // 分组 2: 核心播放与离线功能
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.MicroItem)) {
                     SettingsCategoryItem(
                         icon = AppIcons.PlayCircle,
                         title = "播放设置",
-                        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 4.dp),
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Lg,
+                            topEnd = CornerRadius.Lg,
+                            bottomStart = CornerRadius.Xs,
+                            bottomEnd = CornerRadius.Xs
+                        ),
                         onClick = onNavigateToPlayer
                     )
                     SettingsCategoryItem(
                         icon = AppIcons.Download,
                         title = "下载设置",
-                        shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Xs,
+                            topEnd = CornerRadius.Xs,
+                            bottomStart = CornerRadius.Lg,
+                            bottomEnd = CornerRadius.Lg
+                        ),
                         onClick = onNavigateToDownload
                     )
                 }
@@ -98,20 +119,30 @@ fun SettingsScreen(
 
             // 分组 3: 存储与日志管理
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.MicroItem)) {
                     SettingsCategoryItem(
                         icon = AppIcons.CleaningServices,
                         title = "清理应用缓存",
                         subtitle = "图片加载、流媒体及网络临时文件",
                         trailingText = state.cacheSizeFormatted,
-                        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 4.dp),
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Lg,
+                            topEnd = CornerRadius.Lg,
+                            bottomStart = CornerRadius.Xs,
+                            bottomEnd = CornerRadius.Xs
+                        ),
                         onClick = { showClearCacheConfirmDialog = true }
                     )
                     SettingsCategoryItem(
                         icon = AppIcons.Terminal,
                         title = "运行日志与导出",
                         subtitle = "日志保存目录：${PublicStorageHelper.LOGS_DISPLAY_DIR}",
-                        shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Xs,
+                            topEnd = CornerRadius.Xs,
+                            bottomStart = CornerRadius.Lg,
+                            bottomEnd = CornerRadius.Lg
+                        ),
                         onClick = onNavigateToLogs
                     )
                 }

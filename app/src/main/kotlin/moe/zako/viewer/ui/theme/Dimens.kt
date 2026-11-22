@@ -21,6 +21,9 @@ object Spacing {
     /** 倍速徽标水平微间距 (3.dp) */
     val SpeedBadge: Dp = 3.dp
 
+    /** 紧凑条目垂直微间距 (3.dp) - 用于设置与个人中心分组卡片项间距 */
+    val MicroItem: Dp = 3.dp
+
     /** 紧凑小间距 (4.dp) - 用于同组紧密关联元素、角标内边距或标签微间距 */
     val Xs: Dp = 4.dp
 
@@ -35,6 +38,9 @@ object Spacing {
 
     /** 标准中间距 (12.dp) - 用于卡片内边距、相邻内容区块间隔 */
     val Md: Dp = 12.dp
+
+    /** 紧凑列表项纵向留白 (13.dp) */
+    val ListItemVertical: Dp = 13.dp
 
     /** 扩展中间距 (14.dp) - 用于 HUD 与标签块垂直内边距 */
     val Expanded: Dp = 14.dp
@@ -80,6 +86,9 @@ object CornerRadius {
     /** 中圆角 (12.dp) - 用于标准视频卡片、设置卡片 */
     val Md: Dp = 12.dp
 
+    /** 分组卡片适度圆角 (14.dp) */
+    val CardGroup: Dp = 14.dp
+
     /** 大圆角 (16.dp) - 用于底部抽屉、标准对话框、历史搜索面板 */
     val Lg: Dp = 16.dp
 
@@ -106,6 +115,9 @@ object IconSize {
     /** 极微小图标 (14.dp) - 用于删除微按钮、状态角标内嵌图标 */
     val Xs: Dp = 14.dp
 
+    /** 紧凑指示箭头图标 (15.dp) - 用于个人中心及设置列表项右侧 Chevron */
+    val Chevron: Dp = 15.dp
+
     /** 微小图标 (16.dp) - 用于行内标签、紧凑按钮、辅助说明图标 */
     val Sm: Dp = 16.dp
 
@@ -123,6 +135,12 @@ object IconSize {
 
     /** 标准大图标 (24.dp) - 用于顶栏导航、标准操作菜单、播放器常规控制 */
     val Lg: Dp = 24.dp
+
+    /** 核心操作大图标 (26.dp) - 用于个人中心主卡片操作图标 */
+    val LargeAction: Dp = 26.dp
+
+    /** 主题取色与圆圈指示图标 (28.dp) */
+    val ColorCircle: Dp = 28.dp
 
     /** 特大图标 (32.dp) - 用于播放器重要状态遮罩图标 */
     val Xl: Dp = 32.dp
@@ -219,6 +237,9 @@ object BorderWidth {
     /** 拾色器游标外圈描边 (2.5.dp) */
     val ColorPickerStroke: Dp = 2.5.dp
 
+    /** 进度环标准描边 (2.5.dp) */
+    val ProgressIndicator: Dp = 2.5.dp
+
     /** 粗轮廓/进度描边 (3.dp) */
     val HeavyStroke: Dp = 3.dp
 
@@ -270,4 +291,28 @@ object VideoCoverTokens {
 
     /** 封面底部半透明遮罩标准高度 (48.dp) */
     val ScrimHeight: Dp = 48.dp
+}
+
+/**
+ * 个人中心专属几何设计令牌
+ */
+object ProfileTokens {
+    /** 个人中心顶部核心业务卡片高度 (112.dp) */
+    val HeroCardHeight: Dp = 112.dp
+}
+
+/**
+ * 进度指示器几何令牌
+ */
+object ProgressBarTokens {
+    /** 线性进度条标准高度 (6.dp) */
+    val Height: Dp = 6.dp
+}
+
+/**
+ * 设置视窗专属设计令牌
+ */
+object SettingsTokens {
+    /** 分类图标外层容器尺寸 (38.dp) */
+    val CategoryIconContainerSize: Dp = 38.dp
 }

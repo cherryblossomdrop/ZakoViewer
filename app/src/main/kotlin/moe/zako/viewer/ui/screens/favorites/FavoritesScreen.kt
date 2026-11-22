@@ -3,13 +3,11 @@
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.ui.components.FolderTreeDialog
@@ -21,7 +19,7 @@ import moe.zako.viewer.ui.components.clearFocusOnScroll
 import moe.zako.viewer.ui.components.clearFocusOnTap
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.SearchBarTokens
-import kotlinx.coroutines.launch
+import moe.zako.viewer.ui.theme.Spacing
 
 /**
  * 收藏夹树状目录管理视窗
@@ -103,7 +101,7 @@ fun FavoritesScreen(
                     ) {
                         TextButton(onClick = { viewModel.showMoveDialogForSelection() }) {
                             Icon(imageVector = AppIcons.Move, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Xs))
                             Text("移动 (${state.totalSelectedCount})")
                         }
 
@@ -112,7 +110,7 @@ fun FavoritesScreen(
                             enabled = state.selectedItemIds.isNotEmpty()
                         ) {
                             Icon(imageVector = AppIcons.Copy, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Xs))
                             Text("复制 (${state.selectedItemIds.size})")
                         }
 
@@ -122,7 +120,7 @@ fun FavoritesScreen(
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Xs))
                             Text("删除 (${state.totalSelectedCount})", color = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -136,8 +134,8 @@ fun FavoritesScreen(
                 .padding(innerPadding)
                 .clearFocusOnScroll()
                 .clearFocusOnTap(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 24.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.Sm),
+            contentPadding = PaddingValues(bottom = Spacing.Xl)
         ) {
             // 1. Breadcrumbs Bar
             item {
@@ -154,7 +152,7 @@ fun FavoritesScreen(
                     onValueChange = { viewModel.onSearchQueryChange(it) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = SearchBarTokens.DefaultHorizontalPadding, vertical = 2.dp)
+                        .padding(horizontal = SearchBarTokens.DefaultHorizontalPadding, vertical = Spacing.Xxs)
                 )
             }
 
@@ -165,7 +163,7 @@ fun FavoritesScreen(
                         text = "子收藏夹 (${state.subFolders.size})",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 2.dp)
+                        modifier = Modifier.padding(start = Spacing.Lg, top = Spacing.Compact, bottom = Spacing.Xxs)
                     )
                 }
 
@@ -184,7 +182,7 @@ fun FavoritesScreen(
             // Divider between folders and items
             if (state.subFolders.isNotEmpty() && state.items.isNotEmpty()) {
                 item {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = Spacing.Lg, vertical = Spacing.Xs))
                 }
             }
 
@@ -194,7 +192,7 @@ fun FavoritesScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 48.dp),
+                            .padding(top = Spacing.Massive),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -210,7 +208,7 @@ fun FavoritesScreen(
                         text = if (state.searchQuery.isNotEmpty()) "递归检索结果 (${state.items.size})" else "视频列表 (${state.items.size})",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 2.dp)
+                        modifier = Modifier.padding(start = Spacing.Lg, top = Spacing.Compact, bottom = Spacing.Xxs)
                     )
                 }
 

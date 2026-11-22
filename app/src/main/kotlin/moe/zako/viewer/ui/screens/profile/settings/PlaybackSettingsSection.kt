@@ -8,10 +8,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.core.external.AppPickerHelper
 import moe.zako.viewer.ui.components.AppPickerDialog
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.Spacing
 
 /**
  * 播放设置页面与播放控制区块
@@ -46,18 +47,18 @@ fun SettingsPlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Spacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
         ) {
             // 播放器长按倍速值设置
             item {
                 Card(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CornerRadius.Md),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     )
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(Spacing.Lg)) {
                         Text(
                             text = "播放器长按倍速值",
                             style = MaterialTheme.typography.titleMedium,
@@ -68,12 +69,12 @@ fun SettingsPlayerScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(Spacing.Md))
 
                         val speeds = listOf(1.5f, 2.0f, 2.5f, 3.0f)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.Sm)
                         ) {
                             for (s in speeds) {
                                 FilterChip(
@@ -90,12 +91,12 @@ fun SettingsPlayerScreen(
             // 默认播放内核引擎设置
             item {
                 Card(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CornerRadius.Md),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     )
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(Spacing.Lg)) {
                         Text(
                             text = "播放内核引擎设置",
                             style = MaterialTheme.typography.titleMedium,
@@ -106,11 +107,11 @@ fun SettingsPlayerScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(Spacing.Intermediate))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.Sm)
                         ) {
                             FilterChip(
                                 selected = state.playerEngine == "system",
@@ -129,16 +130,16 @@ fun SettingsPlayerScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(Spacing.Md))
                         Text(
                             text = "MPV 硬件解码模式",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(Spacing.Compact))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.Sm)
                         ) {
                             FilterChip(
                                 selected = state.hwDecMode == "mediacodec",

@@ -11,27 +11,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
-import moe.zako.viewer.ui.components.DurationBadge
 import moe.zako.viewer.ui.components.VideoListItemCard
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.CornerRadius
 import moe.zako.viewer.ui.theme.IconSize
-import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
-import moe.zako.viewer.ui.theme.OverlayBlack
+import moe.zako.viewer.ui.theme.PlayerOverlayTokens
 import moe.zako.viewer.ui.theme.Spacing
 import moe.zako.viewer.ui.theme.VipGold
 
@@ -49,9 +39,9 @@ fun BreadcrumbBar(
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = Spacing.Lg, vertical = Spacing.Xs),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.Xs)
     ) {
         items(breadcrumbs) { folder ->
             val isLast = folder.id == breadcrumbs.lastOrNull()?.id
@@ -59,7 +49,7 @@ fun BreadcrumbBar(
                 onClick = { onFolderClick(folder) },
                 label = { Text(folder.name, fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal) },
                 leadingIcon = if (folder.parentId == null) {
-                    { Icon(imageVector = AppIcons.FolderSpecial, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    { Icon(imageVector = AppIcons.FolderSpecial, contentDescription = null, modifier = Modifier.size(IconSize.Sm)) }
                 } else null,
                 colors = if (isLast) {
                     AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
@@ -70,7 +60,7 @@ fun BreadcrumbBar(
                     imageVector = AppIcons.ChevronRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(IconSize.Sm)
                 )
             }
         }
@@ -94,7 +84,7 @@ fun FavoriteFolderItem(
     val isRootFolder = folder.parentId == null
 
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CornerRadius.Md),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -104,7 +94,7 @@ fun FavoriteFolderItem(
         ),
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 2.dp)
+            .padding(horizontal = Spacing.Lg, vertical = Spacing.Xxs)
             .combinedClickable(
                 onClick = {
                     if (isSelectionMode) {
@@ -123,14 +113,14 @@ fun FavoriteFolderItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = Spacing.Expanded, vertical = Spacing.Intermediate),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (isSelectionMode && !isRootFolder) {
                 Checkbox(
                     checked = isSelected,
                     onCheckedChange = { onSelectToggle() },
-                    modifier = Modifier.padding(end = 8.dp)
+                    modifier = Modifier.padding(end = Spacing.Sm)
                 )
             }
 
@@ -138,10 +128,10 @@ fun FavoriteFolderItem(
                 imageVector = AppIcons.Folder,
                 contentDescription = null,
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(IconSize.ColorCircle)
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Spacing.Md))
 
             Text(
                 text = folder.name,
@@ -213,7 +203,7 @@ fun FavoriteVideoItem(
                     Icon(
                         imageVector = AppIcons.WorkspacePremium,
                         contentDescription = "VIP",
-                        tint = Color(0xFF2E1C00),
+                        tint = PlayerOverlayTokens.VipBadgeContent,
                         modifier = Modifier
                             .size(IconSize.Sm)
                             .padding(Spacing.Xxs)

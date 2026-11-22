@@ -13,10 +13,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import moe.zako.viewer.core.external.AppItem
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.SettingsTokens
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.TouchTarget
 
 /**
  * 设置主菜单分类条目组件
@@ -41,25 +45,25 @@ fun SettingsCategoryItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = Spacing.Lg, vertical = Spacing.Expanded),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(CornerRadius.Intermediate),
                 color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(38.dp)
+                modifier = Modifier.size(SettingsTokens.CategoryIconContainerSize)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(IconSize.Md)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.Lg))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -68,7 +72,7 @@ fun SettingsCategoryItem(
                     fontWeight = FontWeight.Medium
                 )
                 if (!subtitle.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(Spacing.Xxs))
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
@@ -84,14 +88,14 @@ fun SettingsCategoryItem(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(Spacing.Compact))
             }
 
             Icon(
                 imageVector = AppIcons.ArrowForward,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(IconSize.Sm)
             )
         }
     }
@@ -103,7 +107,7 @@ fun SettingsCategoryItem(
 @Composable
 fun SettingsCard(
     modifier: Modifier = Modifier,
-    shape: RoundedCornerShape = RoundedCornerShape(12.dp),
+    shape: RoundedCornerShape = RoundedCornerShape(CornerRadius.Md),
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -116,7 +120,7 @@ fun SettingsCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(Spacing.Lg),
             content = content
         )
     }
@@ -143,14 +147,14 @@ fun SettingsSwitchItem(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Spacing.Xs))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(Spacing.Md))
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange
@@ -174,13 +178,13 @@ fun ExternalAppCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CornerRadius.Md),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.Lg)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -206,17 +210,17 @@ fun ExternalAppCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(Spacing.Intermediate))
 
             Surface(
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(CornerRadius.Sm),
                 color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onOpenPicker() }
             ) {
                 Row(
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier.padding(Spacing.Md),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val iconBitmap: androidx.compose.ui.graphics.ImageBitmap? = remember(selectedApp?.icon) {
@@ -231,19 +235,19 @@ fun ExternalAppCard(
                             bitmap = iconBitmap,
                             contentDescription = null,
                             modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .size(TouchTarget.Dense)
+                                .clip(RoundedCornerShape(CornerRadius.Sm))
                         )
                     } else {
                         Icon(
                             imageVector = defaultFallbackIcon,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(TouchTarget.Dense)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(Spacing.Md))
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -303,5 +307,3 @@ fun StoragePermissionGuideDialog(
         }
     )
 }
-
-

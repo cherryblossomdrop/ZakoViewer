@@ -11,9 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import moe.zako.viewer.core.external.AppPickerHelper
@@ -24,6 +21,9 @@ import moe.zako.viewer.ui.components.FolderBrowserDialog
 import moe.zako.viewer.ui.components.MigrationProgressDialog
 import moe.zako.viewer.ui.components.ObserveStoragePermissionOnResume
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
 import java.io.File
 
 /**
@@ -53,11 +53,11 @@ fun SettingsPrivacyScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Spacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
         ) {
             item {
-                SettingsCard(shape = RoundedCornerShape(14.dp)) {
+                SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
                     SettingsSwitchItem(
                         title = "视频封面模糊",
                         subtitle = "对全应用所有视频卡片与列表项（推荐页、搜索结果、历史记录、收藏夹、稍后再看、相关推荐等）的封面施加明显的隐私模糊效果，防止敏感画面社死（默认开启）。",
@@ -97,14 +97,14 @@ fun SettingsShareScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Spacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
         ) {
             // 当 isLongPressShareUnlocked == false 时，界面上完全不渲染该开关
             // 当 isLongPressShareUnlocked == true 时，显示“开启长按分享复制完整链接”开关
             if (state.isLongPressShareUnlocked) {
                 item {
-                    SettingsCard(shape = RoundedCornerShape(14.dp)) {
+                    SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
                         SettingsSwitchItem(
                             title = "开启长按分享复制完整链接",
                             subtitle = "在视频详情页长按分享图标时，将直接复制视频的完整原始播放/详情链接到剪贴板",
@@ -170,13 +170,13 @@ fun SettingsDownloadScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Spacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
         ) {
             // 1. 所有文件访问权限卡片
             item {
                 Card(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CornerRadius.Md),
                     colors = CardDefaults.cardColors(
                         containerColor = if (hasStoragePermission) {
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -185,7 +185,7 @@ fun SettingsDownloadScreen(
                         }
                     )
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(Spacing.Lg)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -196,9 +196,9 @@ fun SettingsDownloadScreen(
                                     imageVector = if (hasStoragePermission) AppIcons.CheckCircle else AppIcons.Warning,
                                     contentDescription = null,
                                     tint = if (hasStoragePermission) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(22.dp)
+                                    modifier = Modifier.size(IconSize.MediumLarge)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(Spacing.Sm))
                                 Text(
                                     text = "所有文件访问权限",
                                     style = MaterialTheme.typography.titleMedium,
@@ -206,20 +206,20 @@ fun SettingsDownloadScreen(
                                 )
                             }
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
+                                shape = RoundedCornerShape(CornerRadius.Compact),
                                 color = if (hasStoragePermission) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
                             ) {
                                 Text(
                                     text = if (hasStoragePermission) "已授权" else "未授权",
                                     color = if (hasStoragePermission) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                                    fontSize = 12.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    modifier = Modifier.padding(horizontal = Spacing.Sm, vertical = Spacing.SpeedBadge)
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.Sm))
                         Text(
                             text = if (hasStoragePermission) {
                                 "应用已拥有全盘文件读写权限，可自由指定手机存储中的任意文件夹作为视频下载目录。"
@@ -231,14 +231,14 @@ fun SettingsDownloadScreen(
                         )
 
                         if (!hasStoragePermission) {
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(Spacing.Intermediate))
                             Button(
                                 onClick = { StoragePermissionHelper.requestAllFilesAccess(context) },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                             ) {
-                                Icon(AppIcons.Security, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Icon(AppIcons.Security, contentDescription = null, modifier = Modifier.size(IconSize.Intermediate))
+                                Spacer(modifier = Modifier.width(Spacing.Compact))
                                 Text("前往系统设置开启权限")
                             }
                         }
@@ -249,12 +249,12 @@ fun SettingsDownloadScreen(
             // 2. 自定义下载目录 (内置文件夹选择器)
             item {
                 Card(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CornerRadius.Md),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     )
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(Spacing.Lg)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -286,10 +286,10 @@ fun SettingsDownloadScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(Spacing.Intermediate))
 
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(CornerRadius.Sm),
                             color = MaterialTheme.colorScheme.surface,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -302,16 +302,16 @@ fun SettingsDownloadScreen(
                                 }
                         ) {
                             Row(
-                                modifier = Modifier.padding(12.dp),
+                                modifier = Modifier.padding(Spacing.Md),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     imageVector = AppIcons.Folder,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(IconSize.Lg)
                                 )
-                                Spacer(modifier = Modifier.width(10.dp))
+                                Spacer(modifier = Modifier.width(Spacing.Intermediate))
                                 Text(
                                     text = currentDisplayDownloadPath,
                                     style = MaterialTheme.typography.bodyMedium,

@@ -9,7 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.Spacing
 
 /**
  * 数据源与 CDN 选线设置区块
@@ -23,13 +24,13 @@ fun DataSourceSettingsCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CornerRadius.Md),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.Lg)) {
             Text(
                 text = "数据源与 CDN 选线",
                 style = MaterialTheme.typography.titleMedium,
@@ -40,13 +41,13 @@ fun DataSourceSettingsCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.Md))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onAutoSelectCdnChange(!autoSelectCdn) }
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = Spacing.Xs),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -66,7 +67,7 @@ fun DataSourceSettingsCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(Spacing.Md))
                 Switch(
                     checked = autoSelectCdn,
                     onCheckedChange = onAutoSelectCdnChange
@@ -74,9 +75,9 @@ fun DataSourceSettingsCard(
             }
 
             AnimatedVisibility(visible = !autoSelectCdn) {
-                Column(modifier = Modifier.padding(top = 12.dp)) {
+                Column(modifier = Modifier.padding(top = Spacing.Md)) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(Spacing.Intermediate))
                     Text(
                         text = "默认 CDN 线路",
                         style = MaterialTheme.typography.labelLarge,
@@ -87,7 +88,7 @@ fun DataSourceSettingsCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.Sm))
 
                     val cdnLineOptions = listOf(
                         0 to "线路 1",
@@ -98,7 +99,7 @@ fun DataSourceSettingsCard(
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.Sm)
                     ) {
                         for ((idx, label) in cdnLineOptions) {
                             FilterChip(

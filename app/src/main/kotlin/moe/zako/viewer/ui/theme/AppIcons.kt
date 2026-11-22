@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.AltRoute
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
@@ -27,7 +28,6 @@ object AppIcons {
     // 基础导航
     val Home: ImageVector = Icons.Default.Home
     val Profile: ImageVector = Icons.Default.Person
-    val Person: ImageVector = Icons.Default.Person
 
     // 多选：以「离线下载」当前使用的 Checklist 图标为全应用唯一权威值
     val MultiSelect: ImageVector = Icons.Default.Checklist
@@ -70,6 +70,7 @@ object AppIcons {
     val Clear: ImageVector = Icons.Default.Clear
     val ArrowBack: ImageVector = Icons.AutoMirrored.Filled.ArrowBack
     val ArrowForward: ImageVector = Icons.AutoMirrored.Filled.ArrowForward
+    val ArrowForwardIos: ImageVector = Icons.AutoMirrored.Filled.ArrowForwardIos
     val ArrowUpward: ImageVector = Icons.Default.ArrowUpward
     val ChevronRight: ImageVector = Icons.Default.ChevronRight
     val Launch: ImageVector = Icons.AutoMirrored.Filled.Launch

@@ -13,14 +13,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import moe.zako.viewer.core.storage.ExportResult
 import moe.zako.viewer.data.backup.RestoreResult
 import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.BorderWidth
 import moe.zako.viewer.ui.theme.CornerRadius
 import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.ProgressBarTokens
 import moe.zako.viewer.ui.theme.Spacing
 
 /**
@@ -44,7 +45,7 @@ fun BackupProgressDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(IconSize.Md),
-                    strokeWidth = 2.5.dp,
+                    strokeWidth = BorderWidth.ProgressIndicator,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(Spacing.Md))
@@ -109,7 +110,7 @@ fun BackupProgressDialog(
                             progress = { percent },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(6.dp)
+                                .height(ProgressBarTokens.Height)
                         )
                         Text(
                             text = "${(percent * 100).toInt()}%",
@@ -123,7 +124,7 @@ fun BackupProgressDialog(
                     LinearProgressIndicator(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
+                            .height(ProgressBarTokens.Height)
                     )
                 }
 

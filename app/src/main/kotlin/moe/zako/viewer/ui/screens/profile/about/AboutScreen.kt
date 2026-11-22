@@ -1,24 +1,21 @@
 ﻿package moe.zako.viewer.ui.screens.profile.about
 
-import moe.zako.viewer.ui.components.ZakoToast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import moe.zako.viewer.core.storage.PublicStorageHelper
 import moe.zako.viewer.data.repository.SettingsRepository
-import kotlinx.coroutines.launch
+import moe.zako.viewer.ui.components.ZakoToast
+import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +24,6 @@ fun AboutScreen(
     onNavigateBack: () -> Unit,
     onNavigateToLogs: () -> Unit
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val isUnlocked by settingsRepository.longPressShareUnlockedFlow.collectAsState(initial = false)
 
@@ -66,7 +62,7 @@ fun AboutScreen(
                 title = { Text("关于") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(imageVector = AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 }
             )
@@ -76,20 +72,20 @@ fun AboutScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Spacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
         ) {
             // App Branding & Version
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CornerRadius.Md),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(24.dp),
+                            .padding(Spacing.Xl),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -98,9 +94,9 @@ fun AboutScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(Spacing.Compact))
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(CornerRadius.Sm),
                             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f),
                             modifier = Modifier.clickable { onVersionClicked() }
                         ) {
@@ -109,7 +105,7 @@ fun AboutScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                modifier = Modifier.padding(horizontal = Spacing.Md, vertical = Spacing.Compact)
                             )
                         }
                     }
@@ -119,16 +115,16 @@ fun AboutScreen(
             // Open-source Licenses Declarations
             item {
                 Card(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CornerRadius.Md),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(Spacing.Lg)) {
                         Text(
                             text = "开源组件许可声明",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.Sm))
                         LicenseItem("libmpv", "GPLv2 / LGPLv2.1", "Cross-platform video player core")
                         LicenseItem("NextPlayerCloud / NeoPlayer", "GPLv3", "Android MPV playback architecture & JNI bindings")
                         LicenseItem("Jetpack Compose & Material 3", "Apache-2.0", "Google Android UI Toolkit")
@@ -145,21 +141,21 @@ fun AboutScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onNavigateToLogs() },
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CornerRadius.Md),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(Spacing.Lg),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Terminal,
+                            imageVector = AppIcons.Terminal,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(Spacing.Lg))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = "导出日志", style = MaterialTheme.typography.titleMedium)
                             Text(
@@ -168,7 +164,7 @@ fun AboutScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null)
+                        Icon(imageVector = AppIcons.ChevronRight, contentDescription = null)
                     }
                 }
             }
@@ -178,7 +174,7 @@ fun AboutScreen(
 
 @Composable
 fun LicenseItem(name: String, license: String, desc: String) {
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+    Column(modifier = Modifier.padding(vertical = Spacing.Xs)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween

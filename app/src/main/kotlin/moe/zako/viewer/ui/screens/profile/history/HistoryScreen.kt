@@ -1,29 +1,20 @@
 ﻿package moe.zako.viewer.ui.screens.profile.history
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
-import moe.zako.viewer.ui.components.DurationBadge
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
@@ -35,7 +26,6 @@ import moe.zako.viewer.ui.components.ZakoSearchBar
 import moe.zako.viewer.ui.components.clearFocusOnScroll
 import moe.zako.viewer.ui.components.clearFocusOnTap
 import moe.zako.viewer.ui.theme.AppIcons
-import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 import moe.zako.viewer.ui.theme.SearchBarTokens
 import moe.zako.viewer.ui.theme.Spacing
 
@@ -47,7 +37,7 @@ fun HistoryScreen(
     onNavigateToDetail: (videoId: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     // 长按上下文操作菜单状态
     var menuTargetItem by remember { mutableStateOf<WatchHistoryEntity?>(null) }
@@ -109,12 +99,12 @@ fun HistoryScreen(
                     ) {
                         TextButton(onClick = { viewModel.showAddToFavoritesDialog() }) {
                             Icon(imageVector = AppIcons.AddToFavorites, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Xs))
                             Text("加入收藏夹")
                         }
                         TextButton(onClick = { viewModel.deleteSelected() }) {
                             Icon(imageVector = AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Xs))
                             Text("删除", color = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -145,7 +135,7 @@ fun HistoryScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
+                    contentPadding = PaddingValues(bottom = Spacing.Lg)
                 ) {
                     groupedHistory.forEach { (dayHeader, itemsInDay) ->
                         // Natural Day Header (按天隔离分组展示)
@@ -159,7 +149,7 @@ fun HistoryScreen(
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                                    modifier = Modifier.padding(horizontal = Spacing.Lg, vertical = Spacing.Compact)
                                 )
                             }
                         }
@@ -187,7 +177,7 @@ fun HistoryScreen(
                                     }
                                 }
                             )
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = Spacing.Lg))
                         }
                     }
                 }

@@ -18,7 +18,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.core.storage.PublicStorageHelper
 import moe.zako.viewer.ui.components.ObserveStoragePermissionOnResume

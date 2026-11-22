@@ -15,11 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.ui.components.CustomColorDialog
 import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.BorderWidth
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
 import moe.zako.viewer.ui.theme.ThemePreset
+import moe.zako.viewer.ui.theme.TouchTarget
 import moe.zako.viewer.ui.theme.parseHexColor
 
 /**
@@ -55,12 +59,12 @@ fun SettingsAppearanceScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Spacing.Lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
         ) {
             // 图标颜色跟随应用主题色开关 (默认状态为关闭 false)
             item {
-                SettingsCard(shape = RoundedCornerShape(14.dp)) {
+                SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
                     SettingsSwitchItem(
                         title = "图标颜色跟随应用主题色",
                         subtitle = "应用桌面图标变体将自适应跟随莫奈动态取色或自定义主题色切换（重启应用后生效）",
@@ -75,7 +79,7 @@ fun SettingsAppearanceScreen(
 
             // 莫奈取色开关
             item {
-                SettingsCard(shape = RoundedCornerShape(14.dp)) {
+                SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
                     SettingsSwitchItem(
                         title = "莫奈动态取色",
                         subtitle = "跟随 Android 12+ 系统壁纸色彩动态生成协调的 Material 3 配色方案",
@@ -94,34 +98,34 @@ fun SettingsAppearanceScreen(
             item {
                 AnimatedVisibility(visible = !state.dynamicColor) {
                     Card(
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(CornerRadius.CardGroup),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(Spacing.Lg)) {
                             Text(
                                 text = "应用主题色",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(Spacing.Xs))
                             Text(
                                 text = "选择预置主题色或添加自定义颜色，即时生效并持久化保存：",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.height(14.dp))
+                            Spacer(modifier = Modifier.height(Spacing.Expanded))
 
                             val presets = ThemePreset.values()
 
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
                                 // 1. 系统预置 7 款颜色（严格二字命名，不可删除）
                                 presets.forEach { theme ->
                                     val isSelected = state.customTheme.equals(theme.hexColor, ignoreCase = true) ||
                                             state.customTheme.equals(theme.key, ignoreCase = true)
                                     Surface(
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = RoundedCornerShape(CornerRadius.Intermediate),
                                         color = if (isSelected) {
                                             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
                                         } else {
@@ -139,17 +143,17 @@ fun SettingsAppearanceScreen(
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                                .padding(horizontal = Spacing.Expanded, vertical = Spacing.Md),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(28.dp)
+                                                    .size(IconSize.ColorCircle)
                                                     .clip(CircleShape)
                                                     .background(theme.primaryColor)
-                                                    .border(2.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+                                                    .border(BorderWidth.Thick, Color.White.copy(alpha = 0.5f), CircleShape)
                                             )
-                                            Spacer(modifier = Modifier.width(14.dp))
+                                            Spacer(modifier = Modifier.width(Spacing.Expanded))
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = theme.displayName,
@@ -179,7 +183,7 @@ fun SettingsAppearanceScreen(
                                     val isSelected = state.customTheme.equals(customHex, ignoreCase = true)
                                     val color = parseHexColor(customHex) ?: MaterialTheme.colorScheme.primary
                                     Surface(
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = RoundedCornerShape(CornerRadius.Intermediate),
                                         color = if (isSelected) {
                                             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
                                         } else {
@@ -197,17 +201,17 @@ fun SettingsAppearanceScreen(
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                                                .padding(horizontal = Spacing.Expanded, vertical = Spacing.Sm),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(28.dp)
+                                                    .size(IconSize.ColorCircle)
                                                     .clip(CircleShape)
                                                     .background(color)
-                                                    .border(2.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+                                                    .border(BorderWidth.Thick, Color.White.copy(alpha = 0.5f), CircleShape)
                                             )
-                                            Spacer(modifier = Modifier.width(14.dp))
+                                            Spacer(modifier = Modifier.width(Spacing.Expanded))
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = "自定义颜色",
@@ -226,11 +230,11 @@ fun SettingsAppearanceScreen(
                                                     contentDescription = "已选择",
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
-                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Spacer(modifier = Modifier.width(Spacing.Sm))
                                             }
                                             IconButton(
                                                 onClick = { themeToDelete = customHex },
-                                                modifier = Modifier.size(36.dp)
+                                                modifier = Modifier.size(TouchTarget.Dense)
                                             ) {
                                                 Icon(
                                                     imageVector = AppIcons.DeleteOutline,
@@ -244,9 +248,9 @@ fun SettingsAppearanceScreen(
 
                                 // 3. “自定义颜色” (+) 按钮入口
                                 Surface(
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = RoundedCornerShape(CornerRadius.Intermediate),
                                     color = MaterialTheme.colorScheme.surface,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    border = androidx.compose.foundation.BorderStroke(BorderWidth.Thin, MaterialTheme.colorScheme.outlineVariant),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable { showCustomColorDialog = true }
@@ -254,12 +258,12 @@ fun SettingsAppearanceScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            .padding(horizontal = Spacing.Expanded, vertical = Spacing.Md),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(28.dp)
+                                                .size(IconSize.ColorCircle)
                                                 .clip(CircleShape)
                                                 .background(MaterialTheme.colorScheme.primaryContainer),
                                             contentAlignment = Alignment.Center
@@ -268,10 +272,10 @@ fun SettingsAppearanceScreen(
                                                 imageVector = AppIcons.Add,
                                                 contentDescription = "添加",
                                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.size(18.dp)
+                                                modifier = Modifier.size(IconSize.Intermediate)
                                             )
                                         }
-                                        Spacer(modifier = Modifier.width(14.dp))
+                                        Spacer(modifier = Modifier.width(Spacing.Expanded))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
                                                 text = "自定义主题色",
@@ -288,7 +292,7 @@ fun SettingsAppearanceScreen(
                                             imageVector = AppIcons.ArrowForward,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.size(14.dp)
+                                            modifier = Modifier.size(IconSize.Xs)
                                         )
                                     }
                                 }

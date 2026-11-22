@@ -470,3 +470,27 @@ object PlayerOverlayTokens {
     /** VIP 抢先看徽章内部前景色 */
     val VipBadgeContent: Color = Color(0xFF2E1C00)
 }
+
+/**
+ * 诊断日志查看器级别与背景语义色彩令牌
+ * 适配深色与浅色模式
+ */
+object LogLevelColors {
+    /** 日志控制台暗色背景 */
+    val BackgroundDark: Color = Color(0xFF0F0F0F)
+
+    /** 日志控制台亮色背景 */
+    val BackgroundLight: Color = Color(0xFFF8F9FA)
+
+    /**
+     * 根据日志级别与明暗主题获取对应的文本色彩
+     */
+    fun colorFor(level: String, isDark: Boolean = true): Color = when (level.uppercase()) {
+        "ERROR", "FATAL" -> if (isDark) Color(0xFFFF5252) else Color(0xFFD32F2F)
+        "WARN", "WARNING" -> if (isDark) Color(0xFFFFD740) else Color(0xFFED6C02)
+        "INFO" -> if (isDark) Color(0xFF69F0AE) else Color(0xFF2E7D32)
+        "DEBUG" -> if (isDark) Color(0xFF40C4FF) else Color(0xFF0288D1)
+        "VERBOSE" -> if (isDark) Color(0xFFB0BEC5) else Color(0xFF757575)
+        else -> if (isDark) Color(0xFFE0E0E0) else Color(0xFF424242)
+    }
+}

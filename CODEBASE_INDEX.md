@@ -1,6 +1,6 @@
 # ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（`v1.2.46`），全项目核心工程源码共计 **110** 个文件，累计 **24,533** 行代码。  
+> **版本定位**：截至最新构建（`v1.2.47`），全项目核心工程源码共计 **110** 个文件，累计 **24,543** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -134,7 +134,7 @@
 | 文件路径 | 代码行数 | 职责与功能（做了什么） | 核心实现方式（怎么做） |
 | :--- | :---: | :--- | :--- |
 | `app/src/main/kotlin/moe/zako/viewer/ui/navigation/Screen.kt` | 47 | 页面导航路由与参数定义密封类 | 定义 Home、Detail、Player、Favorites、History、Downloads 等页面的 Route 与参数解析模板，统一历史记录与五角星收藏 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/navigation/ZakoNavHost.kt` | 464 | 应用根级声明式导航图宿主 | 绑定 `NavHostController`，统筹页面跳转动效、ViewModel 注入与列表本地起播仲裁 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/navigation/ZakoNavHost.kt` | 440 | 应用根级声明式导航图宿主 | 绑定 `NavHostController`，统筹页面跳转动效与 ViewModel 注入，详情页跳转播放器契约透传 forceOnline 强制在线 |
 
 ---
 
@@ -142,11 +142,11 @@
 
 | 文件路径 | 代码行数 | 职责与功能（做了什么） | 核心实现方式（怎么做） |
 | :--- | :---: | :--- | :--- |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/VideoDetailScreen.kt` | 304 | 视频详情骨架视窗，承载响应式布局与弹窗宿主 | 响应式双栏/单栏排布，管理全屏边到边沉浸、返回拦截、收藏夹树选择弹窗与下载方式弹窗宿主 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/DetailInlinePlayerSection.kt` | 347 | 视频详情内嵌播放器视口容器与控制层 | 维持 AndroidView 组合树稳定，复用 `PlayerTopBar` 与 `PlayerBottomControls`，集成手势侦测与全屏切换 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/VideoDetailScreen.kt` | 280 | 视频详情骨架视窗，承载响应式布局与弹窗宿主 | 响应式双栏/单栏排布，管理原地横屏全屏沉浸（锁定强制在线片源）、返回拦截、收藏夹树选择与下载弹窗宿主 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/DetailInlinePlayerSection.kt` | 329 | 视频详情内嵌播放器视口容器与控制层 | 维持 AndroidView 组合树稳定，复用 PlayerTopBar 与 PlayerBottomControls，落实全屏原地展开维持在线源契约 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/DetailInfoAndActionsSection.kt` | 411 | 视频标题、核心操作栏与元数据展示卡片 | 呈现 VIP 徽标、可复制标题，集成五角星收藏/下载/稍后再看/暗号分享操作栏及点击检索元数据芯片 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/DetailRelatedAndCommentsSection.kt` | 272 | 相关推荐视频列表与留言区交互面板 | 折叠/展开留言评论区、横屏网格与竖屏列表相关视频渲染，复用共享弹窗组件 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/VideoDetailViewModel.kt` | 641 | 视频详情页状态中枢，负责详情拉取、收藏夹归属、稍后再看与下载创建 | 聚合 `CosApiClient`、`FavoriteRepository` 与 `DownloadManager`，委托 `PlaybackSourceCoordinator` 统一内嵌选线起播与测速会话 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/VideoDetailViewModel.kt` | 649 | 视频详情页状态中枢，负责详情拉取、收藏夹归属、稍后再看与下载创建 | 聚合各仓库门面，setFullscreen 契约锁定全屏维持当前在线片源与进度，统筹选线起播与测速会话 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesScreen.kt` | 334 | 收藏夹树状目录管理视窗，支持多选批量操纵与长按菜单 | 统一多选反选逻辑，长按固定跳转详情页、本地视频弹出 `LocalFileInfoDialog`，接入 `MultiSelectTopBar` 与 `ZakoSearchBar` |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoriteTreeItems.kt` | 300 | 收藏夹树状组件（面包屑路径条、子收藏夹卡片与视频卡片） | 呈现 `BreadcrumbBar` 路径芯片、`FavoriteFolderItem` 文件夹卡片与接入 `DurationBadge` 的视频卡片 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesDialogs.kt` | 272 | 收藏夹业务弹窗与操作抽屉宿主 | 提供新建/重命名文件夹弹窗、重命名视频弹窗及统一步调的长按操作抽屉 |
@@ -186,5 +186,5 @@
 | :--- | :---: | :--- | :--- |
 | `build.gradle.kts` | 5 | 根工程 Gradle 构建拓扑脚本 | 配置根级构建脚本与基础插件别名声明 |
 | `settings.gradle.kts` | 18 | 模块依赖树与 Maven 插件仓库编排 | 定义工程名 `NeoViewer`，编排 Google、MavenCentral 及本地插件存储库 |
-| `app/build.gradle.kts` | 129 | 核心应用模块构建参数、依赖声明与发版配置 | 配置 Android SDK 34、CMake 原生链接、R8 混淆、签名配置及动态版本号递增字段（v1.2.46 / versionCode 50） |
+| `app/build.gradle.kts` | 129 | 核心应用模块构建参数、依赖声明与发版配置 | 配置 Android SDK 34、CMake 原生链接、R8 混淆、签名配置及动态版本号递增字段（v1.2.47 / versionCode 51） |
 | `.github/workflows/release.yml` | 130 | GitHub Actions 自动化发版流水线工作流 | 监听版本 Tag（`v*`），自动化构建环境，生成更新日志并自动归档发布纯源码压缩包 |

@@ -38,6 +38,7 @@ import moe.zako.viewer.ui.theme.OverlayBlack
 /**
  * 详情页原位内嵌播放器视口容器与轻量控制层
  * 高风险红线：严禁破坏 AndroidView 组合树稳定性（状态遮罩仅用 Box 叠加，保留 key(engine) 逻辑）
+ * 业务契约约束：全屏切换通过 [onToggleFullscreen] 原位横屏展开，严格复用既有在线流与起播进度，严禁触发本地文件检测
  */
 @Composable
 fun DetailEmbeddedPlayer(

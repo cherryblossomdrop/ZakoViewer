@@ -389,6 +389,14 @@ class VideoDetailViewModel(
         }
     }
 
+    /**
+     * 切换内嵌播放器的全屏状态（页面内原地横屏沉浸）
+     *
+     * 【跨模块核心契约规则】：
+     * 从视频详情页内嵌播放进入全屏播放时，必须严格维持当前在线片源（保留当前在线流、
+     * 已选 CDN 线路节点及实时播放进度），严禁触发「本地已下载视频优先直进」拦截，
+     * 绝不切换为本地文件播放，确保全屏与内嵌切换期间的纯在线流媒体播放连续性。
+     */
     fun setFullscreen(fullscreen: Boolean) {
         _uiState.update { it.copy(isFullscreen = fullscreen) }
     }

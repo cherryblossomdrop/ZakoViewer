@@ -234,6 +234,7 @@ fun ZakoNavHost(
                         VideoDetailScreen(
                             viewModel = viewModel,
                             onNavigateBack = { navController.popBackStack() },
+                            // 详情页跳转播放器契约：显式透传 forceOnline = true，严格跳过本地优先拦截并强制走在线 CDN 路由
                             onNavigateToPlayer = { id ->
                                 navController.navigate(Screen.Player.createRoute(id, forceOnline = true))
                             },

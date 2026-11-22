@@ -213,6 +213,7 @@ fun VideoDetailScreen(
                         viewModel = viewModel,
                         video = video,
                         isFullscreen = state.isFullscreen,
+                        // 全屏切换契约：原地横屏展开，维持当前在线流与进度，严禁触发本地文件检测
                         onToggleFullscreen = { viewModel.setFullscreen(!state.isFullscreen) },
                         onNavigateBack = {
                             if (state.isFullscreen) {

@@ -34,14 +34,14 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 - **共享选线起播协调门面**：抽离跨模块 `PlaybackSourceCoordinator` 统一统筹在线流媒体起播线路决策，集中管控自动选优并发测速、默认节点索引优雅回退，以及流媒体代理 URL 解析，大幅瘦身全屏播放与详情页 ViewModel；
 - **毫秒级高并发实时测速**：集成 `CdnSpeedTester`，在开启选线弹窗时瞬时对多路镜像分发节点发起高并发测速，实时测量 TTFB 延迟（ms）与突发吞吐带宽（KB/s），动态降序呈现质量矩阵；
 - **最优路径自适应决策**：测速完毕后毫秒级研判最优物理节点并自动应用；若用户未手动干预，自动平滑切至最佳线路；若用户在测速期间已选定目标线路，以手动指令为最高仲裁优先级；
-- **断点记忆无缝热切**：彻底修复切线重播缺陷，切换节点时精确透传 `currentPositionMs` 维持播放连续性，彻底消除重载黑屏与进度丢失；
+- **断点记忆无缝热切**：切换节点时精确透传 `currentPositionMs` 维持播放连续性，实现零黑屏、零进度丢失的平滑无缝热切；
 - **持久化数据源策略**：播放设置深度集成「数据源与 CDN 选线」持久化区块，支持自由切换「自动选择最优节点（推荐）」与「固定默认线路（线路 1 ~ 5）」，满足个性化网络调度诉求。
 
 ### 3. 🛡️ 播放引擎适配器架构与渲染管线 (Player Engine Adapter Architecture)
 - **引擎适配器解耦与轻量门面**：抽离 `PlayerEngineAdapter` 接口，将 `ZakoPlayer` 重构为轻量门面（~350 行），将底层 `libmpv` 原生渲染管线（`MpvPlayerEngine`）与系统 `MediaPlayer` 异步管线（`SystemPlayerEngine`）彻底解耦，并建立带身份校验的 `EngineCallback` 彻底隔离旧引擎迟到回调；
-- **Seek 瞬态防抖与零值抑制**：在引擎适配器与播放门面建立双层 Seek 保护窗口期，抑制底层解复用重定位瞬态上报的 0 进度与残留脏数据，彻底解决进度条点击归零问题；主线程同步断开旧引擎 Surface 占用，杜绝跨引擎切换时的 EGL 创建冲突与双重起播异步竞态；
+- **Seek 瞬态防抖与零值抑制**：在引擎适配器与播放门面建立双层 Seek 保护窗口期，抑制底层解复用重定位瞬态上报的 0 进度与残留脏数据，确保进度条拖动与点击跳转精准流畅；主线程同步断开旧引擎 Surface 占用，杜绝跨引擎切换时的 EGL 创建冲突与双重起播异步竞态；
 - **libmpv 原生硬件加速**：基于高性能 libmpv 底层驱动音视频管线，支持 GPU 渲染输出直通与多格式硬件解码加速；
-- **Surface 引用缓存与起播零冗余绑定**：维护活动 Surface 实例，起播与切片完全跳过重复的 EGL 重建与无效尺寸设置；严格遵循 MPV 现代规范弃用旧版 `video-aspect-override` 整数指令，消除起播停顿与控制台废弃警告；
+- **Surface 引用缓存与起播零冗余绑定**：维护活动 Surface 实例，起播与切片完全跳过重复的 EGL 重建与无效尺寸设置；严格遵循 MPV 现代规范弃用旧版 `video-aspect-override` 整数指令，保障起播即刻渲染并完全符合现代 MPV 规范；
 - **JNI 互斥锁与生命周期同步**：底层跨语言交互引入互斥锁（Mutex）与异步 Seek 屏障，严密协同 Surface 生命周期，杜绝引擎热切换与跨线程竞争崩溃；
 - **系统内核全异步串行 IPC**：系统 `MediaPlayer` 的全部生命周期与 Surface 解绑操作统一收敛至独立单线程队列串行派发，彻底消除主线程阻塞与线程泄漏；
 - **本地微型反向代理网关**：内置支持流式 HTTP Range 请求的专用本地代理网关，高效适配原生播放内核与网络分片拉取。
@@ -53,7 +53,7 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 ### 5. 🎨 Material 3 Expressive 动态流体美学与自适应响应式拓扑 (M3 Expressive Fluid Design)
 - **全局基础 Design Token 与常量底座建立**：建立 `Dimens`（语义化间距 `Spacing`、圆角 `CornerRadius`、图标尺寸 `IconSize`、触控目标 `TouchTarget`、标高 `Elevation` 与通用封面规格）、`MotionTokens`（语义化动效时长与缓动曲线）及 `Typography`（全层级文字排版与业务角标扩展样式），将局部 Token 统一对齐；建立 `StorageConstants` 统筹系统公共导出子目录与流式 I/O 缓冲区规格；
-- **全域搜索框自动失焦与高亮残留根治**：在 `ZakoSearchBar` 中内建严密的软键盘展开收起监听跳变判定（`wasImeVisible && !isImeVisible`）、搜索提交失焦机制，并抽离出可复用的 `clearFocusOnScroll` 与 `clearFocusOnTap` 修饰符，全面接入首页、收藏夹、历史记录与应用选择器，彻底根除用户退出输入或滑动内容时搜索框高亮残留问题；
+- **全域搜索框自动失焦与状态感知**：在 `ZakoSearchBar` 中内建严密的软键盘展开收起监听判定（`wasImeVisible && !isImeVisible`）与搜索提交失焦机制，并抽离出可复用的 `clearFocusOnScroll` 与 `clearFocusOnTap` 修饰符，全面接入首页、收藏夹、历史记录与应用选择器，实现顺畅自如的失焦与浏览体验；
 - **全域搜索框组件与带微动效一键清空归一**：抽离 `ZakoSearchBar` 与 `SearchBarTokens`，全应用（首页搜索条、收藏夹内搜索、历史记录搜索及应用选择器）统一 28dp 胶囊轮廓、中性前景色（`onSurfaceVariant`，禁止随主题色变色）与图标规格。彻底移除右侧向右箭头，替换为一键清空按钮，配合 `AnimatedVisibility` 平滑进出过渡，并在点击瞬间触发缩放回弹与轻度旋转的触感微动效；
 - **首页筛选、排序与布局切换圆形按钮着色统一**：抽离 `FilterBarCircleButton` 与 `FilterBarTokens`，统一采用 Material 3 Tonal 逻辑（`secondaryContainer` 底色 + `onSecondaryContainer` 图标色），并在激活态（勾选综合筛选条件或非默认排序）统一切换为高对比主题色（`primary` 底色 + `onPrimary` 图标色），彻底消除视觉割裂与间距硬编码；
 - **系统级莫奈动态取色**：支持随 Android 12+ 动态壁纸主色实时流动重绘，并内置紫色（`#686BDD`）、浅绿、淡黄及无级自定义调色板；
@@ -64,10 +64,10 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 - **全域播放组件归拢与共享控制拓扑**：建立 `ui/components/player/` 播放器专用组件库，抽离共享播放顶栏（`PlayerTopBar`）、波浪进度控制条（`PlayerBottomControls`）、CDN 测速选线抽屉（`CdnNodeSelectorDialog`）及播放内核与硬解切换弹窗，驱动独立全屏播放视窗与视频详情内嵌播放器实现高度复用与像素级对称；
 - **全域时长角标与本地文件信息规范归一**：抽离 `DurationBadge` 封面时长角标组件与解析器，统一兼容浮点秒、整数秒、毫秒与格式化串，全面覆盖离线下载、历史记录、收藏夹与稍后再看四大列表；合并本地文件信息弹窗为单一公共组件 `LocalFileInfoDialog`，长按菜单统一固定「查看详情」跳转详情页，检测到本地视频时无缝呈现「文件信息」；
 - **全仓 Design Token 覆盖与硬编码绝对清零**：全仓（涵盖个人中心、6 大设置模块、日志查看器、备份恢复、离线下载、历史记录、稍后再看与收藏夹树状体系）彻底消除散落硬编码。所有图标引用 100% 收敛至全局 `AppIcons` 门面（全仓业务与组件代码直接引用 `Icons.`/`ZakoIcons.` 数量实现绝对清零）；诊断日志级别色与控制台背景收敛至 `LogLevelColors` 并自适应深浅色模式，全仓散落裸写 `Color(0x...)` 数量归零；排版文字与几何尺寸全量对齐 `Typography` 与 `Dimens`（`Spacing`、`CornerRadius`、`IconSize`、`BorderWidth` 及 `SettingsTokens` / `ProfileTokens` 等）。
-- **多选反选状态机原子清空修复**：统一 4 大列表 ViewModel 的 `toggleSelectAll()` 反选逻辑，彻底修复全选态下点击「取消全选」失效的缺陷，精准联动 `MultiSelectTopBar` 计数与勾选视觉态；
+- **多选反选状态机原子联动**：统一 4 大列表 ViewModel 的 `toggleSelectAll()` 反选状态机逻辑，支持一键全选与原子清空，精准双向联动 `MultiSelectTopBar` 计数与勾选视觉态；
 - **全域播放控制层统一几何拓扑与视觉等重补偿**：抽离 `PlayerControlDefaults` 规范中枢，全域图标标准归一至 24dp、触控容器归一至 40dp；标定自定义矢量图安全区（20x20，线宽 2.0f），并对斜向异形图标实施视觉减重补偿，实现跨全屏、竖屏与内嵌态的完全像素级和谐对齐；
 - **全场景通用倍速选择视口与手势穿透隔离**：抽离 `PlaybackSpeedDialog` 统一倍速控制流，根据屏幕方向动态自适应约束视口高度，支持丝滑垂直滚动与平滑居中定位，并在交互层阻断垂直拖动手势穿透，杜绝误触底层亮度和音量调节；
-- **全场景连续手势交互与跨会话零跳变调控**：重构 `PlayerGestureDetector` 与 `PlayerBrightnessVolumeHelper` 统一手势决策中枢，覆盖横屏全屏、竖屏全屏及详情页原位内嵌三大形态。起手动态直读窗口属性与设备真实系统亮度/媒体音量，杜绝闭包过期与初次/再次滑动弹回跳变缺陷；拖拽过程阶梯与浮点双向平滑归一化，退出播放页自动释放窗口亮度覆盖跟随系统，提供丝滑可靠的视听交互流；
+- **全场景连续手势交互与跨会话平滑调控**：重构 `PlayerGestureDetector` 与 `PlayerBrightnessVolumeHelper` 统一手势决策中枢，覆盖横屏全屏、竖屏全屏及详情页原位内嵌三大形态。起手动态直读窗口属性与设备真实系统亮度/媒体音量，杜绝闭包过期与手势跳变；拖拽过程阶梯与浮点双向平滑归一化，退出播放页自动释放窗口亮度覆盖跟随系统，提供丝滑可靠的视听交互流；
 - **检索与切换状态机严格隔离防闪烁**：重构标签切换与布尔语法检索的状态流转，发起新请求即刻激活居中 Material 3 流体加载动画，严格隔离空状态渲染时机，内置协程并发取消与静默退出屏障，彻底杜绝数据穿透闪烁与静默等待假死感；
 - **桌面图标动态随动映射**：应用图标颜色实时响应主题变动，重启即刻生效；
 - **大屏平板响应式双栏排布**：横屏自适应切分黄金视觉双栏（左侧原生渲染播放与交互，右侧独立滚动推荐瀑布流），侧边栏（NavigationRail）自适应平滑折展；

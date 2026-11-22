@@ -49,7 +49,6 @@ fun PlayerBottomControls(
         Column {
             var isScrubbing by remember { mutableStateOf(false) }
             var scrubProgress by remember { mutableFloatStateOf(0f) }
-            var lastSeekTriggerTime by remember { mutableLongStateOf(0L) }
 
             // MD3e 可动波浪进度条
             WavyProgressSlider(
@@ -63,12 +62,8 @@ fun PlayerBottomControls(
                 onValueChangeFinished = { ratio ->
                     isScrubbing = false
                     if (durationMs > 0L) {
-                        val now = System.currentTimeMillis()
-                        if (now - lastSeekTriggerTime >= 150L) {
-                            lastSeekTriggerTime = now
-                            val targetMs = (ratio * durationMs).toLong().coerceIn(0L, durationMs)
-                            onSeekTo(targetMs)
-                        }
+                        val targetMs = (ratio * durationMs).toLong().coerceIn(0L, durationMs)
+                        onSeekTo(targetMs)
                     }
                 },
                 modifier = Modifier

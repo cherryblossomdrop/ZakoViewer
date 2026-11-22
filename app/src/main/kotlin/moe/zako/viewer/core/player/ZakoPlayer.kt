@@ -92,17 +92,22 @@ class ZakoPlayer(val context: Context) {
             if (!isCurrent()) return
             val now = System.currentTimeMillis()
             val seekTarget = lastSeekTargetMs
-            val effectivePos = if (seekTarget >= 0L && now - lastSeekTimestamp < 800L) {
-                if (positionMs in 0L..999L && seekTarget >= 2000L) {
-                    -1L // 丢弃 seek 期间底层残留的 0 值或首帧瞬态
-                } else {
-                    if (kotlin.math.abs(positionMs - seekTarget) < 1500L) {
+            val effectivePos = if (seekTarget >= 0L) {
+                if (now - lastSeekTimestamp < 1200L) {
+                    if (kotlin.math.abs(positionMs - seekTarget) <= 1500L) {
+                        // 底层进度已到达目标附近，Seek 已就绪完成
                         lastSeekTargetMs = -1L
+                        positionMs
+                    } else {
+                        // 底层仍处于 Seek 瞬态（上报旧进度或重定位 0 值），维持目标进度，抑制旧值覆盖
+                        -1L
                     }
+                } else {
+                    // 超出保护窗口期，解除 Seek 保护
+                    lastSeekTargetMs = -1L
                     positionMs
                 }
             } else {
-                lastSeekTargetMs = -1L
                 positionMs
             }
 

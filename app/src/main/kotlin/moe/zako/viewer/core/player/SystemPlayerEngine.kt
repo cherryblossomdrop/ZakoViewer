@@ -395,13 +395,12 @@ internal class SystemPlayerEngine(
                                 val seekTarget = inFlightSeekTargetMs
                                 if (seekTarget >= 0L) {
                                     val elapsed = System.currentTimeMillis() - inFlightSeekTimestamp
-                                    if (elapsed < 800L) {
-                                        if (pos in 0L..999L && seekTarget >= 2000L) {
+                                    if (elapsed < 1200L) {
+                                        if (kotlin.math.abs(pos - seekTarget) <= 1500L) {
+                                            inFlightSeekTargetMs = -1L
+                                        } else {
                                             if (dur > 0L) callback.onPositionChanged(-1L, dur)
                                             return@let
-                                        }
-                                        if (kotlin.math.abs(pos - seekTarget) < 1500L) {
-                                            inFlightSeekTargetMs = -1L
                                         }
                                     } else {
                                         inFlightSeekTargetMs = -1L

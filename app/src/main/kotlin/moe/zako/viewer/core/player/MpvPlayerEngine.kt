@@ -401,14 +401,13 @@ internal class MpvPlayerEngine(
         val seekTarget = inFlightSeekTargetMs
         if (seekTarget >= 0L) {
             val elapsed = System.currentTimeMillis() - inFlightSeekTimestamp
-            if (elapsed < 800L) {
-                // 在 Seek 保护窗口期内，若收到明显残留的 0 值或首帧瞬态值，抑制该 posMs
-                if (posMs in 0L..999L && seekTarget >= 2000L) {
+            if (elapsed < 1200L) {
+                if (kotlin.math.abs(posMs - seekTarget) <= 1500L) {
+                    inFlightSeekTargetMs = -1L
+                } else {
+                    // 底层进度尚未就绪（旧进度或瞬态零值），抑制该 posMs，仅更新 duration
                     if (durMs > 0L) callback.onPositionChanged(-1L, durMs)
                     return
-                }
-                if (kotlin.math.abs(posMs - seekTarget) < 1500L) {
-                    inFlightSeekTargetMs = -1L
                 }
             } else {
                 inFlightSeekTargetMs = -1L

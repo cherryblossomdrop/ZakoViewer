@@ -2,8 +2,8 @@
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
@@ -78,43 +78,41 @@ fun WavyProgressSlider(
             .fillMaxWidth()
             .height(36.dp)
             .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    val targetProgress = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
-                    onValueChange?.invoke(targetProgress)
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val width = size.width.toFloat()
+                    if (width <= 0f) return@awaitEachGesture
+
+                    down.consume()
+                    isDragging = true
+                    val startProgress = (down.position.x / width).coerceIn(0f, 1f)
+                    dragProgress = startProgress
+                    onValueChange?.invoke(startProgress)
+
+                    var lastProgress = startProgress
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull() ?: break
+                        if (change.pressed) {
+                            change.consume()
+                            val newProgress = (change.position.x / width).coerceIn(0f, 1f)
+                            dragProgress = newProgress
+                            lastProgress = newProgress
+                            onValueChange?.invoke(newProgress)
+                        } else {
+                            // 手指抬起 (Up)
+                            change.consume()
+                            break
+                        }
+                    }
+
+                    isDragging = false
                     if (onValueChangeFinished != null) {
-                        onValueChangeFinished(targetProgress)
+                        onValueChangeFinished(lastProgress)
                     } else {
-                        onSeek?.invoke(targetProgress)
+                        onSeek?.invoke(lastProgress)
                     }
                 }
-            }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        isDragging = true
-                        val startProgress = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
-                        dragProgress = startProgress
-                        onValueChange?.invoke(startProgress)
-                    },
-                    onDragEnd = {
-                        isDragging = false
-                        if (onValueChangeFinished != null) {
-                            onValueChangeFinished(dragProgress)
-                        } else {
-                            onSeek?.invoke(dragProgress)
-                        }
-                    },
-                    onDragCancel = {
-                        isDragging = false
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        val newProgress = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
-                        dragProgress = newProgress
-                        // Only update preview progress, do NOT seek directly
-                        onValueChange?.invoke(newProgress)
-                    }
-                )
             }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {

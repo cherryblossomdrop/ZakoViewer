@@ -1,6 +1,6 @@
 # ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（`v1.2.41`），全项目核心工程源码共计 **102** 个文件，累计 **25,890** 行代码。  
+> **版本定位**：截至最新构建（`v1.2.42`），全项目核心工程源码共计 **103** 个文件，累计 **24,028** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -32,8 +32,9 @@
 
 | 文件路径 | 代码行数 | 职责与功能（做了什么） | 核心实现方式（怎么做） |
 | :--- | :---: | :--- | :--- |
-| `app/src/main/kotlin/moe/zako/viewer/core/cdn/CdnSmartRouter.kt` | 79 | 智能 CDN 线路路由与测速结果解析仲裁 | 维护多节点元数据，结合 `CdnSpeedTester` 返回的 TTFB 和带宽动态评分并产出最佳线路 |
-| `app/src/main/kotlin/moe/zako/viewer/core/cdn/CdnSpeedTester.kt` | 171 | 多路 CDN 节点并发网络探测与测速引擎 | 基于 OkHttp 协程并发发起 Range 请求，探测 TCP/TLS 握手延迟与突发下行速率 |
+| `app/src/main/kotlin/moe/zako/viewer/core/cdn/CdnSmartRouter.kt` | 66 | 智能 CDN 线路路由与测速结果解析仲裁 | 维护多节点元数据，结合 `CdnSpeedTester` 返回的 TTFB 和带宽动态评分并产出最佳线路 |
+| `app/src/main/kotlin/moe/zako/viewer/core/cdn/CdnSpeedTester.kt` | 153 | 多路 CDN 节点并发网络探测与测速引擎 | 基于 OkHttp 协程并发发起 Range 请求，探测 TCP/TLS 握手延迟与突发下行速率 |
+| `app/src/main/kotlin/moe/zako/viewer/core/cdn/PlaybackSourceCoordinator.kt` | 203 | 在线视频起播选线与 CDN 测速调度协调器 | 统筹自动测速选优、默认节点索引优雅回退、测速面板会话控制与流代理 URL 解析门面 |
 | `app/src/main/kotlin/moe/zako/viewer/core/cover/CoverCacheManager.kt` | 437 | 视频封面本地持久化缓存、离线自愈与按需加载中枢 | 本地文件 Hash 寻址存储，封装 Coil `ImageRequest` 拦截器，支持旧版离线封面静默自愈 |
 | `app/src/main/kotlin/moe/zako/viewer/core/download/DownloadManager.kt` | 815 | 离线下载全生命周期管理中枢，协调任务调度、断点续传与存储目录迁移 | 单例维护下载任务状态机（Flow 响应式通知），透传视频时长，协调 `DownloadDao` 与本地文件物理 I/O |
 | `app/src/main/kotlin/moe/zako/viewer/core/download/DownloadService.kt` | 58 | 离线下载前台服务，保障后台下载稳定不被系统杀进程 | 继承 Android `Service`，绑定前台通知通道并实时显示下载进度与速率通知 |
@@ -138,7 +139,7 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/DetailInlinePlayerSection.kt` | 347 | 视频详情内嵌播放器视口容器与控制层 | 维持 AndroidView 组合树稳定，复用 `PlayerTopBar` 与 `PlayerBottomControls`，集成手势侦测与全屏切换 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/DetailInfoAndActionsSection.kt` | 411 | 视频标题、核心操作栏与元数据展示卡片 | 呈现 VIP 徽标、可复制标题，集成五角星收藏/下载/稍后再看/暗号分享操作栏及点击检索元数据芯片 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/DetailRelatedAndCommentsSection.kt` | 272 | 相关推荐视频列表与留言区交互面板 | 折叠/展开留言评论区、横屏网格与竖屏列表相关视频渲染，复用共享弹窗组件 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/VideoDetailViewModel.kt` | 722 | 视频详情页状态中枢，负责详情拉取、收藏夹归属、稍后再看与下载创建 | 聚合 `CosApiClient`、`FavoriteRepository` 与 `DownloadManager`，下载时透传时长 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/VideoDetailViewModel.kt` | 641 | 视频详情页状态中枢，负责详情拉取、收藏夹归属、稍后再看与下载创建 | 聚合 `CosApiClient`、`FavoriteRepository` 与 `DownloadManager`，委托 `PlaybackSourceCoordinator` 统一内嵌选线起播与测速会话 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesScreen.kt` | 365 | 收藏夹树状目录管理视窗，支持多选批量操纵与长按菜单 | 统一多选反选逻辑，长按固定跳转详情页、本地视频弹出 `LocalFileInfoDialog`，接入 `MultiSelectTopBar` |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoriteTreeItems.kt` | 300 | 收藏夹树状组件（面包屑路径条、子收藏夹卡片与视频卡片） | 呈现 `BreadcrumbBar` 路径芯片、`FavoriteFolderItem` 文件夹卡片与接入 `DurationBadge` 的视频卡片 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesDialogs.kt` | 272 | 收藏夹业务弹窗与操作抽屉宿主 | 提供新建/重命名文件夹弹窗、重命名视频弹窗及统一步调的长按操作抽屉 |
@@ -148,7 +149,7 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeFilterBar.kt` | 443 | 首页分类标签栏、排序模式切换、视图切换与综合筛选抽屉 | 呈现分类 Chip 组、筛选图标全主题色适配（含莫奈动态色与自定义调色盘）、按时间范围/排序方式过滤的底部筛选抽屉及排序匹配算法 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeViewModel.kt` | 502 | 首页状态机中枢，管理视频列表分页、搜索词历史与暗号直达 | 协同 `CosApiClient` 与 `SearchHistoryRepository`，流式响应排序模式与查询关键词流 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerScreen.kt` | 370 | 独立全屏播放视窗，集成控制层覆盖物、CDN 测速面板与画幅调整 | 装载 `MPVView` 纯原生渲染视口，全面复用 `PlayerTopBar`、`PlayerBottomControls` 及共享弹窗组件 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerViewModel.kt` | 785 | 播放器状态机中枢，统筹起播选线、实时测速热切、进度保存与外部播放 | 驱动 `ZakoPlayer` 与 `CdnSmartRouter`，支持本地文件优先起播与进度自动写回历史表 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerViewModel.kt` | 641 | 播放器状态机中枢，统筹起播选线、实时测速热切、进度保存与外部播放 | 驱动 `ZakoPlayer` 与 `PlaybackSourceCoordinator`，统筹本地视频优先起播、在线路由起播与测速面板切换 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/ProfileScreen.kt` | 365 | 个人中心主入口视窗 | 全局更名历史记录，统一五角星收藏图标，提供离线下载、稍后再看、数据备份与全局设置等子模块聚合导航列表 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/AboutScreen.kt` | 191 | 关于视窗，展示应用版本信息、开源协议与开发者鸣谢 | 包含版本信息、源码仓库跳转及彩蛋连击解锁机制 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/LogViewerScreen.kt` | 291 | 实时应用日志查看器视窗 | 提供日志实时流刷新、级别筛选、关键词搜索、清空及外部导出分享功能 |

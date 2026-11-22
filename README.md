@@ -30,7 +30,8 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 - **自愈式目录扫描拓扑**：若数据库记录失效或物理文件路径变更，引擎自动调动全域下载目录扫描算法，毫秒级重定位匹配文件并自动回写数据库自愈；若文件遭外部彻底删除，静默平滑降级至在线流，绝无卡死异常；
 - **异步解耦与网络封面隔离**：本地起播不等待元数据网络阻塞，详情标签与推荐后台异步静默补全；历史进度记录机制内置网络封面隔离保护，杜绝私有路径覆盖污染网络元数据。
 
-### 2. 🌐 智能多路并发 CDN 实时竞速与无缝热重定向 (Smart CDN Matrix & Zero-Latency Rerouting)
+### 2. 🌐 智能多路并发 CDN 实时竞速与在线起播调度 (Smart CDN Matrix & Playback Source Coordination)
+- **共享选线起播协调门面**：抽离跨模块 `PlaybackSourceCoordinator` 统一统筹在线流媒体起播线路决策，集中管控自动选优并发测速、默认节点索引优雅回退，以及流媒体代理 URL 解析，大幅瘦身全屏播放与详情页 ViewModel；
 - **毫秒级高并发实时测速**：集成 `CdnSpeedTester`，在开启选线弹窗时瞬时对多路镜像分发节点发起高并发测速，实时测量 TTFB 延迟（ms）与突发吞吐带宽（KB/s），动态降序呈现质量矩阵；
 - **最优路径自适应决策**：测速完毕后毫秒级研判最优物理节点并自动应用；若用户未手动干预，自动平滑切至最佳线路；若用户在测速期间已选定目标线路，以手动指令为最高仲裁优先级；
 - **断点记忆无缝热切**：彻底修复切线重播缺陷，切换节点时精确透传 `currentPositionMs` 维持播放连续性，彻底消除重载黑屏与进度丢失；
@@ -92,7 +93,7 @@ app/src/main/
 ├── cpp/                           # C++ JNI 模块 (CMakeLists.txt, mpv_jni.cpp 核心互斥锁与渲染绑定)
 ├── kotlin/moe/zako/viewer/
 │   ├── core/                      # 核心基建与能力驱动
-│   │   ├── cdn/                   # CDN 动态并发测速引擎与弹性路由调度 (CdnSpeedTester, CdnSmartRouter)
+│   │   ├── cdn/                   # CDN 动态并发测速引擎与在线选线调度中枢 (CdnSpeedTester, CdnSmartRouter, PlaybackSourceCoordinator)
 │   │   ├── cover/                 # 核心业务封面持久化与按需补全引擎 (CoverCacheManager)
 │   │   ├── download/              # 多并发分片断点续传下载引擎与本地视频检测仲裁 (DownloadManager)
 │   │   ├── external/              # 外部播放器与多态应用调用适配

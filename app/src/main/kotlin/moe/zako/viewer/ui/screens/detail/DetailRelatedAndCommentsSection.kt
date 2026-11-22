@@ -1,6 +1,5 @@
 package moe.zako.viewer.ui.screens.detail
 
-import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,23 +9,18 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.automirrored.filled.Comment
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Comment
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import moe.zako.viewer.data.source.cosav.CosComment
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import moe.zako.viewer.ui.components.VideoCard
-import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
 
 /**
  * 详情页留言区与相关视频高内聚 UI 区块
@@ -47,14 +41,14 @@ fun DetailCommentsCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = Spacing.Lg, vertical = Spacing.Intermediate)
             .clickable { onToggleExpand() },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CornerRadius.Md),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         )
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(Spacing.Expanded)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -62,11 +56,11 @@ fun DetailCommentsCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Comment,
+                        imageVector = AppIcons.Comment,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(IconSize.Intermediate)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.Sm))
                     Text(
                         text = "留言区 (${comments.size} 条评论)",
                         style = MaterialTheme.typography.titleSmall,
@@ -74,13 +68,13 @@ fun DetailCommentsCard(
                     )
                 }
                 Icon(
-                    imageVector = if (isExpanded) AppIcons.ExpandLess else Icons.Default.ExpandMore,
+                    imageVector = if (isExpanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
                     contentDescription = "展开/折叠"
                 )
             }
 
             AnimatedVisibility(visible = isExpanded) {
-                Column(modifier = Modifier.padding(top = 10.dp)) {
+                Column(modifier = Modifier.padding(top = Spacing.Intermediate)) {
                     if (comments.isEmpty()) {
                         Text(
                             text = "暂无留言，快来抢沙发吧~",
@@ -90,7 +84,7 @@ fun DetailCommentsCard(
                     } else {
                         comments.forEach { comment ->
                             CommentItem(comment)
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.Compact))
                         }
                     }
                 }
@@ -124,7 +118,7 @@ fun CommentItem(comment: CosComment) {
                 )
             }
         }
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(Spacing.Xxs))
         Text(
             text = comment.displayContent,
             style = MaterialTheme.typography.bodySmall
@@ -145,9 +139,9 @@ fun DetailRelatedVideosGrid(
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            contentPadding = PaddingValues(bottom = Spacing.Lg),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.Intermediate),
+            verticalArrangement = Arrangement.spacedBy(Spacing.Intermediate)
         ) {
             items(relatedList, key = { it.id }) { relItem ->
                 VideoCard(
@@ -184,7 +178,7 @@ fun LazyListScope.detailRelatedVideosSection(
                 text = "相关视频 (${relatedList.size})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp)
+                modifier = Modifier.padding(start = Spacing.Lg, top = Spacing.Md, bottom = Spacing.Sm)
             )
         }
 
@@ -193,8 +187,8 @@ fun LazyListScope.detailRelatedVideosSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = Spacing.Lg, vertical = Spacing.Compact),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.Intermediate)
             ) {
                 Box(modifier = Modifier.weight(1f)) {
                     VideoCard(
@@ -218,7 +212,7 @@ fun LazyListScope.detailRelatedVideosSection(
         }
 
         item {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.Xl))
         }
     }
 }
@@ -241,12 +235,12 @@ fun DetailDownloadChoiceDialog(
                     text = "选择要使用的下载引擎：",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Spacing.Md))
 
                 ListItem(
                     headlineContent = { Text("内置多节点多线程下载器") },
                     supportingContent = { Text("并发向每一个 CDN 节点拉取分片，支持断点续传") },
-                    leadingContent = { Icon(imageVector = Icons.Default.Speed, contentDescription = null) },
+                    leadingContent = { Icon(imageVector = AppIcons.Speed, contentDescription = null) },
                     modifier = Modifier.clickable {
                         onStartInternalDownload()
                     }
@@ -270,4 +264,3 @@ fun DetailDownloadChoiceDialog(
         }
     )
 }
-

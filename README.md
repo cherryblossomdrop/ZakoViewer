@@ -6,18 +6,18 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 ## 📊 工程源码规模统计
 
-本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.50**）代码规模统计如下：
+本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.51**）代码规模统计如下：
 
 | 语言 / 类型 | 模块数 | 源码行数 | 核心架构与工程职责 |
 | :--- | :---: | :---: | :--- |
-| **Kotlin (`.kt`)** | 113 | 25,993 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
+| **Kotlin (`.kt`)** | 113 | 26,253 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
 | **C++ / JNI (`.cpp`)** | 3 | 2,216 | libmpv 原生硬件加速渲染、跨语言 JNI 互斥锁、异步 Seek 屏障与原生日志捕获 |
 | **Gradle 构建 (`.kts`)** | 3 | 171 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
 | **资源配置 (`.xml`)** | 26 | 355 | 跨版本清单配置、多主题矢量图形及自适应图标资源 |
 | **构建配置 (CMake)** | 1 | 32 | CMake 原生链接编排与编译参数 |
 | **CI/CD 工作流 (`.yml`)** | 1 | 130 | 自动化 GitHub Release 发版与纯源码无污染归档流水线 |
-| **项目规范与文档 (`.md`)** | 3 | 351 | 自动化版本递增、Commit 规范、发版发布、代码索引与编译验证准则 |
-| **总计** | **150** | **29,248** | **全项目共计约 2.92 万行高质量工程源码** |
+| **项目规范与文档 (`.md`)** | 3 | 355 | 自动化版本递增、Commit 规范、发版发布、代码索引与编译验证准则 |
+| **总计** | **150** | **29,512** | **全项目共计约 2.95 万行高质量工程源码** |
 
 ---
 
@@ -123,7 +123,7 @@ app/src/main/
 │       │   └── player/            # 播放器共享组件库 (顶部栏、波浪控制条、手势 HUD、倍速视口、CDN测速选线与内核弹窗)
 │       ├── navigation/            # 响应式导航拓扑与自适应多端路由
 │       ├── screens/               # 各核心业务页面 (Player, Home, Detail, Profile, Settings 等)
-│       └── theme/                 # 主题调色板、语义化图标 (AppIcons) 与菜单样式 (MenuTokens) 设计令牌
+│       └── theme/                 # 全局 Design Tokens：语义化图标 (AppIcons)、尺寸间距 (Dimens)、动效 (MotionTokens) 与主题色彩体系
 └── res/                           # 资源定义 (矢量图形资源、多主题应用图标、多语言字符映射)
 ```
 

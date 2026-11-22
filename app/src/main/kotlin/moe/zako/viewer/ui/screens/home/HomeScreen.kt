@@ -31,6 +31,12 @@ import moe.zako.viewer.ui.components.VideoCard
 import moe.zako.viewer.ui.components.clearFocusOnScroll
 import moe.zako.viewer.ui.components.clearFocusOnTap
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.BorderWidth
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.TouchTarget
+import moe.zako.viewer.ui.theme.VideoCoverTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -169,7 +175,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = Spacing.Lg, vertical = Spacing.Sm)
             ) {
                 // 1. 顶部搜索栏组件
                 HomeSearchBar(
@@ -194,7 +200,7 @@ fun HomeScreen(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.Sm))
 
                 // 2. 筛选与排序控制条
                 HomeFilterBar(
@@ -231,12 +237,12 @@ fun HomeScreen(
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(Spacing.Md)
                     ) {
                         CircularProgressIndicator(
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(36.dp),
-                            strokeWidth = 3.dp
+                            modifier = Modifier.size(TouchTarget.Dense),
+                            strokeWidth = BorderWidth.HeavyStroke
                         )
                         Text(
                             text = "加载中…",
@@ -252,7 +258,7 @@ fun HomeScreen(
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(Spacing.Md)
                     ) {
                         Text(
                             text = state.errorMessage ?: if (state.searchQuery.isNotEmpty()) "未找到相关视频" else "暂无符合筛选条件的视频",
@@ -269,12 +275,12 @@ fun HomeScreen(
             } else if (state.layoutMode == LayoutMode.WATERFALL) {
                 // 瀑布流模式：双列交错网格 + 触底自动加载下一页
                 LazyVerticalStaggeredGrid(
-                    columns = StaggeredGridCells.Adaptive(minSize = 160.dp),
+                    columns = StaggeredGridCells.Adaptive(minSize = VideoCoverTokens.GridAdaptiveMinSize),
                     state = staggeredGridState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalItemSpacing = 10.dp
+                    contentPadding = PaddingValues(Spacing.Md),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.Intermediate),
+                    verticalItemSpacing = Spacing.Intermediate
                 ) {
                     items(displayedVideos, key = { it.id }) { video ->
                         VideoCard(
@@ -289,10 +295,10 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
+                                    .padding(Spacing.Lg),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                CircularProgressIndicator(modifier = Modifier.size(IconSize.Lg))
                             }
                         }
                     }
@@ -300,12 +306,12 @@ fun HomeScreen(
             } else {
                 // 分页排布模式：规整卡片网格展示当前页数据 + 底部翻页控制栏
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 160.dp),
+                    columns = GridCells.Adaptive(minSize = VideoCoverTokens.GridAdaptiveMinSize),
                     state = gridState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    contentPadding = PaddingValues(Spacing.Md),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.Intermediate),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.Intermediate)
                 ) {
                     items(displayedVideos, key = { it.id }) { video ->
                         VideoCard(
@@ -320,10 +326,10 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
+                                    .padding(Spacing.Lg),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                CircularProgressIndicator(modifier = Modifier.size(IconSize.Lg))
                             }
                         }
                     }
@@ -332,7 +338,7 @@ fun HomeScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 16.dp),
+                                .padding(vertical = Spacing.Lg),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -343,40 +349,40 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = AppIcons.ArrowBack,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(IconSize.Sm)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(Spacing.Xs))
                                 Text("上一页")
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Lg))
 
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(CornerRadius.Sm),
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp)
+                                modifier = Modifier.padding(horizontal = Spacing.Sm)
                             ) {
                                 Text(
                                     text = "第 ${state.page + 1} 页",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    modifier = Modifier.padding(horizontal = Spacing.Md, vertical = Spacing.Compact)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Lg))
 
                             Button(
                                 onClick = { viewModel.nextPage() },
                                 enabled = state.hasMore && !state.isLoading
                             ) {
                                 Text("下一页")
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(Spacing.Xs))
                                 Icon(
                                     imageVector = AppIcons.ArrowForward,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(IconSize.Sm)
                                 )
                             }
                         }

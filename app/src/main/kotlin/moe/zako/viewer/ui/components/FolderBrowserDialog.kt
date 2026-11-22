@@ -6,20 +6,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.DialogTokens
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
 import java.io.File
 
 @Composable
@@ -96,25 +96,25 @@ fun FolderBrowserDialog(
             Column(modifier = Modifier.fillMaxWidth()) {
                 // Current Path Banner
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(CornerRadius.Sm),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = Spacing.Intermediate, vertical = Spacing.Compact),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = AppIcons.FolderOpen,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(IconSize.Sm)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(Spacing.Compact))
                         Text(
                             text = currentDir.absolutePath,
                             style = MaterialTheme.typography.bodySmall,
-                            fontSize = 11.sp,
+                            fontSize = FontSizes.Badge,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -122,48 +122,48 @@ fun FolderBrowserDialog(
                 }
 
                 if (!hasStoragePermission) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(Spacing.Compact))
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(CornerRadius.Sm),
                         color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { StoragePermissionHelper.requestAllFilesAccess(context) }
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = Spacing.Intermediate, vertical = Spacing.Compact),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = AppIcons.Warning,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(IconSize.Sm)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Compact))
                             Text(
                                 text = "未获得所有文件访问权限，点击前往授权",
                                 style = MaterialTheme.typography.bodySmall,
-                                fontSize = 11.sp,
+                                fontSize = FontSizes.Badge,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.Sm))
 
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 320.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                        .heightIn(max = DialogTokens.FolderBrowserMaxHeight),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.Xs)
                 ) {
                     // Navigate up / parent item
                     if (canGoUp) {
                         item {
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(CornerRadius.Sm),
                                 color = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -174,16 +174,16 @@ fun FolderBrowserDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                                        .padding(horizontal = Spacing.Sm, vertical = Spacing.Intermediate),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.ArrowUpward,
+                                        imageVector = AppIcons.ArrowUpward,
                                         contentDescription = "返回上一级",
                                         tint = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(IconSize.Md)
                                     )
-                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Spacer(modifier = Modifier.width(Spacing.Intermediate))
                                     Text(
                                         text = ".. (返回上一级)",
                                         style = MaterialTheme.typography.bodyMedium,
@@ -192,7 +192,7 @@ fun FolderBrowserDialog(
                                     )
                                 }
                             }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.Xxs))
                         }
                     }
 
@@ -201,7 +201,7 @@ fun FolderBrowserDialog(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(24.dp),
+                                    .padding(Spacing.Xl),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -214,7 +214,7 @@ fun FolderBrowserDialog(
                     } else {
                         items(subFolders, key = { it.absolutePath }) { folder ->
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(CornerRadius.Sm),
                                 color = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -225,16 +225,16 @@ fun FolderBrowserDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                                        .padding(horizontal = Spacing.Sm, vertical = Spacing.Sm),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
                                         imageVector = AppIcons.Folder,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(IconSize.Lg)
                                     )
-                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Spacer(modifier = Modifier.width(Spacing.Intermediate))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = folder.name,
@@ -247,7 +247,7 @@ fun FolderBrowserDialog(
                                         Text(
                                             text = "$count 项",
                                             style = MaterialTheme.typography.bodySmall,
-                                            fontSize = 11.sp,
+                                            fontSize = FontSizes.Badge,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
@@ -255,7 +255,7 @@ fun FolderBrowserDialog(
                                         imageVector = AppIcons.ChevronRight,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(IconSize.Intermediate)
                                     )
                                 }
                             }

@@ -10,8 +10,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import moe.zako.viewer.ui.theme.BorderWidth
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
 import java.util.Locale
 
 @Composable
@@ -33,26 +37,26 @@ fun SpeedBadge(
 
     Box(
         modifier = modifier
-            .height(24.dp)
-            .widthIn(min = 24.dp)
+            .height(IconSize.Lg)
+            .widthIn(min = IconSize.Lg)
             .border(
-                width = 1.8.dp,
+                width = BorderWidth.SpeedBadge,
                 color = tint,
-                shape = RoundedCornerShape(5.dp)
+                shape = RoundedCornerShape(CornerRadius.SpeedBadge)
             )
-            .padding(horizontal = 3.dp),
+            .padding(horizontal = Spacing.SpeedBadge),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             color = tint,
-            fontSize = if (text.length > 3) 9.sp else 10.5.sp,
+            fontSize = if (text.length > 3) FontSizes.SpeedBadgeSmall else FontSizes.SpeedBadge,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             softWrap = false,
             textAlign = TextAlign.Center,
             letterSpacing = (-0.5).sp,
-            lineHeight = 12.sp
+            lineHeight = FontSizes.Caption
         )
     }
 }

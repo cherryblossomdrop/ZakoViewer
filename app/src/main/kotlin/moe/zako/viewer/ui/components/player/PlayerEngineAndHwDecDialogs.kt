@@ -7,9 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.core.player.HwDecMode
 import moe.zako.viewer.core.player.PlayerEngine
+import moe.zako.viewer.ui.theme.Spacing
 
 /**
  * 播放内核切换弹窗 (系统 / MPV)
@@ -30,21 +30,21 @@ fun PlayerEngineDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Spacing.Md))
                 PlayerEngine.values().forEach { engine ->
                     val isSelected = currentEngine == engine
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelectEngine(engine) }
-                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                            .padding(vertical = Spacing.Intermediate, horizontal = Spacing.Xs),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = isSelected,
                             onClick = { onSelectEngine(engine) }
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.Sm))
                         Text(
                             text = engine.label,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
@@ -81,21 +81,21 @@ fun PlayerHwDecDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Spacing.Md))
                 HwDecMode.values().forEach { mode ->
                     val isSelected = currentMode == mode
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelectMode(mode) }
-                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                            .padding(vertical = Spacing.Intermediate, horizontal = Spacing.Xs),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = isSelected,
                             onClick = { onSelectMode(mode) }
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.Sm))
                         Text(
                             text = mode.label,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,

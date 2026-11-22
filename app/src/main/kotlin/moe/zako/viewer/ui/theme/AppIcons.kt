@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.NetworkCheck
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -23,6 +24,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * 集中统一管理应用内的矢量图标引用，禁止业务 UI 硬编码 Material Icons 字面量
  */
 object AppIcons {
+    // 基础导航
+    val Home: ImageVector = Icons.Default.Home
+    val Profile: ImageVector = Icons.Default.Person
+    val Person: ImageVector = Icons.Default.Person
+
     // 多选：以「离线下载」当前使用的 Checklist 图标为全应用唯一权威值
     val MultiSelect: ImageVector = Icons.Default.Checklist
 
@@ -81,6 +87,9 @@ object AppIcons {
 
     // 设置、系统与硬件
     val Palette: ImageVector = Icons.Default.Palette
+    val ColorLens: ImageVector = Icons.Default.ColorLens
+    val Numbers: ImageVector = Icons.Default.Numbers
+    val RadioButtonUnchecked: ImageVector = Icons.Default.RadioButtonUnchecked
     val Share: ImageVector = Icons.Default.Share
     val Download: ImageVector = Icons.Default.Download
     val DownloadForOffline: ImageVector = Icons.Default.DownloadForOffline
@@ -90,6 +99,7 @@ object AppIcons {
     val Terminal: ImageVector = Icons.Default.Terminal
     val Apps: ImageVector = Icons.Default.Apps
     val AltRoute: ImageVector = Icons.AutoMirrored.Filled.AltRoute
+    val NetworkCheck: ImageVector = Icons.Rounded.NetworkCheck
     val Hardware: ImageVector = Icons.Default.Hardware
     val Memory: ImageVector = Icons.Default.Memory
     val Upload: ImageVector = Icons.Default.Upload

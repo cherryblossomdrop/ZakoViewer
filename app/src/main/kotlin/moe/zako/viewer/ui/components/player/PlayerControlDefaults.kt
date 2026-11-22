@@ -22,11 +22,17 @@ object PlayerControlDefaults {
     val ControlSpacing: Dp = Spacing.Sm
 
     /** 针对斜向/对角线异形图标 (如旋转屏幕) 的视觉等重补偿尺寸 (21.dp，保持 24.dp 居中外盒) */
-    val CompensatedIconSize: Dp = 21.dp
+    val CompensatedIconSize: Dp = IconSize.Compensated
 
     /** 锁屏图标标准尺寸 (24.dp) */
     val LockIconSize: Dp = IconSize.Lg
 
     /** 锁屏圆形悬浮背景内边距 (10.dp，总外径 44.dp) */
-    val LockContainerPadding: Dp = 10.dp
+    val LockContainerPadding: Dp = Spacing.Intermediate
+
+    /** 内嵌播放器中央播放按钮容器尺寸 (64.dp) */
+    val InlinePlayButtonSize: Dp = 64.dp
+
+    /** 内嵌播放器中央播放图标尺寸 (40.dp) */
+    val InlinePlayIconSize: Dp = IconSize.Huge
 }

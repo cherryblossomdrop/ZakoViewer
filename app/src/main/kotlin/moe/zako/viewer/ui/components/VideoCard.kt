@@ -4,9 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,13 +17,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.source.cosav.CosVideoItem
+import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.IconSize
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
-import moe.zako.viewer.ui.theme.VipGold
+import moe.zako.viewer.ui.theme.PlayerOverlayTokens
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.VideoCoverTokens
 
 @Composable
 fun VideoCard(
@@ -40,7 +40,7 @@ fun VideoCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CornerRadius.Md),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
@@ -50,9 +50,9 @@ fun VideoCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
-                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                    .background(Color.Black)
+                    .aspectRatio(VideoCoverTokens.AspectRatio)
+                    .clip(RoundedCornerShape(topStart = CornerRadius.Md, topEnd = CornerRadius.Md))
+                    .background(PlayerOverlayTokens.Background)
             ) {
                 val context = LocalContext.current
                 AsyncImage(
@@ -61,7 +61,7 @@ fun VideoCard(
                     modifier = Modifier
                         .fillMaxSize()
                         .then(
-                            if (isCoverBlurEnabled) Modifier.blur(18.dp).clipToBounds() else Modifier
+                            if (isCoverBlurEnabled) Modifier.blur(VideoCoverTokens.BlurRadius).clipToBounds() else Modifier
                         ),
                     contentScale = ContentScale.Crop
                 )
@@ -70,11 +70,11 @@ fun VideoCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(VideoCoverTokens.ScrimHeight)
                         .align(Alignment.BottomCenter)
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
+                                colors = listOf(Color.Transparent, PlayerOverlayTokens.Background.copy(alpha = 0.75f))
                             )
                         )
                 )
@@ -84,20 +84,20 @@ fun VideoCard(
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(start = 6.dp, bottom = 6.dp)
-                            .clip(RoundedCornerShape(6.dp))
+                            .padding(start = Spacing.Compact, bottom = Spacing.Compact)
+                            .clip(RoundedCornerShape(CornerRadius.Compact))
                             .background(
                                 Brush.linearGradient(
-                                    colors = listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                    colors = listOf(PlayerOverlayTokens.VipBadgeStart, PlayerOverlayTokens.VipBadgeEnd)
                                 )
                             )
-                            .padding(4.dp)
+                            .padding(Spacing.Xs)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.WorkspacePremium,
+                            imageVector = AppIcons.WorkspacePremium,
                             contentDescription = "VIP抢先看",
-                            tint = Color(0xFF2E1C00),
-                            modifier = Modifier.size(16.dp)
+                            tint = PlayerOverlayTokens.VipBadgeContent,
+                            modifier = Modifier.size(IconSize.Sm)
                         )
                     }
                 }
@@ -105,13 +105,13 @@ fun VideoCard(
                 // Duration badge (Bottom-Right)
                 DurationBadge(
                     duration = video.duration,
-                    modifier = Modifier.padding(end = 4.dp, bottom = 4.dp)
+                    modifier = Modifier.padding(end = Spacing.Xs, bottom = Spacing.Xs)
                 )
             }
 
             // Info Section
             Column(
-                modifier = Modifier.padding(10.dp)
+                modifier = Modifier.padding(Spacing.Intermediate)
             ) {
                 Text(
                     text = video.title,
@@ -121,7 +121,7 @@ fun VideoCard(
                     fontWeight = FontWeight.SemiBold
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(Spacing.Xs))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),

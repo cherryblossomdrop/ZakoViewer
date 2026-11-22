@@ -15,12 +15,15 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import moe.zako.viewer.core.external.AppItem
 import moe.zako.viewer.core.external.AppPickerHelper
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.DialogTokens
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.TouchTarget
 
 @Composable
 fun AppPickerDialog(
@@ -80,7 +83,7 @@ fun AppPickerDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.Sm))
 
                 // Tabs: 推荐应用 vs 全部应用
                 TabRow(selectedTabIndex = selectedTab) {
@@ -96,13 +99,13 @@ fun AppPickerDialog(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.Sm))
 
                 if (isLoading) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp),
+                            .height(DialogTokens.LoadingBoxHeight),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
@@ -111,14 +114,14 @@ fun AppPickerDialog(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 340.dp)
+                            .heightIn(max = DialogTokens.AppPickerMaxHeight)
                             .clearFocusOnScroll(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(Spacing.Xs)
                     ) {
                         // 1. Reset / Default option: 系统默认选择器
                         item {
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(CornerRadius.Sm),
                                 color = if (currentPackage.isEmpty()) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -130,16 +133,16 @@ fun AppPickerDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(10.dp),
+                                        .padding(Spacing.Intermediate),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
                                         imageVector = AppIcons.Apps,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(36.dp)
+                                        modifier = Modifier.size(TouchTarget.Dense)
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Spacer(modifier = Modifier.width(Spacing.Md))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = "系统默认应用选择器",
@@ -161,7 +164,7 @@ fun AppPickerDialog(
                                     )
                                 }
                             }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.Xs))
                         }
 
                         if (filteredList.isEmpty()) {
@@ -169,7 +172,7 @@ fun AppPickerDialog(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(24.dp),
+                                        .padding(Spacing.Xl),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -183,7 +186,7 @@ fun AppPickerDialog(
                             items(filteredList, key = { it.packageName }) { app ->
                                 val isSelected = app.packageName == currentPackage
                                 Surface(
-                                    shape = RoundedCornerShape(8.dp),
+                                    shape = RoundedCornerShape(CornerRadius.Sm),
                                     color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -195,7 +198,7 @@ fun AppPickerDialog(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(8.dp),
+                                            .padding(Spacing.Sm),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         // App Icon
@@ -211,19 +214,19 @@ fun AppPickerDialog(
                                                 bitmap = iconBitmap,
                                                 contentDescription = app.appName,
                                                 modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .size(TouchTarget.Dense)
+                                                    .clip(RoundedCornerShape(CornerRadius.Sm))
                                             )
                                         } else {
                                             Icon(
                                                 imageVector = AppIcons.Apps,
                                                 contentDescription = app.appName,
-                                                modifier = Modifier.size(36.dp),
+                                                modifier = Modifier.size(TouchTarget.Dense),
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
 
-                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Spacer(modifier = Modifier.width(Spacing.Md))
 
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
@@ -236,7 +239,7 @@ fun AppPickerDialog(
                                             Text(
                                                 text = app.packageName,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                fontSize = 11.sp,
+                                                fontSize = FontSizes.Badge,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis

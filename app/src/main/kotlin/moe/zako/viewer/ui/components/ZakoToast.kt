@@ -28,6 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import moe.zako.viewer.ui.theme.BorderWidth
+import moe.zako.viewer.ui.theme.Elevation
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.ToastTokens
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -176,16 +180,16 @@ fun ZakoToastPill(
 
     Surface(
         modifier = modifier
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = Spacing.Xl)
             .shadow(
-                elevation = 6.dp,
+                elevation = Elevation.Level3,
                 shape = CircleShape,
                 clip = false,
                 ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
                 spotColor = Color.Black.copy(alpha = 0.35f)
             )
             .border(
-                width = 1.dp,
+                width = BorderWidth.Thin,
                 color = borderColor,
                 shape = CircleShape
             )
@@ -197,20 +201,18 @@ fun ZakoToastPill(
         shape = CircleShape,
         color = containerColor,
         contentColor = contentColor,
-        tonalElevation = 6.dp
+        tonalElevation = Elevation.Level3
     ) {
         Box(
             modifier = Modifier
-                .widthIn(min = 96.dp, max = 340.dp)
-                .padding(horizontal = 22.dp, vertical = 11.dp),
+                .widthIn(min = ToastTokens.MinWidth, max = ToastTokens.MaxWidth)
+                .padding(horizontal = ToastTokens.HorizontalPadding, vertical = ToastTokens.VerticalPadding),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.2.sp,
-                    lineHeight = 19.sp
+                    fontWeight = FontWeight.SemiBold
                 ),
                 color = contentColor,
                 textAlign = TextAlign.Center,

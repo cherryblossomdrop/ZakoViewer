@@ -9,12 +9,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import moe.zako.viewer.core.player.VideoPlayerState
 import moe.zako.viewer.ui.components.WavyProgressSlider
 import moe.zako.viewer.ui.theme.AppIcons
-import moe.zako.viewer.ui.theme.ZakoIcons
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.PlayerOverlayTokens
+import moe.zako.viewer.ui.theme.Spacing
 
 /**
  * 全屏播放与详情页内嵌播放通用的底部控制栏
@@ -41,10 +41,10 @@ fun PlayerBottomControls(
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                    colors = listOf(Color.Transparent, PlayerOverlayTokens.Background.copy(alpha = 0.85f))
                 )
             )
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = Spacing.Md, vertical = Spacing.Compact)
     ) {
         Column {
             var isScrubbing by remember { mutableStateOf(false) }
@@ -87,7 +87,7 @@ fun PlayerBottomControls(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 2.dp)
+                    .padding(vertical = Spacing.Xxs)
             )
 
             Row(
@@ -120,7 +120,7 @@ fun PlayerBottomControls(
                     Text(
                         text = "$displayPosFormatted / $durationFormatted",
                         color = Color.White,
-                        fontSize = 12.sp,
+                        fontSize = FontSizes.Caption,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -145,7 +145,7 @@ fun PlayerBottomControls(
                         modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
                     ) {
                         Icon(
-                            imageVector = if (isFullscreen) ZakoIcons.FullscreenExit else ZakoIcons.Fullscreen,
+                            imageVector = if (isFullscreen) AppIcons.FullscreenExit else AppIcons.Fullscreen,
                             contentDescription = if (isFullscreen) "退出全屏" else "全屏",
                             tint = Color.White,
                             modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)

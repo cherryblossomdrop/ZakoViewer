@@ -4,17 +4,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.SubdirectoryArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
+import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.DialogTokens
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
 
 @Composable
 fun FolderTreeDialog(
@@ -36,7 +34,6 @@ fun FolderTreeDialog(
 
     // Organize folders hierarchically
     val rootFolders = remember(folders) { folders.filter { it.parentId == null } }
-    fun getChildren(parentId: Long): List<FavoriteFolderEntity> = folders.filter { it.parentId == parentId }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -51,7 +48,7 @@ fun FolderTreeDialog(
                     newFolderParentId = selectedFolderId ?: rootFolders.firstOrNull()?.id
                     showCreateDialog = true
                 }) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "新建收藏夹")
+                    Icon(imageVector = AppIcons.Add, contentDescription = "新建收藏夹")
                 }
             }
         },
@@ -60,7 +57,7 @@ fun FolderTreeDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp),
+                        .padding(Spacing.Xl),
                     contentAlignment = Alignment.Center
                 ) {
                     Text("暂无收藏夹")
@@ -69,7 +66,7 @@ fun FolderTreeDialog(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 350.dp)
+                        .heightIn(max = DialogTokens.MaxListHeight)
                 ) {
                     items(rootFolders) { root ->
                         FolderTreeItem(
@@ -158,16 +155,21 @@ fun FolderTreeItem(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = (depth * 20 + 8).dp, top = 8.dp, bottom = 8.dp, end = 8.dp),
+                    .padding(
+                        start = Spacing.Dp20 * depth + Spacing.Sm,
+                        top = Spacing.Sm,
+                        bottom = Spacing.Sm,
+                        end = Spacing.Sm
+                    ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = if (depth > 0) Icons.Default.SubdirectoryArrowRight else Icons.Default.Folder,
+                    imageVector = if (depth > 0) AppIcons.Subdirectory else AppIcons.Folder,
                     contentDescription = null,
                     tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(IconSize.Md)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.Sm))
                 Text(
                     text = folder.name,
                     style = MaterialTheme.typography.bodyMedium,
@@ -175,10 +177,10 @@ fun FolderTreeItem(
                 )
                 if (isSelected) {
                     Icon(
-                        imageVector = Icons.Default.Check,
+                        imageVector = AppIcons.Check,
                         contentDescription = "Selected",
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(IconSize.Intermediate)
                     )
                 }
             }

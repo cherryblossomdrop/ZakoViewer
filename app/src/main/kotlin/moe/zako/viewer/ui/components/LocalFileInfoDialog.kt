@@ -6,13 +6,13 @@ import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -109,7 +109,7 @@ fun LocalFileInfoDialog(
         },
         title = { Text("本地文件信息") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
                 Text(
                     text = "视频标题: ${info.title}",
                     fontWeight = FontWeight.Bold,
@@ -126,7 +126,7 @@ fun LocalFileInfoDialog(
                 if (!info.lastModifiedFormatted.isNullOrBlank()) {
                     Text(text = "最后修改时间: ${info.lastModifiedFormatted}", style = MaterialTheme.typography.bodySmall)
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(Spacing.Xs))
                 Text(
                     text = "本地存储路径:\n${info.filePath}",
                     style = MaterialTheme.typography.bodySmall,
@@ -142,8 +142,8 @@ fun LocalFileInfoDialog(
                     ZakoToast.show("已复制路径到剪贴板")
                 }
             ) {
-                Icon(AppIcons.Copy, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
+                Icon(AppIcons.Copy, contentDescription = null, modifier = Modifier.size(IconSize.Sm))
+                Spacer(modifier = Modifier.width(Spacing.Compact))
                 Text("复制路径")
             }
         },

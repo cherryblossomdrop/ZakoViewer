@@ -16,6 +16,10 @@ import moe.zako.viewer.data.source.cosav.CosVideoItem
 import moe.zako.viewer.ui.components.FilterBarCircleButton
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.FilterBarTokens
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.TouchTarget
 import java.util.Calendar
 
 /**
@@ -75,7 +79,7 @@ fun HomeFilterBar(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = Spacing.Md, vertical = Spacing.Compact)
                 )
                 SortDimension.values().forEach { dim ->
                     DropdownMenuItem(
@@ -85,7 +89,7 @@ fun HomeFilterBar(
                                 Icon(
                                     imageVector = AppIcons.Check,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(IconSize.Intermediate),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -97,14 +101,14 @@ fun HomeFilterBar(
                     )
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.Xs))
 
                 Text(
                     text = "排序方向",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = Spacing.Md, vertical = Spacing.Compact)
                 )
                 SortDirection.values().forEach { dir ->
                     DropdownMenuItem(
@@ -114,7 +118,7 @@ fun HomeFilterBar(
                                 Icon(
                                     imageVector = AppIcons.Check,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(IconSize.Intermediate),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -196,9 +200,9 @@ fun HomeFilterBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(horizontal = Spacing.Dp20, vertical = Spacing.Md)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -221,7 +225,7 @@ fun HomeFilterBottomSheet(
             }
 
             // 1. 分类维度
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
                 Text(
                     text = "分类",
                     style = MaterialTheme.typography.titleMedium,
@@ -229,8 +233,8 @@ fun HomeFilterBottomSheet(
                 )
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.Sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.Sm)
                 ) {
                     HomeViewModel.AVAILABLE_CATEGORIES.forEach { cat ->
                         FilterChip(
@@ -243,7 +247,7 @@ fun HomeFilterBottomSheet(
             }
 
             // 2. 常用标签维度
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
                 Text(
                     text = "标签",
                     style = MaterialTheme.typography.titleMedium,
@@ -251,8 +255,8 @@ fun HomeFilterBottomSheet(
                 )
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.Sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.Sm)
                 ) {
                     FilterChip(
                         selected = tempTag.isEmpty(),
@@ -273,7 +277,7 @@ fun HomeFilterBottomSheet(
             }
 
             // 3. 时间范围维度
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
                 Text(
                     text = "时间范围",
                     style = MaterialTheme.typography.titleMedium,
@@ -281,8 +285,8 @@ fun HomeFilterBottomSheet(
                 )
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.Sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.Sm)
                 ) {
                     TimeRange.values().forEach { range ->
                         FilterChip(
@@ -295,7 +299,7 @@ fun HomeFilterBottomSheet(
             }
 
             // 4. 包含维度 (VIP抢先看视频)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
                 Text(
                     text = "包含",
                     style = MaterialTheme.typography.titleMedium,
@@ -303,8 +307,8 @@ fun HomeFilterBottomSheet(
                 )
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.Sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.Sm)
                 ) {
                     FilterChip(
                         selected = tempIncludeVip,
@@ -315,7 +319,7 @@ fun HomeFilterBottomSheet(
                                 Icon(
                                     imageVector = AppIcons.Check,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(IconSize.Sm)
                                 )
                             }
                         }
@@ -323,7 +327,7 @@ fun HomeFilterBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.Sm))
 
             Button(
                 onClick = {
@@ -332,12 +336,12 @@ fun HomeFilterBottomSheet(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(TouchTarget.Min)
             ) {
-                Text("确定应用筛选", fontSize = 16.sp)
+                Text("确定应用筛选", fontSize = FontSizes.Body)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.Lg))
         }
     }
 }

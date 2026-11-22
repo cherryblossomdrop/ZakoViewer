@@ -2,11 +2,6 @@ package moe.zako.viewer.ui.components.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.ScreenRotation
-import androidx.compose.material.icons.outlined.OfflinePin
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -14,9 +9,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.ui.theme.AppIcons
-import moe.zako.viewer.ui.theme.ZakoIcons
+import moe.zako.viewer.ui.theme.PlayerOverlayTokens
+import moe.zako.viewer.ui.theme.Spacing
 
 /**
  * 全屏播放与详情页内嵌播放通用的顶部控制栏
@@ -41,10 +36,10 @@ fun PlayerTopBar(
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent)
+                    colors = listOf(PlayerOverlayTokens.Background.copy(alpha = 0.85f), Color.Transparent)
                 )
             )
-            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .padding(horizontal = Spacing.Sm, vertical = Spacing.Compact)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -56,7 +51,7 @@ fun PlayerTopBar(
                 modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = AppIcons.ArrowBack,
                     contentDescription = "返回",
                     tint = Color.White,
                     modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
@@ -78,10 +73,10 @@ fun PlayerTopBar(
                     modifier = Modifier.weight(1f, fill = false)
                 )
                 if (isLocalPlayback) {
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(Spacing.Compact))
                     CompositionLocalProvider(LocalContentColor provides Color.White) {
                         Icon(
-                            imageVector = Icons.Outlined.OfflinePin,
+                            imageVector = AppIcons.OfflinePin,
                             contentDescription = "本地视频",
                             tint = LocalContentColor.current,
                             modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
@@ -96,7 +91,7 @@ fun PlayerTopBar(
                 modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
             ) {
                 Icon(
-                    imageVector = ZakoIcons.AspectRatio,
+                    imageVector = AppIcons.AspectRatio,
                     contentDescription = "画面比例 ($aspectRatioLabel)",
                     tint = Color.White,
                     modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
@@ -114,7 +109,7 @@ fun PlayerTopBar(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ScreenRotation,
+                            imageVector = AppIcons.ScreenRotation,
                             contentDescription = "旋转屏幕",
                             tint = Color.White,
                             modifier = Modifier.size(PlayerControlDefaults.CompensatedIconSize)
@@ -130,7 +125,7 @@ fun PlayerTopBar(
                     modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
+                        imageVector = AppIcons.MoreVert,
                         contentDescription = "更多选项",
                         tint = Color.White,
                         modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)

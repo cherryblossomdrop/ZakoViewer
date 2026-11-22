@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import moe.zako.viewer.ui.theme.Spacing
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -106,7 +107,7 @@ fun ZakoNavHost(
                     )
                     items.forEachIndexed { index, screen ->
                         if (index > 0) {
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(Spacing.Xl))
                         }
                         val isSelected = currentRoute == screen.route ||
                                 (screen == Screen.Home && currentRoute?.startsWith("home") == true)

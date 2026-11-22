@@ -17,6 +17,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import moe.zako.viewer.ui.theme.MotionTokens
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.TouchTarget
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -53,7 +56,7 @@ fun WavyProgressSlider(
     val targetBufferedProgress = maxOf(bufferedProgress.coerceIn(0f, 1f), currentDisplayProgress)
     val currentBufferedProgress by animateFloatAsState(
         targetValue = targetBufferedProgress,
-        animationSpec = tween(durationMillis = 150, easing = LinearEasing),
+        animationSpec = tween(durationMillis = MotionTokens.Duration.Compact, easing = LinearEasing),
         label = "bufferedProgress"
     )
 
@@ -80,7 +83,7 @@ fun WavyProgressSlider(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(36.dp)
+            .height(TouchTarget.Dense)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -203,7 +206,7 @@ fun WavyProgressSlider(
             if (isDragging) {
                 drawCircle(
                     color = activeColor.copy(alpha = 0.35f),
-                    radius = thumbRadiusPx + 4.dp.toPx(),
+                    radius = thumbRadiusPx + Spacing.Xs.toPx(),
                     center = Offset(progressX, centerY)
                 )
             }

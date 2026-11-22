@@ -6,8 +6,6 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,7 +17,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.TouchTarget
 import kotlin.math.abs
 
 /**
@@ -56,7 +58,7 @@ fun PlaybackSpeedDialog(
     // 打开菜单时自动平滑滚动至当前选中项可见位置
     LaunchedEffect(selectedIndex) {
         if (selectedIndex > 0) {
-            val itemHeightApproxPx = with(density) { 48.dp.toPx() }
+            val itemHeightApproxPx = with(density) { TouchTarget.Min.toPx() }
             val targetScrollPx = ((selectedIndex - 1).coerceAtLeast(0) * itemHeightApproxPx).toInt()
             scrollState.animateScrollTo(targetScrollPx)
         }
@@ -85,7 +87,7 @@ fun PlaybackSpeedDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+                        .padding(vertical = Spacing.Xs)
                 ) {
                     speedOptions.forEach { speed ->
                         val isSelected = abs(currentSpeed - speed) < 0.05f
@@ -99,7 +101,7 @@ fun PlaybackSpeedDialog(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 2.dp)
+                                .padding(vertical = Spacing.Xxs)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -108,13 +110,13 @@ fun PlaybackSpeedDialog(
                                         onSpeedSelect(speed)
                                         onDismissRequest()
                                     }
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    .padding(horizontal = Spacing.Expanded, vertical = Spacing.Md),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
                                     text = "${speed}x",
-                                    fontSize = 15.sp,
+                                    fontSize = FontSizes.BodyMedium,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     color = if (isSelected) {
                                         MaterialTheme.colorScheme.primary
@@ -124,10 +126,10 @@ fun PlaybackSpeedDialog(
                                 )
                                 if (isSelected) {
                                     Icon(
-                                        imageVector = Icons.Default.Check,
+                                        imageVector = AppIcons.Check,
                                         contentDescription = "当前选中",
                                         tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(IconSize.Md)
                                     )
                                 }
                             }

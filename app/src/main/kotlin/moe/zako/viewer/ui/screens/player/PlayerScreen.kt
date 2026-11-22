@@ -9,17 +9,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.AltRoute
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -29,7 +24,9 @@ import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.components.player.*
 import moe.zako.viewer.ui.theme.AppIcons
-import moe.zako.viewer.ui.theme.OverlayBlack
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.PlayerOverlayTokens
+import moe.zako.viewer.ui.theme.Spacing
 
 @Composable
 fun PlayerScreen(
@@ -95,7 +92,7 @@ fun PlayerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(PlayerOverlayTokens.Background)
             .playerGestureDetector(
                 isLocked = state.playerState.isLocked,
                 onSingleTap = { viewModel.toggleControls() },
@@ -159,14 +156,14 @@ fun PlayerScreen(
         if (state.playerState.isLocked) {
             Surface(
                 shape = CircleShape,
-                color = OverlayBlack,
+                color = PlayerOverlayTokens.HudBackground,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .padding(start = 24.dp)
+                    .padding(start = Spacing.Xl)
                     .clickable { viewModel.toggleLock() }
             ) {
                 Icon(
-                    imageVector = Icons.Default.Lock,
+                    imageVector = AppIcons.Lock,
                     contentDescription = "解锁屏幕",
                     tint = Color.White,
                     modifier = Modifier
@@ -217,7 +214,7 @@ fun PlayerScreen(
                     if (state.isLocalPlayback && onNavigateToDetail != null) {
                         DropdownMenuItem(
                             text = { Text("查看视频详情页") },
-                            leadingIcon = { Icon(imageVector = Icons.Default.Info, contentDescription = null) },
+                            leadingIcon = { Icon(imageVector = AppIcons.Info, contentDescription = null) },
                             onClick = { viewModel.onViewDetailClicked(onNavigateToDetail) }
                         )
                     }
@@ -228,7 +225,7 @@ fun PlayerScreen(
                     )
                     DropdownMenuItem(
                         text = { Text("选择 CDN 节点播放") },
-                        leadingIcon = { Icon(imageVector = Icons.AutoMirrored.Filled.AltRoute, contentDescription = null) },
+                        leadingIcon = { Icon(imageVector = AppIcons.AltRoute, contentDescription = null) },
                         onClick = { viewModel.showSelectCdnDialog() }
                     )
                     DropdownMenuItem(
@@ -237,12 +234,12 @@ fun PlayerScreen(
                                 Text("播放内核切换")
                                 Text(
                                     text = "当前: ${state.playerState.engine.label}",
-                                    fontSize = 11.sp,
+                                    fontSize = FontSizes.Badge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         },
-                        leadingIcon = { Icon(imageVector = Icons.Default.Memory, contentDescription = null) },
+                        leadingIcon = { Icon(imageVector = AppIcons.Memory, contentDescription = null) },
                         onClick = {
                             viewModel.showMoreMenu(false)
                             viewModel.showEngineDialog(true)
@@ -254,12 +251,12 @@ fun PlayerScreen(
                                 Text("硬件解码设置")
                                 Text(
                                     text = "当前: ${state.playerState.hwDecMode.label}",
-                                    fontSize = 11.sp,
+                                    fontSize = FontSizes.Badge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         },
-                        leadingIcon = { Icon(imageVector = Icons.Default.Hardware, contentDescription = null) },
+                        leadingIcon = { Icon(imageVector = AppIcons.Hardware, contentDescription = null) },
                         onClick = {
                             viewModel.showMoreMenu(false)
                             viewModel.showHwDecDialog(true)
@@ -270,14 +267,14 @@ fun PlayerScreen(
                 // 居中偏左：锁屏按钮
                 Surface(
                     shape = CircleShape,
-                    color = OverlayBlack,
+                    color = PlayerOverlayTokens.HudBackground,
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .padding(start = 24.dp)
+                        .padding(start = Spacing.Xl)
                         .clickable { viewModel.toggleLock() }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.LockOpen,
+                        imageVector = AppIcons.LockOpen,
                         contentDescription = "锁定屏幕",
                         tint = Color.White,
                         modifier = Modifier

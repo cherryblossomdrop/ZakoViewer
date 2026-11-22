@@ -12,9 +12,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DownloadDone
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,12 +19,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import moe.zako.viewer.core.share.ShareCipherUtil
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.BorderWidth
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.TouchTarget
 import moe.zako.viewer.ui.theme.VipGold
 
 /**
@@ -43,36 +44,36 @@ fun DetailHeader(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(Spacing.Lg)
     ) {
         SelectionContainer {
             Column {
                 if (video.isVipEarlyAccess) {
                     Surface(
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(CornerRadius.Xs),
                         color = VipGold,
-                        modifier = Modifier.padding(end = 8.dp)
+                        modifier = Modifier.padding(end = Spacing.Sm)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = Spacing.Compact, vertical = Spacing.Xxs)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Star,
+                                imageVector = AppIcons.Favorite,
                                 contentDescription = "VIP",
                                 tint = Color.Black,
-                                modifier = Modifier.size(12.dp)
+                                modifier = Modifier.size(IconSize.ExtraSmall)
                             )
-                            Spacer(modifier = Modifier.width(2.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Xxs))
                             Text(
                                 text = "VIP抢先看",
                                 color = Color.Black,
-                                fontSize = 11.sp,
+                                fontSize = FontSizes.Badge,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(Spacing.Compact))
                 }
 
                 Text(
@@ -106,16 +107,16 @@ fun DetailActionButtons(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.Intermediate)
     ) {
         // 1. 收藏按钮 (全局对齐五角星 Design Token)
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(CornerRadius.Md),
             color = if (state.isFavorite) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier
                 .weight(1f)
-                .height(48.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .height(TouchTarget.Min)
+                .clip(RoundedCornerShape(CornerRadius.Md))
                 .clickable {
                     viewModel.onFavoriteClick()
                     if (state.isFavorite) {
@@ -128,22 +129,22 @@ fun DetailActionButtons(
                     imageVector = if (state.isFavorite) AppIcons.Favorite else AppIcons.FavoriteBorder,
                     contentDescription = "收藏",
                     tint = if (state.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(IconSize.Lg)
                 )
             }
         }
 
         // 2. 下载按钮 (短按加入多节点队列，长按呼出外部下载方式)
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(CornerRadius.Md),
             color = when (state.downloadStatus) {
                 "COMPLETED", "DOWNLOADING" -> MaterialTheme.colorScheme.primaryContainer
                 else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             },
             modifier = Modifier
                 .weight(1f)
-                .height(48.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .height(TouchTarget.Min)
+                .clip(RoundedCornerShape(CornerRadius.Md))
                 .combinedClickable(
                     onClick = {
                         when (state.downloadStatus) {
@@ -167,17 +168,17 @@ fun DetailActionButtons(
                 when (state.downloadStatus) {
                     "DOWNLOADING" -> {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(22.dp),
-                            strokeWidth = 2.5.dp,
+                            modifier = Modifier.size(IconSize.MediumLarge),
+                            strokeWidth = BorderWidth.ColorPickerStroke,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                     "COMPLETED" -> {
                         Icon(
-                            imageVector = Icons.Filled.DownloadDone,
+                            imageVector = AppIcons.DownloadDone,
                             contentDescription = "已下载",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(IconSize.Lg)
                         )
                     }
                     else -> {
@@ -185,7 +186,7 @@ fun DetailActionButtons(
                             imageVector = AppIcons.Download,
                             contentDescription = "下载",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(IconSize.Lg)
                         )
                     }
                 }
@@ -194,12 +195,12 @@ fun DetailActionButtons(
 
         // 3. 稍后再看按钮
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(CornerRadius.Md),
             color = if (state.isWatchLater) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier
                 .weight(1f)
-                .height(48.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .height(TouchTarget.Min)
+                .clip(RoundedCornerShape(CornerRadius.Md))
                 .clickable {
                     viewModel.toggleWatchLater()
                     val msg = if (!state.isWatchLater) "已加入稍后再看" else "已从稍后再看移除"
@@ -211,19 +212,19 @@ fun DetailActionButtons(
                     imageVector = if (state.isWatchLater) AppIcons.WatchLaterFilled else AppIcons.WatchLaterOutlined,
                     contentDescription = "稍后再看",
                     tint = if (state.isWatchLater) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(IconSize.Lg)
                 )
             }
         }
 
         // 4. 分享按钮 (短按生成汉字暗号，长按受隐藏开关控制复制完整链接)
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(CornerRadius.Md),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier
                 .weight(1f)
-                .height(48.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .height(TouchTarget.Min)
+                .clip(RoundedCornerShape(CornerRadius.Md))
                 .combinedClickable(
                     onClick = {
                         val cipher = ShareCipherUtil.encode(video.id)
@@ -244,7 +245,7 @@ fun DetailActionButtons(
                     imageVector = AppIcons.Share,
                     contentDescription = "分享",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(IconSize.Lg)
                 )
             }
         }
@@ -264,14 +265,14 @@ fun DetailMetadataCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(12.dp),
+            .padding(horizontal = Spacing.Lg),
+        shape = RoundedCornerShape(CornerRadius.Md),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         )
     ) {
         SelectionContainer {
-            Column(modifier = Modifier.padding(14.dp)) {
+            Column(modifier = Modifier.padding(Spacing.Expanded)) {
                 ClickableMetadataRow(
                     label = "上架日期",
                     value = video.adddate ?: "未知",
@@ -327,19 +328,19 @@ fun DetailMetadataCard(
 
                 // 标签 (Tags) 支持点击跳转搜索
                 if (video.tagList.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(Spacing.Compact))
                     Text(
                         text = "标签:",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Spacer(modifier = Modifier.height(Spacing.Xs))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.Compact)) {
                         items(video.tagList) { tag ->
                             SuggestionChip(
                                 onClick = { onNavigateToSearch(tag) },
-                                label = { Text(tag, fontSize = 12.sp) }
+                                label = { Text(tag, fontSize = FontSizes.Caption) }
                             )
                         }
                     }
@@ -363,7 +364,7 @@ fun ClickableMetadataRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp),
+            .padding(vertical = Spacing.SpeedBadge),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -371,7 +372,7 @@ fun ClickableMetadataRow(
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(72.dp)
+            modifier = Modifier.width(IconSize.Massive)
         )
         Text(
             text = value,
@@ -393,13 +394,13 @@ fun ClickableMetadataRow(
         )
         IconButton(
             onClick = onCopy,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(IconSize.Lg)
         ) {
             Icon(
                 imageVector = AppIcons.Copy,
                 contentDescription = "复制",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(IconSize.Xs)
             )
         }
     }

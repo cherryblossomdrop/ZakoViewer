@@ -2,25 +2,23 @@
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.FastForward
-import androidx.compose.material.icons.rounded.FastRewind
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import moe.zako.viewer.core.player.VideoPlayerState
-import moe.zako.viewer.ui.theme.OverlayBlack
+import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.Elevation
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.MotionTokens
+import moe.zako.viewer.ui.theme.PlayerOverlayTokens
+import moe.zako.viewer.ui.theme.Spacing
 
 @Composable
 fun GestureFeedbackOverlays(
@@ -41,20 +39,20 @@ fun GestureFeedbackOverlays(
         // 1. Play / Pause Central Indicator
         AnimatedVisibility(
             visible = showPlayPauseIndicator,
-            enter = fadeIn(tween(150)) + scaleIn(initialScale = 0.8f),
-            exit = fadeOut(tween(250))
+            enter = fadeIn(tween(MotionTokens.Duration.Compact)) + scaleIn(initialScale = 0.8f),
+            exit = fadeOut(tween(MotionTokens.Duration.Medium))
         ) {
             Surface(
                 shape = CircleShape,
-                color = OverlayBlack,
-                modifier = Modifier.size(72.dp)
+                color = PlayerOverlayTokens.HudBackground,
+                modifier = Modifier.size(IconSize.Massive)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        imageVector = if (isPlaying) AppIcons.Pause else AppIcons.Play,
                         contentDescription = if (isPlaying) "暂停" else "继续播放",
                         tint = Color.White,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(IconSize.Huge)
                     )
                 }
             }
@@ -63,8 +61,8 @@ fun GestureFeedbackOverlays(
         // 2. Double-tap Rewind / Fast Forward Indicator (-10s / +10s)
         AnimatedVisibility(
             visible = seekFeedbackDeltaSeconds != null,
-            enter = fadeIn(tween(100)),
-            exit = fadeOut(tween(200))
+            enter = fadeIn(tween(MotionTokens.Duration.Micro)),
+            exit = fadeOut(tween(MotionTokens.Duration.Moderate))
         ) {
             seekFeedbackDeltaSeconds?.let { delta ->
                 val isForward = delta > 0
@@ -73,25 +71,25 @@ fun GestureFeedbackOverlays(
                     contentAlignment = if (isForward) Alignment.CenterEnd else Alignment.CenterStart
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = OverlayBlack,
-                        modifier = Modifier.padding(horizontal = 48.dp)
+                        shape = RoundedCornerShape(CornerRadius.Xl),
+                        color = PlayerOverlayTokens.HudBackground,
+                        modifier = Modifier.padding(horizontal = Spacing.Massive)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                            modifier = Modifier.padding(horizontal = Spacing.Lg, vertical = Spacing.Md)
                         ) {
                             Icon(
-                                imageVector = if (isForward) Icons.Default.FastForward else Icons.Default.FastRewind,
+                                imageVector = if (isForward) AppIcons.FastForward else AppIcons.FastRewind,
                                 contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(IconSize.Lg)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Compact))
                             Text(
                                 text = "${if (isForward) "+" else ""}${delta}s",
                                 color = Color.White,
-                                fontSize = 16.sp
+                                fontSize = FontSizes.Body
                             )
                         }
                     }
@@ -102,23 +100,23 @@ fun GestureFeedbackOverlays(
         // 3. Horizontal Swipe Seek HUD (Target Time + Delta)
         AnimatedVisibility(
             visible = seekTargetMs != null,
-            enter = fadeIn(tween(100)),
-            exit = fadeOut(tween(200))
+            enter = fadeIn(tween(MotionTokens.Duration.Micro)),
+            exit = fadeOut(tween(MotionTokens.Duration.Moderate))
         ) {
             seekTargetMs?.let { targetMs ->
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = OverlayBlack,
-                    modifier = Modifier.padding(16.dp)
+                    shape = RoundedCornerShape(CornerRadius.Md),
+                    color = PlayerOverlayTokens.HudBackground,
+                    modifier = Modifier.padding(Spacing.Lg)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp)
+                        modifier = Modifier.padding(horizontal = Spacing.Xl, vertical = Spacing.Expanded)
                     ) {
                         Text(
                             text = VideoPlayerState.formatTime(targetMs),
                             color = Color.White,
-                            fontSize = 20.sp,
+                            fontSize = FontSizes.TitleMedium,
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -129,30 +127,30 @@ fun GestureFeedbackOverlays(
         // 4. Vertical Left Swipe: Brightness Percentage HUD
         AnimatedVisibility(
             visible = brightnessPercent != null,
-            enter = fadeIn(tween(100)),
-            exit = fadeOut(tween(200))
+            enter = fadeIn(tween(MotionTokens.Duration.Micro)),
+            exit = fadeOut(tween(MotionTokens.Duration.Moderate))
         ) {
             brightnessPercent?.let { percent ->
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = OverlayBlack,
-                    modifier = Modifier.padding(start = 32.dp).align(Alignment.CenterStart)
+                    shape = RoundedCornerShape(CornerRadius.Lg),
+                    color = PlayerOverlayTokens.HudBackground,
+                    modifier = Modifier.padding(start = Spacing.Xxl).align(Alignment.CenterStart)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                        modifier = Modifier.padding(horizontal = Spacing.Lg, vertical = Spacing.Intermediate)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.BrightnessMedium,
+                            imageVector = AppIcons.Brightness,
                             contentDescription = "亮度",
                             tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(IconSize.Lg)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.Sm))
                         Text(
                             text = "$percent%",
                             color = Color.White,
-                            fontSize = 15.sp
+                            fontSize = FontSizes.BodyMedium
                         )
                     }
                 }
@@ -162,30 +160,30 @@ fun GestureFeedbackOverlays(
         // 5. Vertical Right Swipe: Volume Percentage HUD
         AnimatedVisibility(
             visible = volumePercent != null,
-            enter = fadeIn(tween(100)),
-            exit = fadeOut(tween(200))
+            enter = fadeIn(tween(MotionTokens.Duration.Micro)),
+            exit = fadeOut(tween(MotionTokens.Duration.Moderate))
         ) {
             volumePercent?.let { percent ->
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = OverlayBlack,
-                    modifier = Modifier.padding(end = 32.dp).align(Alignment.CenterEnd)
+                    shape = RoundedCornerShape(CornerRadius.Lg),
+                    color = PlayerOverlayTokens.HudBackground,
+                    modifier = Modifier.padding(end = Spacing.Xxl).align(Alignment.CenterEnd)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                        modifier = Modifier.padding(horizontal = Spacing.Lg, vertical = Spacing.Intermediate)
                     ) {
                         Icon(
-                            imageVector = if (percent > 0) Icons.Default.VolumeUp else Icons.Default.VolumeMute,
+                            imageVector = if (percent > 0) AppIcons.VolumeUp else AppIcons.VolumeMute,
                             contentDescription = "音量",
                             tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(IconSize.Lg)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.Sm))
                         Text(
                             text = "$percent%",
                             color = Color.White,
-                            fontSize = 15.sp
+                            fontSize = FontSizes.BodyMedium
                         )
                     }
                 }
@@ -195,30 +193,30 @@ fun GestureFeedbackOverlays(
         // 6. Long Press Speed Boost HUD (e.g. 2.0x 倍速播放中)
         AnimatedVisibility(
             visible = isSpeedBoosted,
-            enter = fadeIn(tween(100)) + slideInVertically(initialOffsetY = { -it }),
-            exit = fadeOut(tween(150)) + slideOutVertically(targetOffsetY = { -it }),
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 28.dp)
+            enter = fadeIn(tween(MotionTokens.Duration.Micro)) + slideInVertically(initialOffsetY = { -it }),
+            exit = fadeOut(tween(MotionTokens.Duration.Compact)) + slideOutVertically(targetOffsetY = { -it }),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = Spacing.XxlCompact)
         ) {
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(CornerRadius.MediumLarge),
                 color = MaterialTheme.colorScheme.primaryContainer,
-                shadowElevation = 6.dp
+                shadowElevation = Elevation.Level3
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(horizontal = Spacing.Lg, vertical = Spacing.Sm)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Speed,
+                        imageVector = AppIcons.Speed,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(IconSize.Intermediate)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(Spacing.Compact))
                     Text(
                         text = "${boostSpeed}x 倍速播放中",
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontSize = 13.sp,
+                        fontSize = FontSizes.Label,
                         style = MaterialTheme.typography.labelMedium
                     )
                 }

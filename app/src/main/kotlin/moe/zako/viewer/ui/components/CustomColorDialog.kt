@@ -1,16 +1,11 @@
 package moe.zako.viewer.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,8 +18,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.BorderWidth
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.DialogTokens
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.PlayerOverlayTokens
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.TouchTarget
 
 @Composable
 fun CustomColorDialog(
@@ -57,26 +58,26 @@ fun CustomColorDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .padding(vertical = Spacing.Xs),
+                verticalArrangement = Arrangement.spacedBy(Spacing.Expanded)
             ) {
                 // 1. 实时预览色块与代码
                 Card(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CornerRadius.Md),
                     colors = CardDefaults.cardColors(containerColor = currentColor),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp)
-                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                        .height(DialogTokens.ColorPreviewCardHeight)
+                        .border(BorderWidth.Thin, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(CornerRadius.Md))
                 ) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.Black.copy(alpha = 0.35f),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            shape = RoundedCornerShape(CornerRadius.Sm),
+                            color = PlayerOverlayTokens.Background.copy(alpha = 0.35f),
+                            modifier = Modifier.padding(horizontal = Spacing.Md, vertical = Spacing.Xs)
                         ) {
                             Text(
                                 text = hexInput.uppercase(),
@@ -85,7 +86,7 @@ fun CustomColorDialog(
                                     fontFamily = FontFamily.Monospace,
                                     fontWeight = FontWeight.Bold
                                 ),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = Spacing.Sm, vertical = Spacing.Xxs)
                             )
                         }
                     }
@@ -100,19 +101,19 @@ fun CustomColorDialog(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
                         text = { Text("HEX 输入") },
-                        icon = { Icon(Icons.Default.Numbers, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        icon = { Icon(AppIcons.Numbers, contentDescription = null, modifier = Modifier.size(IconSize.Intermediate)) }
                     )
                     Tab(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
                         text = { Text("调色板") },
-                        icon = { Icon(Icons.Default.ColorLens, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        icon = { Icon(AppIcons.ColorLens, contentDescription = null, modifier = Modifier.size(IconSize.Intermediate)) }
                     )
                 }
 
                 if (selectedTab == 0) {
                     // --- HEX 输入模式 ---
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.Compact)) {
                         OutlinedTextField(
                             value = hexInput,
                             onValueChange = { input ->
@@ -152,7 +153,7 @@ fun CustomColorDialog(
                     }
                 } else {
                     // --- 调色板模式 (Canvas HSV 拾色器) ---
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.Intermediate)) {
                         Text(
                             text = "拖动拾取饱和度与明度：",
                             style = MaterialTheme.typography.labelMedium,
@@ -163,9 +164,9 @@ fun CustomColorDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(160.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+                                .height(DialogTokens.ColorCanvasHeight)
+                                .clip(RoundedCornerShape(CornerRadius.Intermediate))
+                                .border(BorderWidth.Thin, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(CornerRadius.Intermediate))
                         ) {
                             Canvas(
                                 modifier = Modifier
@@ -207,13 +208,13 @@ fun CustomColorDialog(
                                 val selY = (1f - value) * size.height
                                 drawCircle(
                                     color = Color.White,
-                                    radius = 10.dp.toPx(),
+                                    radius = Spacing.Intermediate.toPx(),
                                     center = Offset(selX, selY),
-                                    style = Stroke(width = 2.5.dp.toPx())
+                                    style = Stroke(width = BorderWidth.ColorPickerStroke.toPx())
                                 )
                                 drawCircle(
                                     color = currentColor,
-                                    radius = 7.5.dp.toPx(),
+                                    radius = BorderWidth.ColorPickerInnerRadius.toPx(),
                                     center = Offset(selX, selY)
                                 )
                             }
@@ -229,9 +230,9 @@ fun CustomColorDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                .height(TouchTarget.ExtraCompact)
+                                .clip(RoundedCornerShape(CornerRadius.Sm))
+                                .border(BorderWidth.Thin, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(CornerRadius.Sm))
                         ) {
                             Canvas(
                                 modifier = Modifier
@@ -274,13 +275,13 @@ fun CustomColorDialog(
                                     color = Color.White,
                                     start = Offset(thumbX, 0f),
                                     end = Offset(thumbX, size.height),
-                                    strokeWidth = 4.dp.toPx()
+                                    strokeWidth = Spacing.Xs.toPx()
                                 )
                                 drawLine(
                                     color = Color.Black,
                                     start = Offset(thumbX, 0f),
                                     end = Offset(thumbX, size.height),
-                                    strokeWidth = 1.dp.toPx()
+                                    strokeWidth = BorderWidth.Thin.toPx()
                                 )
                             }
                         }

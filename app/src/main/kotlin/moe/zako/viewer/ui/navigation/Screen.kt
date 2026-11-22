@@ -1,18 +1,15 @@
 ﻿package moe.zako.viewer.ui.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 import moe.zako.viewer.ui.theme.AppIcons
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
-    object Home : Screen("home?q={q}", "推荐", Icons.Default.Home) {
+    object Home : Screen("home?q={q}", "推荐", AppIcons.Home) {
         fun createRoute(q: String = ""): String =
             if (q.isNotEmpty()) "home?q=${java.net.URLEncoder.encode(q, "UTF-8")}" else "home"
     }
     object Favorites : Screen("favorites", "收藏夹", AppIcons.Favorite)
-    object Profile : Screen("profile", "我的", Icons.Default.Person)
+    object Profile : Screen("profile", "我的", AppIcons.Profile)
 
     object VideoDetail : Screen("video_detail/{videoId}", "视频详情") {
         fun createRoute(videoId: String) = "video_detail/$videoId"

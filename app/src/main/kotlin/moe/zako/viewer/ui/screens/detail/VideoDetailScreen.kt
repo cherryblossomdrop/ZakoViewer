@@ -24,6 +24,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.player.PlayerBrightnessHelper
 import moe.zako.viewer.ui.components.ZakoToast
+import moe.zako.viewer.ui.theme.Spacing
 
 /**
  * 视频详情视窗主体骨架
@@ -148,7 +149,7 @@ fun VideoDetailScreen(
 
                             DetailHeader(video = video, context = context)
 
-                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            Box(modifier = Modifier.padding(horizontal = Spacing.Lg)) {
                                 DetailActionButtons(
                                     viewModel = viewModel,
                                     state = state,
@@ -157,7 +158,7 @@ fun VideoDetailScreen(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(Spacing.Lg))
 
                             DetailMetadataCard(
                                 video = video,
@@ -171,7 +172,7 @@ fun VideoDetailScreen(
                                 onToggleExpand = { viewModel.toggleCommentsExpanded() }
                             )
 
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(Spacing.Xl))
                         }
 
                         VerticalDivider(modifier = Modifier.fillMaxHeight())
@@ -181,7 +182,7 @@ fun VideoDetailScreen(
                             modifier = Modifier
                                 .weight(0.42f)
                                 .fillMaxHeight()
-                                .padding(16.dp)
+                                .padding(Spacing.Lg)
                         ) {
                             Text(
                                 text = "相关视频 (${relatedList.size})",
@@ -189,7 +190,7 @@ fun VideoDetailScreen(
                                 fontWeight = FontWeight.Bold
                             )
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(Spacing.Intermediate))
 
                             DetailRelatedVideosGrid(
                                 relatedList = relatedList,
@@ -236,7 +237,7 @@ fun VideoDetailScreen(
                             }
 
                             item {
-                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                Box(modifier = Modifier.padding(horizontal = Spacing.Lg)) {
                                     DetailActionButtons(
                                         viewModel = viewModel,
                                         state = state,
@@ -244,7 +245,7 @@ fun VideoDetailScreen(
                                         context = context
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(Spacing.Lg))
                             }
 
                             item {

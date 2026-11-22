@@ -438,3 +438,35 @@ fun getColorSchemeForTheme(themeKey: String, darkTheme: Boolean): ColorScheme {
         if (darkTheme) PurpleDarkColorScheme else PurpleLightColorScheme
     }
 }
+
+/**
+ * 视频播放器与全屏控制层语义色彩令牌
+ */
+object PlayerOverlayTokens {
+    /** 播放器背景纯黑 */
+    val Background: Color = Color(0xFF000000)
+
+    /** 播放器控制层标准半透明遮罩背景 (40% 黑色) */
+    val Scrim: Color = Color(0x66000000)
+
+    /** 播放器控制层深色半透明遮罩背景 (50% 黑色) */
+    val ScrimDark: Color = Color(0x80000000)
+
+    /** HUD 手势浮层半透明背景 (70% 黑色) */
+    val HudBackground: Color = Color(0xB3000000)
+
+    /** VIP 金色徽章主要文字与边框色彩 */
+    val VipGold: Color = Color(0xFFFFB300)
+
+    /** VIP 金色徽章半透明背景容器色彩 (20% 金色) */
+    val VipGoldContainer: Color = Color(0x33FFB300)
+
+    /** VIP 抢先看徽章渐变起始色 */
+    val VipBadgeStart: Color = Color(0xFFFFD54F)
+
+    /** VIP 抢先看徽章渐变结束色 */
+    val VipBadgeEnd: Color = Color(0xFFFF8F00)
+
+    /** VIP 抢先看徽章内部前景色 */
+    val VipBadgeContent: Color = Color(0xFF2E1C00)
+}

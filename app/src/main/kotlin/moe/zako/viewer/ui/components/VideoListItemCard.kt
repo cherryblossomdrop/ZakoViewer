@@ -129,7 +129,7 @@ fun VideoListItemCard(
                         alpha = coverAlpha,
                         modifier = Modifier
                             .fillMaxSize()
-                            .then(if (isCoverBlurEnabled) Modifier.blur(18.dp) else Modifier)
+                            .then(if (isCoverBlurEnabled) Modifier.blur(VideoCoverTokens.BlurRadius) else Modifier)
                     )
 
                     coverBadge?.invoke(this)

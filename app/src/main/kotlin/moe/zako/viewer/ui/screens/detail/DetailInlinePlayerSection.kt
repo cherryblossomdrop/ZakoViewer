@@ -8,10 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.AltRoute
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.NetworkCheck
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,8 +18,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
 import moe.zako.viewer.core.cover.CoverCacheManager
@@ -32,8 +26,14 @@ import moe.zako.viewer.data.source.cosav.CosVideoItem
 import moe.zako.viewer.ui.components.*
 import moe.zako.viewer.ui.components.player.*
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.IconSize
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
-import moe.zako.viewer.ui.theme.OverlayBlack
+import moe.zako.viewer.ui.theme.PlayerOverlayTokens
+import moe.zako.viewer.ui.theme.Spacing
+import moe.zako.viewer.ui.theme.TouchTarget
+import moe.zako.viewer.ui.theme.VideoCoverTokens
 
 /**
  * 详情页原位内嵌播放器视口容器与轻量控制层
@@ -84,8 +84,8 @@ fun DetailEmbeddedPlayer(
 
     Box(
         modifier = modifier
-            .then(if (isFullscreen) Modifier.fillMaxSize() else Modifier.aspectRatio(16f / 9f))
-            .background(Color.Black)
+            .then(if (isFullscreen) Modifier.fillMaxSize() else Modifier.aspectRatio(VideoCoverTokens.AspectRatio))
+            .background(PlayerOverlayTokens.Background)
             .then(gestureModifier)
     ) {
         // 1. MPV SurfaceView: 保持在稳定的组合树最底层节点中，绝不被条件分支卸载或替换
@@ -110,10 +110,12 @@ fun DetailEmbeddedPlayer(
 
         // 2. 未播放封面图覆盖层 (Overlay): 纯 Box 叠加在 AndroidView 上方，点击直接起播，不卸载底层播放器
         if (!state.isInlinePlaying) {
+            val isCoverBlurEnabled = LocalCoverBlurEnabled.current
+            // 封面海报占位
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
+                    .background(PlayerOverlayTokens.Background)
                     .clickable {
                         if (video.allVideoLines.isEmpty() && video.allMp4Lines.isEmpty()) {
                             val tip = video.canPlayMsg?.takeIf { it.isNotBlank() } ?: "VIP抢先看视频，暂无有效播放源"
@@ -123,33 +125,54 @@ fun DetailEmbeddedPlayer(
                         }
                     }
             ) {
-                val isCoverBlurEnabled = LocalCoverBlurEnabled.current
                 AsyncImage(
-                    model = CoverCacheManager.getCoverModel(LocalContext.current, video.id, video.displayCover),
+                    model = CoverCacheManager.getCoverModel(context, video.id, video.displayCover),
                     contentDescription = video.title,
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(if (isCoverBlurEnabled) Modifier.blur(18.dp).clipToBounds() else Modifier),
+                        .then(
+                            if (isCoverBlurEnabled) Modifier.blur(VideoCoverTokens.BlurRadius).clipToBounds() else Modifier
+                        ),
                     contentScale = ContentScale.Crop
                 )
 
                 // 顶部返回按钮
                 IconButton(
                     onClick = onNavigateBack,
-                    modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(Spacing.Sm)
                 ) {
-                    Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.5f), modifier = Modifier.size(36.dp)) {
+                    Surface(
+                        shape = CircleShape,
+                        color = PlayerOverlayTokens.HudBackground,
+                        modifier = Modifier.size(TouchTarget.Dense)
+                    ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(AppIcons.ArrowBack, contentDescription = "返回", tint = Color.White, modifier = Modifier.size(20.dp))
+                            Icon(
+                                imageVector = AppIcons.ArrowBack,
+                                contentDescription = "返回",
+                                tint = Color.White,
+                                modifier = Modifier.size(IconSize.Md)
+                            )
                         }
                     }
                 }
 
                 // 播放图标背景与矢量图标
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.65f), modifier = Modifier.size(64.dp)) {
+                    Surface(
+                        shape = CircleShape,
+                        color = PlayerOverlayTokens.HudBackground,
+                        modifier = Modifier.size(PlayerControlDefaults.InlinePlayButtonSize)
+                    ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(AppIcons.Play, contentDescription = "播放", tint = Color.White, modifier = Modifier.size(40.dp))
+                            Icon(
+                                imageVector = AppIcons.Play,
+                                contentDescription = "播放",
+                                tint = Color.White,
+                                modifier = Modifier.size(PlayerControlDefaults.InlinePlayIconSize)
+                            )
                         }
                     }
                 }
@@ -157,16 +180,23 @@ fun DetailEmbeddedPlayer(
                 // VIP 抢先看徽章
                 if (video.isVipEarlyAccess) {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFFFD54F),
-                        modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)
+                        shape = RoundedCornerShape(CornerRadius.Sm),
+                        color = PlayerOverlayTokens.VipBadgeStart,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(Spacing.Md)
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(Brush.linearGradient(colors = listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))))
-                                .padding(6.dp)
+                                .background(Brush.linearGradient(colors = listOf(PlayerOverlayTokens.VipBadgeStart, PlayerOverlayTokens.VipBadgeEnd)))
+                                .padding(Spacing.Compact)
                         ) {
-                            Icon(AppIcons.WorkspacePremium, contentDescription = "VIP抢先看", tint = Color(0xFF2E1C00), modifier = Modifier.size(18.dp))
+                            Icon(
+                                imageVector = AppIcons.WorkspacePremium,
+                                contentDescription = "VIP抢先看",
+                                tint = PlayerOverlayTokens.VipBadgeContent,
+                                modifier = Modifier.size(IconSize.Intermediate)
+                            )
                         }
                     }
                 }
@@ -189,14 +219,14 @@ fun DetailEmbeddedPlayer(
             if (playerState.isLocked) {
                 Surface(
                     shape = CircleShape,
-                    color = OverlayBlack,
+                    color = PlayerOverlayTokens.HudBackground,
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .padding(start = if (isFullscreen) 24.dp else 12.dp)
+                        .padding(start = if (isFullscreen) Spacing.Xl else Spacing.Md)
                         .clickable { viewModel.toggleLock() }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Lock,
+                        imageVector = AppIcons.Lock,
                         contentDescription = "解锁屏幕",
                         tint = Color.White,
                         modifier = Modifier.padding(PlayerControlDefaults.LockContainerPadding).size(PlayerControlDefaults.LockIconSize)
@@ -244,32 +274,32 @@ fun DetailEmbeddedPlayer(
                         )
                         DropdownMenuItem(
                             text = { Text(if (state.isCdnTesting) "测速中..." else "对 CDN 节点进行测速") },
-                            leadingIcon = { Icon(Icons.Rounded.NetworkCheck, contentDescription = null) },
+                            leadingIcon = { Icon(AppIcons.NetworkCheck, contentDescription = null) },
                             onClick = { viewModel.triggerCdnSpeedTest(); ZakoToast.show("正在并发测试全部 CDN 节点速率与延迟") }
                         )
                         DropdownMenuItem(
                             text = { Text("选择 CDN 节点播放") },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.AltRoute, contentDescription = null) },
+                            leadingIcon = { Icon(AppIcons.AltRoute, contentDescription = null) },
                             onClick = { viewModel.showSelectCdnDialog() }
                         )
                         DropdownMenuItem(
                             text = {
                                 Column {
                                     Text("播放内核切换")
-                                    Text("当前: ${playerState.engine.label}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("当前: ${playerState.engine.label}", fontSize = FontSizes.Badge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             },
-                            leadingIcon = { Icon(Icons.Default.Memory, contentDescription = null) },
+                            leadingIcon = { Icon(AppIcons.Memory, contentDescription = null) },
                             onClick = { viewModel.showMoreMenu(false); viewModel.showEngineDialog(true) }
                         )
                         DropdownMenuItem(
                             text = {
                                 Column {
                                     Text("硬件解码设置")
-                                    Text("当前: ${playerState.hwDecMode.label}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("当前: ${playerState.hwDecMode.label}", fontSize = FontSizes.Badge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             },
-                            leadingIcon = { Icon(Icons.Default.Hardware, contentDescription = null) },
+                            leadingIcon = { Icon(AppIcons.Hardware, contentDescription = null) },
                             onClick = { viewModel.showMoreMenu(false); viewModel.showHwDecDialog(true) }
                         )
                     }
@@ -277,14 +307,14 @@ fun DetailEmbeddedPlayer(
                     // 居中偏左：锁屏按钮
                     Surface(
                         shape = CircleShape,
-                        color = OverlayBlack,
+                        color = PlayerOverlayTokens.HudBackground,
                         modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .padding(start = if (isFullscreen) 24.dp else 12.dp)
+                            .padding(start = if (isFullscreen) Spacing.Xl else Spacing.Md)
                             .clickable { viewModel.toggleLock() }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.LockOpen,
+                            imageVector = AppIcons.LockOpen,
                             contentDescription = "锁定屏幕",
                             tint = Color.White,
                             modifier = Modifier.padding(PlayerControlDefaults.LockContainerPadding).size(PlayerControlDefaults.LockIconSize)

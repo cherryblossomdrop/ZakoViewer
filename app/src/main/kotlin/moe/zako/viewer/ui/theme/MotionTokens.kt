@@ -24,6 +24,9 @@ object MotionTokens {
         /** 瞬间响应 (70ms) - 用于按钮微按压缩放 */
         const val Instant: Int = 70
 
+        /** 微动效 (100ms) - 用于手势快速反馈淡入 */
+        const val Micro: Int = 100
+
         /** 快速动效 (120ms) - 用于组件轻量级淡出、微小图标旋转归位 */
         const val Fast: Int = 120
 
@@ -32,6 +35,9 @@ object MotionTokens {
 
         /** 标准快速动效 (180ms) - 用于常规状态切换、搜索框一键清空旋转 */
         const val Normal: Int = 180
+
+        /** 适中动效 (200ms) - 用于手势反馈适度淡出 */
+        const val Moderate: Int = 200
 
         /** 中速动效 (250ms) - 用于卡片展开折叠、页面内容局部切换 */
         const val Medium: Int = 250

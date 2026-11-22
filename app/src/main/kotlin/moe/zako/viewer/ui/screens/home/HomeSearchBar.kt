@@ -15,6 +15,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import moe.zako.viewer.ui.components.ZakoSearchBar
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
 
 /**
  * 首页顶部搜索栏与搜索历史管理面板
@@ -60,13 +64,13 @@ fun HomeSearchBar(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 4.dp),
-                shape = RoundedCornerShape(16.dp),
+                    .padding(top = Spacing.Sm, bottom = Spacing.Xs),
+                shape = RoundedCornerShape(CornerRadius.Lg),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
                 )
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(Spacing.Md)) {
                     // 标题与管理栏
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -77,10 +81,10 @@ fun HomeSearchBar(
                             Icon(
                                 imageVector = AppIcons.History,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(IconSize.Intermediate),
                                 tint = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(Spacing.Compact))
                             Text(
                                 text = if (isHistoryMultiSelect) "选择历史 (${selectedHistoryQueries.size})" else "搜索历史",
                                 style = MaterialTheme.typography.titleSmall,
@@ -93,18 +97,18 @@ fun HomeSearchBar(
                                 val allSelected = searchHistory.isNotEmpty() && selectedHistoryQueries.containsAll(searchHistory)
                                 TextButton(
                                     onClick = onToggleSelectAllHistory,
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                    contentPadding = PaddingValues(horizontal = Spacing.Compact, vertical = Spacing.Xxs)
                                 ) {
-                                    Text(if (allSelected) "取消全选" else "全选", fontSize = 12.sp)
+                                    Text(if (allSelected) "取消全选" else "全选", fontSize = FontSizes.Caption)
                                 }
                                 TextButton(
                                     onClick = onDeleteSelectedHistory,
                                     enabled = selectedHistoryQueries.isNotEmpty(),
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                    contentPadding = PaddingValues(horizontal = Spacing.Compact, vertical = Spacing.Xxs)
                                 ) {
                                     Text(
                                         "删除(${selectedHistoryQueries.size})",
-                                        fontSize = 12.sp,
+                                        fontSize = FontSizes.Caption,
                                         color = if (selectedHistoryQueries.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                                     )
                                 }
@@ -114,45 +118,45 @@ fun HomeSearchBar(
                                         focusManager.clearFocus()
                                         onSearchFocusChanged(false)
                                     },
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                    contentPadding = PaddingValues(horizontal = Spacing.Compact, vertical = Spacing.Xxs)
                                 ) {
-                                    Text("清空全部", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                                    Text("清空全部", fontSize = FontSizes.Caption, color = MaterialTheme.colorScheme.error)
                                 }
                                 TextButton(
                                     onClick = onExitHistoryMultiSelect,
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                    contentPadding = PaddingValues(horizontal = Spacing.Compact, vertical = Spacing.Xxs)
                                 ) {
-                                    Text("完成", fontSize = 12.sp)
+                                    Text("完成", fontSize = FontSizes.Caption)
                                 }
                             } else {
                                 TextButton(
                                     onClick = { onEnterHistoryMultiSelect(null) },
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                    contentPadding = PaddingValues(horizontal = Spacing.Compact, vertical = Spacing.Xxs)
                                 ) {
-                                    Icon(AppIcons.MultiSelect, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("多选/管理", fontSize = 12.sp)
+                                    Icon(AppIcons.MultiSelect, contentDescription = null, modifier = Modifier.size(IconSize.Sm))
+                                    Spacer(modifier = Modifier.width(Spacing.Xs))
+                                    Text("多选/管理", fontSize = FontSizes.Caption)
                                 }
                                 IconButton(
                                     onClick = {
                                         focusManager.clearFocus()
                                         onSearchFocusChanged(false)
                                     },
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(IconSize.Lg)
                                 ) {
-                                    Icon(AppIcons.ExpandLess, contentDescription = "收起", modifier = Modifier.size(18.dp))
+                                    Icon(AppIcons.ExpandLess, contentDescription = "收起", modifier = Modifier.size(IconSize.Intermediate))
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.Sm))
 
                     // 搜索词条流式列表
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.Sm),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.Compact)
                     ) {
                         searchHistory.forEach { historyQuery ->
                             val isSelected = selectedHistoryQueries.contains(historyQuery)
@@ -164,7 +168,7 @@ fun HomeSearchBar(
                                     label = { Text(historyQuery, maxLines = 1) },
                                     leadingIcon = {
                                         if (isSelected) {
-                                            Icon(AppIcons.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Icon(AppIcons.Check, contentDescription = null, modifier = Modifier.size(IconSize.Sm))
                                         }
                                     }
                                 )
@@ -195,12 +199,12 @@ fun HomeSearchBar(
                                     trailingIcon = {
                                         IconButton(
                                             onClick = { onDeleteSearchHistoryItem(historyQuery) },
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(IconSize.Intermediate)
                                         ) {
                                             Icon(
                                                 imageVector = AppIcons.Close,
                                                 contentDescription = "删除记录",
-                                                modifier = Modifier.size(14.dp)
+                                                modifier = Modifier.size(IconSize.Xs)
                                             )
                                         }
                                     }

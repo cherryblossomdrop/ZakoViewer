@@ -11,8 +11,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.FontSizes
+import moe.zako.viewer.ui.theme.PlayerOverlayTokens
+import moe.zako.viewer.ui.theme.Spacing
 import java.util.Locale
 
 /**
@@ -77,18 +79,18 @@ fun BoxScope.DurationBadge(
     val formatted = remember(duration) { DurationFormatter.format(duration) }
     if (formatted.isNotEmpty()) {
         Surface(
-            color = Color.Black.copy(alpha = 0.75f),
-            shape = RoundedCornerShape(4.dp),
+            color = PlayerOverlayTokens.Background.copy(alpha = 0.75f),
+            shape = RoundedCornerShape(CornerRadius.Xs),
             modifier = modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 4.dp, bottom = 4.dp)
+                .padding(end = Spacing.Xs, bottom = Spacing.Xs)
         ) {
             Text(
                 text = formatted,
                 color = Color.White,
-                fontSize = 10.sp,
+                fontSize = FontSizes.MicroBadge,
                 fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.5.dp)
+                modifier = Modifier.padding(horizontal = Spacing.Xs, vertical = Spacing.BadgeVertical)
             )
         }
     }

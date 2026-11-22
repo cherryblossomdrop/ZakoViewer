@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.Add
@@ -65,6 +66,15 @@ object AppIcons {
     val DownloadForOffline: ImageVector = Icons.Default.DownloadForOffline
     val CleaningServices: ImageVector = Icons.Default.CleaningServices
     val Terminal: ImageVector = Icons.Default.Terminal
+
+    // 搜索、浏览与视图模式
+    val History: ImageVector = Icons.Default.History
+    val Check: ImageVector = Icons.Default.Check
+    val ExpandLess: ImageVector = Icons.Default.ExpandLess
+    val Tune: ImageVector = Icons.Default.Tune
+    val Sort: ImageVector = Icons.AutoMirrored.Filled.Sort
+    val GridView: ImageVector = Icons.Default.GridView
+    val ViewAgenda: ImageVector = Icons.Default.ViewAgenda
 
     // 文件与目录
     val FileInfo: ImageVector = Icons.Default.Info

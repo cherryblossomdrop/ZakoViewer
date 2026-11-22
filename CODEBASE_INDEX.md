@@ -1,6 +1,6 @@
 # ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（`v1.2.38`），全项目核心工程源码共计 **91** 个文件，累计 **23,817** 行代码。  
+> **版本定位**：截至最新构建（`v1.2.39`），全项目核心工程源码共计 **93** 个文件，累计 **23,696** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -84,7 +84,7 @@
 
 | 文件路径 | 代码行数 | 职责与功能（做了什么） | 核心实现方式（怎么做） |
 | :--- | :---: | :--- | :--- |
-| `app/src/main/kotlin/moe/zako/viewer/ui/theme/AppIcons.kt` | 75 | 全局统一图标 Design Token 门面 | 语义化聚合多选、收藏、播放、删除、详情、文件及设置系统操作图标，权威对齐 Checklist 多选图标 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/theme/AppIcons.kt` | 76 | 全局统一图标 Design Token 门面 | 语义化聚合多选、收藏、播放、删除、详情、文件及设置系统操作图标，权威对齐 Checklist 多选图标 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/Color.kt` | 413 | 全局色彩拓扑、调色板预设与莫奈动态取色方案 | 定义多种内置主题色盘（经典紫、自然绿、暖阳黄等）及暗色/亮色 ColorScheme 语义 token |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/MenuTokens.kt` | 37 | 上下文菜单与底部操作栏样式 Design Token | 集中规范菜单容器与项圆角、标高、内边距、图标规格、文字样式及动态危险色 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/Theme.kt` | 45 | Material 3 主题容器组合项与 LocalComposition 注入 | 提供 `ZakoViewerTheme`，将动态色彩方案、字体排版及封面模糊状态注入 Compose 环境树 |
@@ -134,7 +134,9 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoriteTreeItems.kt` | 313 | 收藏夹树状组件（面包屑路径条、子收藏夹卡片与视频卡片） | 呈现 `BreadcrumbBar` 路径芯片、`FavoriteFolderItem` 文件夹卡片与 `FavoriteVideoItem` 视频封面信息卡片 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesDialogs.kt` | 289 | 收藏夹业务弹窗与操作抽屉宿主 | 提供新建/重命名文件夹弹窗、重命名视频弹窗、本地文件信息弹窗及长按操作抽屉 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesViewModel.kt` | 387 | 收藏夹业务状态中枢，处理层级切换、批量移动/删除与搜索 | 调度 `FavoriteRepository`，管理当前浏览目录路径、批量选中集合及搜索过滤 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeScreen.kt` | 903 | 首页聚合视窗，支持网格/瀑布流浏览、标签筛选与语法级搜索 | 集成搜索栏（暗号嗅探）、分类 Chip 组、下拉刷新与分页加载状态机隔离 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeScreen.kt` | 381 | 首页主页面视窗，负责列表滚动骨架、瀑布流/网格排布与状态机调度 | 维护下拉刷新、触底分页预加载、`!isLoading && error == null && items.isEmpty()` 明确状态机隔离，调度搜索与筛选条 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeSearchBar.kt` | 228 | 首页搜索输入框、暗号直达提示与搜索历史交互面板 | 支持布尔关键词输入、SFW 暗号直达快捷提示、搜索历史弹发展开与长按多选批量删除 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeFilterBar.kt` | 416 | 首页分类标签栏、排序模式切换、视图切换与综合筛选抽屉 | 呈现分类 Chip 组、视图模式（网格/瀑布流）切换、按时间范围/排序方式过滤的底部筛选抽屉及排序匹配算法 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeViewModel.kt` | 460 | 首页状态机中枢，管理视频列表分页、搜索词历史与暗号直达 | 协同 `CosApiClient` 与 `SearchHistoryRepository`，流式响应排序模式与查询关键词流 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerScreen.kt` | 681 | 独立全屏播放视窗，集成控制层覆盖物、CDN 测速面板与画幅调整 | 装载 `MPVView` 纯原生渲染视口，提供顶部控制条、波浪进度条、手势 HUD 及选线抽屉 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerViewModel.kt` | 706 | 播放器状态机中枢，统筹起播选线、实时测速热切、进度保存与外部播放 | 驱动 `ZakoPlayer` 与 `CdnSmartRouter`，支持本地文件优先起播与进度自动写回历史表 |

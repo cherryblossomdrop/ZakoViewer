@@ -7,7 +7,13 @@ import moe.zako.viewer.data.local.entities.WatchHistoryEntity
 import moe.zako.viewer.data.repository.FavoriteRepository
 import moe.zako.viewer.data.repository.HistoryRepository
 import moe.zako.viewer.ui.components.ZakoToast
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class HistoryUiState(

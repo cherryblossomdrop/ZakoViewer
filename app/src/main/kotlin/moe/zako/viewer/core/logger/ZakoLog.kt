@@ -298,13 +298,10 @@ object ZakoLog {
                 raf.readFully(buffer)
             }
 
-            var newlineIdx = 0
-            while (newlineIdx < buffer.size && buffer[newlineIdx] != '\n'.code.toByte()) {
-                newlineIdx++
-            }
-            val validStart = if (newlineIdx < buffer.size) newlineIdx + 1 else 0
+            val newlineIdx = buffer.indexOf('\n'.code.toByte())
+            val validStart = if (newlineIdx in 0 until buffer.size) newlineIdx + 1 else 0
 
-            FileOutputStream(file, false).use { fos ->
+            file.outputStream().use { fos ->
                 if (validStart < buffer.size) {
                     fos.write(buffer, validStart, buffer.size - validStart)
                 }
@@ -340,10 +337,7 @@ object ZakoLog {
                 if (entry.timestamp < lastClearTimestamp) return@synchronized
                 try {
                     checkAndTrimLogFile(file)
-                    FileOutputStream(file, true).use { fos ->
-                        fos.write(formattedLine.toByteArray(Charsets.UTF_8))
-                        fos.flush()
-                    }
+                    file.appendText(formattedLine, Charsets.UTF_8)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error writing persistent log", e)
                 }
@@ -423,9 +417,7 @@ object ZakoLog {
                 // 1. 截断当前持久化日志文件为 0 字节
                 val file = getPersistentLogFile()
                 if (file != null && file.exists()) {
-                    FileOutputStream(file, false).use { fos ->
-                        fos.flush()
-                    }
+                    file.writeBytes(byteArrayOf())
                 }
 
                 // 2. 清理 logs 目录下所有历史归档文件

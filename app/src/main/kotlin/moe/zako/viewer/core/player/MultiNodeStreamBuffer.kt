@@ -2,16 +2,33 @@
 
 import android.content.Context
 import moe.zako.viewer.core.logger.ZakoLog
-import kotlinx.coroutines.*
+import moe.zako.viewer.core.network.NetworkClientProvider
+import moe.zako.viewer.core.network.isHttpUrl
+import moe.zako.viewer.core.storage.StorageConstants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.*
+import java.io.BufferedOutputStream
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStreamReader
+import java.io.OutputStream
+import java.io.RandomAccessFile
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -23,12 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class MultiNodeStreamBuffer(
     private val context: Context,
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .writeTimeout(10, TimeUnit.SECONDS)
-        .retryOnConnectionFailure(true)
-        .build()
+    private val client: OkHttpClient = NetworkClientProvider.streamClient
 ) {
     companion object {
         private const val TAG = "MultiNodeStreamBuffer"
@@ -291,7 +303,7 @@ class MultiNodeStreamBuffer(
                 }
 
                 body.byteStream().use { input ->
-                    val buf = ByteArray(32768)
+                    val buf = ByteArray(StorageConstants.STREAM_IO_BUFFER_SIZE)
                     var bytesRead: Int
                     while (input.read(buf).also { bytesRead = it } != -1) {
                         clientOutput.write(buf, 0, bytesRead)
@@ -604,7 +616,7 @@ class MultiNodeStreamBuffer(
     }
 
     private fun resolveSegmentUrl(baseCdnUrl: String, relativeUri: String): String {
-        return if (relativeUri.startsWith("http://") || relativeUri.startsWith("https://")) {
+        return if (relativeUri.isHttpUrl()) {
             relativeUri
         } else {
             val base = baseCdnUrl.substringBeforeLast('/') + "/"
@@ -633,7 +645,7 @@ class MultiNodeStreamBuffer(
                 client.newCall(reqBuilder.build()).execute().use { resp ->
                     if (resp.isSuccessful) {
                         resp.body?.byteStream()?.use { input ->
-                            FileOutputStream(tempFile).use { output ->
+                            tempFile.outputStream().use { output ->
                                 input.copyTo(output)
                             }
                         }

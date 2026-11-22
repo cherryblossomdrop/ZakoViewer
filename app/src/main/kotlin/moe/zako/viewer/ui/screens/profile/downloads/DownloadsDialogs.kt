@@ -1,27 +1,25 @@
 package moe.zako.viewer.ui.screens.profile.downloads
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.window.DialogProperties
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.ui.components.VideoActionBottomSheet
 import moe.zako.viewer.ui.components.VideoMenuAction
-import moe.zako.viewer.ui.components.ZakoToast
+import moe.zako.viewer.ui.screens.profile.settings.StoragePermissionGuideDialog
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.Spacing
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * 下载任务长按菜单底部抽屉
@@ -144,37 +142,18 @@ fun BatchDeleteConfirmDialog(
 }
 
 /**
- * 存储权限引导弹窗
+ * 存储权限引导弹窗（直接复用全局 StoragePermissionGuideDialog）
  */
 @Composable
 fun DownloadPermissionGuideDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(AppIcons.Security, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-        title = { Text("需要「所有文件访问权限」") },
-        text = {
-            Text(
-                text = "自定义下载目录需要系统授予「所有文件访问权限」，以便在手机外部存储或 SD 卡中自由读写和保存下载的视频。请前往设置开启该权限。",
-                style = MaterialTheme.typography.bodyMedium
-            )
+    StoragePermissionGuideDialog(
+        onConfirm = {
+            onDismiss()
+            StoragePermissionHelper.requestAllFilesAccess(context)
         },
-        confirmButton = {
-            Button(onClick = {
-                onDismiss()
-                StoragePermissionHelper.requestAllFilesAccess(context)
-            }) {
-                Text("前往设置")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
+        onDismiss = onDismiss
     )
 }
-
-

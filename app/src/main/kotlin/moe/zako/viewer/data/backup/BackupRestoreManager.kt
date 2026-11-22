@@ -16,14 +16,14 @@ import moe.zako.viewer.data.local.entities.WatchHistoryEntity
 import moe.zako.viewer.data.local.entities.WatchLaterEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.*
+import java.io.BufferedOutputStream
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
-import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 data class BackupProgress(
@@ -72,7 +72,7 @@ class BackupRestoreManager(
         if (file.name.endsWith(".zip", ignoreCase = true)) return true
         if (file.length() < 4) return false
         return try {
-            FileInputStream(file).use { fis ->
+            file.inputStream().use { fis ->
                 val header = ByteArray(4)
                 if (fis.read(header) == 4) {
                     header[0] == 0x50.toByte() && // 'P'
@@ -171,16 +171,12 @@ class BackupRestoreManager(
                 zos.closeEntry()
 
                 // Entry 2+: covers/{videoId}.jpg 流式写入 ZIP
-                val buffer = ByteArray(BUFFER_SIZE)
                 for ((idx, videoId) in allVideoIds.withIndex()) {
                     val coverFile = CoverCacheManager.getCoverFile(context, videoId)
                     if (coverFile.exists() && coverFile.length() > 0L) {
                         zos.putNextEntry(ZipEntry("covers/$videoId.jpg"))
                         coverFile.inputStream().use { fis ->
-                            var bytesRead: Int
-                            while (fis.read(buffer).also { bytesRead = it } != -1) {
-                                zos.write(buffer, 0, bytesRead)
-                            }
+                            fis.copyTo(zos, BUFFER_SIZE)
                         }
                         zos.closeEntry()
                     }
@@ -236,10 +232,7 @@ class BackupRestoreManager(
                         if (file.isFile) {
                             zos.putNextEntry(ZipEntry("videos/${file.name}"))
                             file.inputStream().use { fis ->
-                                var bytesRead: Int
-                                while (fis.read(buffer).also { bytesRead = it } != -1) {
-                                    zos.write(buffer, 0, bytesRead)
-                                }
+                                fis.copyTo(zos, BUFFER_SIZE)
                             }
                             zos.closeEntry()
                         }
@@ -311,8 +304,6 @@ class BackupRestoreManager(
                         try { fallbackDir.mkdirs() } catch (_: Exception) {}
                     }
 
-                    val buffer = ByteArray(BUFFER_SIZE)
-
                     // 阶段 2.1: 解压封面
                     if (coverEntries.isNotEmpty()) {
                         val totalCoverCount = coverEntries.size
@@ -321,11 +312,8 @@ class BackupRestoreManager(
                             val targetCover = File(CoverCacheManager.getCoversDir(context), fileName)
                             try {
                                 zipFile.getInputStream(entry).use { input ->
-                                    FileOutputStream(targetCover).use { fos ->
-                                        var bytesRead: Int
-                                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                                            fos.write(buffer, 0, bytesRead)
-                                        }
+                                    targetCover.outputStream().use { fos ->
+                                        input.copyTo(fos, BUFFER_SIZE)
                                         fos.flush()
                                     }
                                 }
@@ -376,11 +364,8 @@ class BackupRestoreManager(
                                     try { targetFile.delete() } catch (_: Exception) {}
                                 }
                                 zipFile.getInputStream(entry).use { input ->
-                                    FileOutputStream(targetFile).use { fos ->
-                                        var bytesRead: Int
-                                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                                            fos.write(buffer, 0, bytesRead)
-                                        }
+                                    targetFile.outputStream().use { fos ->
+                                        input.copyTo(fos, BUFFER_SIZE)
                                         fos.flush()
                                     }
                                 }
@@ -394,11 +379,8 @@ class BackupRestoreManager(
                                         try { sandboxFile.delete() } catch (_: Exception) {}
                                     }
                                     zipFile.getInputStream(entry).use { input ->
-                                        FileOutputStream(sandboxFile).use { fos ->
-                                            var bytesRead: Int
-                                            while (input.read(buffer).also { bytesRead = it } != -1) {
-                                                fos.write(buffer, 0, bytesRead)
-                                            }
+                                        sandboxFile.outputStream().use { fos ->
+                                            input.copyTo(fos, BUFFER_SIZE)
                                             fos.flush()
                                         }
                                     }

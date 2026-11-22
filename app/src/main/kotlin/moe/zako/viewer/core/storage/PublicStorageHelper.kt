@@ -9,7 +9,6 @@ import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import moe.zako.viewer.core.logger.ZakoLog
 import java.io.File
-import java.io.FileOutputStream
 import java.io.OutputStream
 
 data class ExportResult(
@@ -31,12 +30,7 @@ object PublicStorageHelper {
     /** UI 常驻展示与说明的日志完整保存目录 */
     const val LOGS_DISPLAY_DIR = StorageConstants.LOGS_DISPLAY_DIR
 
-    fun formatBytes(bytes: Long): String {
-        if (bytes <= 0) return "0.00 B"
-        val units = arrayOf("B", "KB", "MB", "GB", "TB")
-        val i = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.size - 1)
-        return String.format(java.util.Locale.getDefault(), "%.2f %s", bytes / Math.pow(1024.0, i.toDouble()), units[i])
-    }
+    fun formatBytes(bytes: Long): String = StorageConstants.formatBytes(bytes)
 
     /**
      * 在公共 Download 目录下创建输出流并完成文件导出。
@@ -95,7 +89,7 @@ object PublicStorageHelper {
             targetDir.mkdirs()
         }
         val targetFile = File(targetDir, fileName)
-        FileOutputStream(targetFile).use { fos ->
+        targetFile.outputStream().use { fos ->
             block(fos)
             fos.flush()
         }

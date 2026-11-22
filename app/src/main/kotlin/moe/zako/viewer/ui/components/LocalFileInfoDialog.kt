@@ -3,12 +3,22 @@ package moe.zako.viewer.ui.components
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import moe.zako.viewer.core.storage.StorageConstants
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.IconSize
@@ -31,12 +41,7 @@ data class LocalFileInfo(
     val statusText: String? = null
 ) {
     companion object {
-        fun formatBytes(bytes: Long): String {
-            if (bytes <= 0) return "0 B"
-            val units = arrayOf("B", "KB", "MB", "GB")
-            val i = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.size - 1)
-            return String.format(Locale.getDefault(), "%.2f %s", bytes / Math.pow(1024.0, i.toDouble()), units[i])
-        }
+        fun formatBytes(bytes: Long): String = StorageConstants.formatBytes(bytes)
 
         fun fromFile(file: File, title: String, duration: String? = null): LocalFileInfo {
             val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())

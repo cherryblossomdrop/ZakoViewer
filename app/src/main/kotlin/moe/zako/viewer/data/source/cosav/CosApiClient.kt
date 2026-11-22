@@ -4,7 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import moe.zako.viewer.core.logger.ZakoLog
-import moe.zako.viewer.core.logger.ZakoLogger
+import moe.zako.viewer.core.network.NetworkClientProvider
+import moe.zako.viewer.core.network.isHttpUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -12,13 +13,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.URLEncoder
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 class CosApiClient(
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
-        .build(),
+    private val client: OkHttpClient = NetworkClientProvider.apiClient,
     private val gson: Gson = GsonBuilder()
         .setLenient()
         .registerTypeAdapter(
@@ -68,7 +65,7 @@ class CosApiClient(
                 val encryptedText = response.body?.string()?.trim() ?: ""
                 if (encryptedText.isNotEmpty()) {
                     val decryptedUrl = CosCrypto.decrypt(encryptedText).trim()
-                    if (decryptedUrl.startsWith("http://") || decryptedUrl.startsWith("https://")) {
+                    if (decryptedUrl.isHttpUrl()) {
                         ZakoLog.i(TAG, "Successfully resolved API URL from cloud: $decryptedUrl")
                         resolvedBaseUrl = decryptedUrl
                         return@withContext decryptedUrl
@@ -193,7 +190,7 @@ class CosApiClient(
             gson.fromJson(json, CosVideoItem::class.java)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            ZakoLogger.e(TAG, "Failed to parse video detail for ID $id. Raw response body:\n$json", e)
+            ZakoLog.e(TAG, "Failed to parse video detail for ID $id. Raw response body:\n$json", e)
             null
         }
     }

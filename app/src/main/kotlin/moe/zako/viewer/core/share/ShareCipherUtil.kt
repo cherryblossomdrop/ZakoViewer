@@ -1,7 +1,5 @@
 ﻿package moe.zako.viewer.core.share
 
-import java.nio.charset.StandardCharsets
-
 object ShareCipherUtil {
     /**
      * 暗号专用识别标记（日常输入绝不会包含的特定汉字组合）
@@ -23,7 +21,7 @@ object ShareCipherUtil {
      */
     fun encode(videoId: String): String {
         val trimmedId = videoId.trim()
-        val bytes = trimmedId.toByteArray(StandardCharsets.UTF_8)
+        val bytes = trimmedId.toByteArray(Charsets.UTF_8)
         val encodedPayload = StringBuilder(bytes.size * 2)
         for (b in bytes) {
             val unsigned = b.toInt() and 0xFF
@@ -82,7 +80,7 @@ object ShareCipherUtil {
                 byteArray[i] = ((high shl 4) or low).toByte()
             }
 
-            val result = String(byteArray, StandardCharsets.UTF_8).trim()
+            val result = String(byteArray, Charsets.UTF_8).trim()
             return if (result.isNotEmpty()) result else null
         } catch (_: Exception) {
             return null

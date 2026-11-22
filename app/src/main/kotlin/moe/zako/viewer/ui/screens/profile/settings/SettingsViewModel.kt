@@ -6,11 +6,16 @@ import androidx.lifecycle.viewModelScope
 import moe.zako.viewer.ZakoApplication
 import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.core.logger.ZakoLog
+import moe.zako.viewer.core.storage.StorageConstants
 import moe.zako.viewer.data.local.dao.DownloadDao
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.ui.components.ZakoToast
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -345,10 +350,5 @@ class SettingsViewModel(
         }
     }
 
-    private fun formatBytes(bytes: Long): String {
-        if (bytes <= 0) return "0.00 B"
-        val units = arrayOf("B", "KB", "MB", "GB", "TB")
-        val i = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.size - 1)
-        return String.format(java.util.Locale.getDefault(), "%.2f %s", bytes / Math.pow(1024.0, i.toDouble()), units[i])
-    }
+    private fun formatBytes(bytes: Long): String = StorageConstants.formatBytes(bytes)
 }

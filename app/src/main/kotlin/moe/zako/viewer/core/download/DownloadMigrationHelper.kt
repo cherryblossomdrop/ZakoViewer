@@ -9,7 +9,6 @@ import moe.zako.viewer.data.local.dao.DownloadDao
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.repository.SettingsRepository
 import java.io.File
-import java.io.FileOutputStream
 
 /**
  * 离线下载物理存储目录迁移与历史版本平滑升级助手 (DownloadMigrationHelper)
@@ -112,7 +111,6 @@ class DownloadMigrationHelper(
 
         // 5. 流式迁移 (统一 64KB 缓冲块)
         var successCount = 0
-        val buffer = ByteArray(StorageConstants.DEFAULT_IO_BUFFER_SIZE)
         ZakoLog.i(TAG, "Starting downloads migration to: $newPath. Total files to migrate: ${existingFiles.size}")
 
         for ((idx, pair) in existingFiles.withIndex()) {
@@ -146,11 +144,8 @@ class DownloadMigrationHelper(
                 if (tmpFile.exists()) tmpFile.delete()
 
                 srcFile.inputStream().use { input ->
-                    FileOutputStream(tmpFile).use { output ->
-                        var read: Int
-                        while (input.read(buffer).also { read = it } != -1) {
-                            output.write(buffer, 0, read)
-                        }
+                    tmpFile.outputStream().use { output ->
+                        input.copyTo(output, StorageConstants.DEFAULT_IO_BUFFER_SIZE)
                         output.flush()
                     }
                 }

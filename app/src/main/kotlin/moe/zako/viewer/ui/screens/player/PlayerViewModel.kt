@@ -25,7 +25,11 @@ import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.data.source.cosav.CosApiClient
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import moe.zako.viewer.ui.components.ZakoToast
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers

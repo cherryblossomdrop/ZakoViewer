@@ -3,7 +3,6 @@ package moe.zako.viewer.core.player
 import android.content.Context
 import android.view.Surface
 import android.view.SurfaceHolder
-import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

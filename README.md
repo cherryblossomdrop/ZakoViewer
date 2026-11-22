@@ -6,18 +6,18 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 ## 📊 工程源码规模统计
 
-本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.52**）代码规模统计如下：
+本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.53**）代码规模统计如下：
 
 | 语言 / 类型 | 模块数 | 源码行数 | 核心架构与工程职责 |
 | :--- | :---: | :---: | :--- |
-| **Kotlin (`.kt`)** | 113 | 26,335 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
-| **C++ / JNI (`.cpp`)** | 1 | 634 | libmpv 原生硬件加速渲染、跨语言 JNI 互斥锁、异步 Seek 屏障与原生日志捕获 |
-| **Gradle 构建 (`.kts`)** | 3 | 171 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
-| **资源配置 (`.xml`)** | 26 | 355 | 跨版本清单配置、多主题矢量图形及自适应图标资源 |
-| **构建配置 (CMake)** | 1 | 32 | CMake 原生链接编排与编译参数 |
-| **CI/CD 工作流 (`.yml`)** | 1 | 130 | 自动化 GitHub Release 发版与纯源码无污染归档流水线 |
-| **项目规范与文档 (`.md`)** | 3 | 350 | 自动化版本递增、Commit 规范、发版发布、代码索引与编译验证准则 |
-| **总计** | **148** | **28,007** | **全项目共计约 2.80 万行高质量工程源码** |
+| **Kotlin (`.kt`)** | 114 | 25,171 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、网络底座、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
+| **C++ / JNI (`.cpp`)** | 1 | 561 | libmpv 原生硬件加速渲染、跨语言 JNI 互斥锁、异步 Seek 屏障与原生日志捕获 |
+| **Gradle 构建 (`.kts`)** | 3 | 150 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
+| **资源配置 (`.xml`)** | 26 | 338 | 跨版本清单配置、多主题矢量图形及自适应图标资源 |
+| **构建配置 (CMake)** | 1 | 25 | CMake 原生链接编排与编译参数 |
+| **CI/CD 工作流 (`.yml`)** | 1 | 112 | 自动化 GitHub Release 发版与纯源码无污染归档流水线 |
+| **项目规范与文档 (`.md`)** | 3 | 303 | 自动化版本递增、Commit 规范、发版发布、代码索引与编译验证准则 |
+| **总计** | **149** | **26,660** | **全项目共计约 2.67 万行高质量工程源码** |
 
 ---
 
@@ -82,6 +82,12 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 - **防误触中断与全局唤醒锁（WakeLock）**：大体积视频备份导出与导入恢复期间，自动激活不可关闭阻断层与 `FLAG_KEEP_SCREEN_ON` 常亮保护，彻底阻止休眠或返回键中断数据写入；
 - **分阶段流式解压与结果卡片**：毫秒级进度回调（已读字节数、百分比、封面/视频解压数精准计数），恢复完毕结构化卡片汇总资产数据，并在 `try/finally` 中严格清理临时缓存，杜绝存储膨胀。
 
+### 8. ⚡ 全局代码复用收敛与标准库优先迁移 (Stdlib-First & Network Unification)
+- **权威共享网络底座 (NetworkClientProvider)**：全项目收敛单一权威 OkHttpClient 提供者与连接池复用架构，为 API 请求、封面缓存、多路测速、分片断点续传及流媒体代理等提供专用派生客户端，杜绝重复创建客户端导致的套接字与线程泄漏，统一注入带 Kotlin Contracts 的 `isHttpUrl()` 契约校验；
+- **标准库优先（Stdlib-First）**：全仓替换手写流式缓冲样板代码与自造轮子，ZIP 打包/解压、封面缓存、物理目录迁移等 I/O 读写全面迁移至标准库 `input.copyTo(output, bufferSize)` 与 `use` 作用域；字符串与字节编码统一采用原生 `Charsets.UTF_8`；
+- **全域字节大小格式化收敛**：在 `StorageConstants` 确立单一权威 `formatBytes(bytes: Long)` 入口，彻底消除公共存储、文件详情与设置页中的重复格式化算法；
+- **依赖精简与通配符导入清零**：彻底移除零引用的 `logging-interceptor` 依赖及版本配置；全仓严格执行精确显式导包红线，通配符导入（`*`）实现绝对清零。
+
 ---
 
 ## 🛠️ 技术栈与依赖架构
@@ -109,6 +115,7 @@ app/src/main/
 │   │   ├── external/              # 外部播放器与多态应用调用适配
 │   │   ├── icon/                  # 动态桌面图标动态切换管理
 │   │   ├── logger/                # 结构化日志追踪、公共导出与原子截断清空
+│   │   ├── network/               # 全局共享网络底座与客户端派生中枢 (NetworkClientProvider)
 │   │   ├── permission/            # 存储与 Scoped Storage 权限处理适配
 │   │   ├── player/                # 播放引擎适配器架构 (MpvPlayerEngine, SystemPlayerEngine, ZakoPlayer 门面)
 │   │   ├── search/                # 复合词法解析引擎

@@ -31,4 +31,14 @@ object StorageConstants {
 
     /** 中型网络/流媒体分片流式传输缓冲区大小 (32KB) */
     const val STREAM_IO_BUFFER_SIZE: Int = 32768
+
+    /**
+     * 全局统一文件大小/字节数格式化算法
+     */
+    fun formatBytes(bytes: Long): String {
+        if (bytes <= 0) return "0.00 B"
+        val units = arrayOf("B", "KB", "MB", "GB", "TB")
+        val i = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.size - 1)
+        return String.format(java.util.Locale.getDefault(), "%.2f %s", bytes / Math.pow(1024.0, i.toDouble()), units[i])
+    }
 }

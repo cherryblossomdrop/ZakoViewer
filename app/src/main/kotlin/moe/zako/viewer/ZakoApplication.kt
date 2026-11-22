@@ -11,6 +11,7 @@ import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.core.icon.AppIconManager
 import moe.zako.viewer.core.logger.ZakoLog
+import moe.zako.viewer.core.network.NetworkClientProvider
 import moe.zako.viewer.data.local.ZakoDatabase
 import moe.zako.viewer.data.repository.FavoriteRepository
 import moe.zako.viewer.data.repository.HistoryRepository
@@ -19,12 +20,10 @@ import moe.zako.viewer.data.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 class ZakoApplication : Application(), ImageLoaderFactory {
     companion object {
@@ -74,21 +73,8 @@ class ZakoApplication : Application(), ImageLoaderFactory {
     }
 
     override fun newImageLoader(): ImageLoader {
-        val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .addInterceptor { chain ->
-                val original = chain.request()
-                val request = original.newBuilder()
-                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) Chrome/120.0.0.0")
-                    .header("Referer", "https://api.cos-dkop.net/")
-                    .build()
-                chain.proceed(request)
-            }
-            .build()
-
         return ImageLoader.Builder(this)
-            .okHttpClient(okHttpClient)
+            .okHttpClient(NetworkClientProvider.imageClient)
             .memoryCache {
                 MemoryCache.Builder(this)
                     .maxSizePercent(0.25)

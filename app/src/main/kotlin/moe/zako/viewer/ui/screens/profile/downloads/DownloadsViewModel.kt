@@ -9,7 +9,10 @@ import moe.zako.viewer.data.repository.FavoriteRepository
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.ui.components.ZakoToast
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 

@@ -13,14 +13,15 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.logger.ZakoLog
+import moe.zako.viewer.core.network.NetworkClientProvider
+import moe.zako.viewer.core.network.isHttpUrl
+import moe.zako.viewer.core.storage.StorageConstants
 import moe.zako.viewer.data.local.ZakoDatabase
 import moe.zako.viewer.data.source.cosav.CosApiClient
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
-import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
 
 object CoverCacheManager {
     private const val TAG = "CoverCacheManager"
@@ -28,10 +29,7 @@ object CoverCacheManager {
     private val downloadSemaphore = Semaphore(3)
     private val inFlightTasks = ConcurrentHashMap<String, Deferred<Boolean>>()
 
-    private val httpClient: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build()
+    private val httpClient: OkHttpClient = NetworkClientProvider.coverCacheClient
 
     fun getCoversDir(context: Context): File {
         val dir = File(context.filesDir, "covers")
@@ -68,8 +66,7 @@ object CoverCacheManager {
         }
 
         val safeFallback = fallbackUrl?.trim() ?: ""
-        val isNetworkFallback = safeFallback.startsWith("http://", ignoreCase = true) ||
-                safeFallback.startsWith("https://", ignoreCase = true)
+        val isNetworkFallback = safeFallback.isHttpUrl()
 
         if (autoFetch && safeId.isNotEmpty()) {
             ensureCoverPersistedAsync(context, safeId, if (isNetworkFallback) safeFallback else null)
@@ -154,9 +151,7 @@ object CoverCacheManager {
 
         // 优先级 1: 当前记录自身的有效 HTTP(S) URL
         val candidate = candidateUrl?.trim()
-        if (!candidate.isNullOrEmpty() &&
-            (candidate.startsWith("http://", ignoreCase = true) || candidate.startsWith("https://", ignoreCase = true))
-        ) {
+        if (candidate.isHttpUrl()) {
             val ok = downloadSemaphore.withPermit {
                 downloadUrlToFile(candidate, targetFile)
             }
@@ -185,9 +180,7 @@ object CoverCacheManager {
                 CosApiClient.instance.getVideoDetail(videoId)
             }
             val netCover = detail?.displayCover?.trim()
-            if (!netCover.isNullOrEmpty() &&
-                (netCover.startsWith("http://", ignoreCase = true) || netCover.startsWith("https://", ignoreCase = true))
-            ) {
+            if (netCover.isHttpUrl()) {
                 val ok = downloadSemaphore.withPermit {
                     downloadUrlToFile(netCover, targetFile)
                 }
@@ -234,10 +227,7 @@ object CoverCacheManager {
         return null
     }
 
-    private fun isValidHttpUrl(url: String?): Boolean {
-        if (url.isNullOrBlank()) return false
-        return url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true)
-    }
+    fun isValidHttpUrl(url: String?): Boolean = url.isHttpUrl()
 
     private suspend fun findLocalVideoFile(
         context: Context,
@@ -277,7 +267,7 @@ object CoverCacheManager {
             val bitmap = retriever.getFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                 ?: retriever.frameAtTime
             if (bitmap != null) {
-                FileOutputStream(tmpFile).use { fos ->
+                tmpFile.outputStream().use { fos ->
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fos)
                     fos.flush()
                 }
@@ -308,13 +298,9 @@ object CoverCacheManager {
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext false
                 val body = response.body ?: return@withContext false
-                val buffer = ByteArray(32768) // 32KB 流式写入
                 body.byteStream().use { input ->
-                    FileOutputStream(tmpFile).use { output ->
-                        var read: Int
-                        while (input.read(buffer).also { read = it } != -1) {
-                            output.write(buffer, 0, read)
-                        }
+                    tmpFile.outputStream().use { output ->
+                        input.copyTo(output, StorageConstants.STREAM_IO_BUFFER_SIZE)
                         output.flush()
                     }
                 }

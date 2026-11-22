@@ -1,14 +1,20 @@
 ﻿package moe.zako.viewer.core.cdn
 
 import moe.zako.viewer.core.logger.ZakoLog
-import kotlinx.coroutines.*
+import moe.zako.viewer.core.network.NetworkClientProvider
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 data class CdnNode(
@@ -36,10 +42,7 @@ data class CdnNode(
 }
 
 class CdnSpeedTester(
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(8, TimeUnit.SECONDS)
-        .build()
+    private val client: OkHttpClient = NetworkClientProvider.speedTestClient
 ) {
     companion object {
         private const val TAG = "CdnSpeedTester"

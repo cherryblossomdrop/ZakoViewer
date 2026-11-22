@@ -2,8 +2,19 @@
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,7 +52,13 @@ import moe.zako.viewer.ui.screens.profile.downloads.DownloadsScreen
 import moe.zako.viewer.ui.screens.profile.downloads.DownloadsViewModel
 import moe.zako.viewer.ui.screens.profile.history.HistoryScreen
 import moe.zako.viewer.ui.screens.profile.history.HistoryViewModel
-import moe.zako.viewer.ui.screens.profile.settings.*
+import moe.zako.viewer.ui.screens.profile.settings.SettingsAppearanceScreen
+import moe.zako.viewer.ui.screens.profile.settings.SettingsDownloadScreen
+import moe.zako.viewer.ui.screens.profile.settings.SettingsPlayerScreen
+import moe.zako.viewer.ui.screens.profile.settings.SettingsPrivacyScreen
+import moe.zako.viewer.ui.screens.profile.settings.SettingsScreen
+import moe.zako.viewer.ui.screens.profile.settings.SettingsShareScreen
+import moe.zako.viewer.ui.screens.profile.settings.SettingsViewModel
 import moe.zako.viewer.ui.screens.profile.watchlater.WatchLaterScreen
 import moe.zako.viewer.ui.screens.profile.watchlater.WatchLaterViewModel
 

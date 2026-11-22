@@ -1,13 +1,21 @@
 ﻿package moe.zako.viewer.core.download
 
 import moe.zako.viewer.core.logger.ZakoLog
-import kotlinx.coroutines.*
+import moe.zako.viewer.core.network.NetworkClientProvider
+import moe.zako.viewer.core.storage.StorageConstants
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.RandomAccessFile
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -20,10 +28,7 @@ data class DownloadChunk(
 )
 
 class MultiNodeDownloader(
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .build()
+    private val client: OkHttpClient = NetworkClientProvider.downloadClient
 ) {
     companion object {
         private const val TAG = "MultiNodeDownloader"
@@ -297,7 +302,7 @@ class MultiNodeDownloader(
 
                     if (codeValid) {
                         val body = resp.body ?: return@use
-                        val buffer = ByteArray(32768)
+                        val buffer = ByteArray(StorageConstants.STREAM_IO_BUFFER_SIZE)
                         val inStream = body.byteStream()
 
                         RandomAccessFile(partFile, "rw").use { raf ->

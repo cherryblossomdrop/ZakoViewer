@@ -1,17 +1,17 @@
 ﻿package moe.zako.viewer.ui.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.vector.ImageVector
+import moe.zako.viewer.ui.theme.AppIcons
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
     object Home : Screen("home?q={q}", "推荐", Icons.Default.Home) {
         fun createRoute(q: String = ""): String =
             if (q.isNotEmpty()) "home?q=${java.net.URLEncoder.encode(q, "UTF-8")}" else "home"
     }
-    object Favorites : Screen("favorites", "收藏夹", Icons.Default.Favorite)
+    object Favorites : Screen("favorites", "收藏夹", AppIcons.Favorite)
     object Profile : Screen("profile", "我的", Icons.Default.Person)
 
     object VideoDetail : Screen("video_detail/{videoId}", "视频详情") {
@@ -32,7 +32,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     }
 
     object Downloads : Screen("downloads", "离线下载")
-    object WatchHistory : Screen("watch_history", "观看记录")
+    object WatchHistory : Screen("watch_history", "历史记录")
     object WatchLater : Screen("watch_later", "稍后再看")
     object Settings : Screen("settings", "设置")
     object SettingsAppearance : Screen("settings/appearance", "外观设置")

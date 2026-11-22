@@ -50,6 +50,7 @@ import moe.zako.viewer.ui.components.SpeedBadge
 import moe.zako.viewer.ui.components.WavyProgressSlider
 import moe.zako.viewer.ui.components.PlayerBrightnessHelper
 import moe.zako.viewer.ui.components.playerGestureDetector
+import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.ZakoIcons
 import moe.zako.viewer.ui.theme.OverlayBlack
 import kotlin.math.abs
@@ -319,14 +320,14 @@ fun PlayerScreen(
                                 // 1. 添加到收藏夹
                                 DropdownMenuItem(
                                     text = { Text("添加到收藏夹") },
-                                    leadingIcon = { Icon(imageVector = Icons.Default.Favorite, contentDescription = null) },
+                                    leadingIcon = { Icon(imageVector = AppIcons.AddToFavorites, contentDescription = null) },
                                     onClick = { viewModel.openAddToFavorites() }
                                 )
 
                                 // 2. 添加到稍后再看
                                 DropdownMenuItem(
                                     text = { Text("添加到稍后再看") },
-                                    leadingIcon = { Icon(imageVector = ZakoIcons.WatchLater, contentDescription = null) },
+                                    leadingIcon = { Icon(imageVector = AppIcons.WatchLater, contentDescription = null) },
                                     onClick = {
                                         viewModel.addToWatchLater()
                                         ZakoToast.show("已加入稍后再看")

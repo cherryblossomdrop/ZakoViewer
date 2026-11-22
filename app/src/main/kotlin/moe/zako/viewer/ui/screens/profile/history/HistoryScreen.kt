@@ -62,7 +62,7 @@ fun HistoryScreen(
                 )
             } else {
                 TopAppBar(
-                    title = { Text("观看记录") },
+                    title = { Text("历史记录") },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(imageVector = AppIcons.ArrowBack, contentDescription = "返回")
@@ -121,7 +121,7 @@ fun HistoryScreen(
 
             if (state.historyList.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("暂无观看记录", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("暂无历史记录", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 LazyColumn(
@@ -219,7 +219,7 @@ fun HistoryScreen(
                 id = "delete",
                 title = "删除记录",
                 icon = AppIcons.Delete,
-                supportingText = "从观看历史中移除此条目",
+                supportingText = "从历史记录中移除此条目",
                 isDangerous = true,
                 onClick = {
                     viewModel.deleteHistory(target.videoId)

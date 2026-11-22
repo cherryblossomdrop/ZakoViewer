@@ -7,7 +7,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.ui.components.FolderBrowserDialog
@@ -30,8 +33,30 @@ fun DownloadsScreen(
     onNavigateToDetail: (videoId: String) -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var hasStoragePermission by remember { mutableStateOf(StoragePermissionHelper.hasAllFilesAccess()) }
+    var pendingOpenFolderBrowserOnPermissionGranted by remember { mutableStateOf(false) }
     var showFolderBrowserDialog by remember { mutableStateOf(false) }
     var showPermissionGuideDialog by remember { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val granted = StoragePermissionHelper.hasAllFilesAccess()
+                val newlyGranted = !hasStoragePermission && granted
+                hasStoragePermission = granted
+                if (newlyGranted && pendingOpenFolderBrowserOnPermissionGranted) {
+                    pendingOpenFolderBrowserOnPermissionGranted = false
+                    showPermissionGuideDialog = false
+                    showFolderBrowserDialog = true
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // 长按菜单状态
     var menuTargetItem by remember { mutableStateOf<DownloadEntity?>(null) }
@@ -52,6 +77,7 @@ fun DownloadsScreen(
         if (StoragePermissionHelper.hasAllFilesAccess()) {
             showFolderBrowserDialog = true
         } else {
+            pendingOpenFolderBrowserOnPermissionGranted = true
             showPermissionGuideDialog = true
         }
     }

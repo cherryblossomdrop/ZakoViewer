@@ -171,7 +171,7 @@ class HistoryViewModel(
     fun deleteHistory(videoId: String) {
         viewModelScope.launch {
             historyRepository.deleteHistory(videoId)
-            ZakoToast.show("已删除观看记录")
+            ZakoToast.show("已删除历史记录")
         }
     }
 

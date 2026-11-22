@@ -50,14 +50,15 @@ fun HomeFilterBar(
             onClick = onOpenFilterSheet,
             modifier = Modifier.size(36.dp),
             colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = if (hasActiveFilter) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                containerColor = if (hasActiveFilter) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.primary
             )
         ) {
             Icon(
                 imageVector = AppIcons.Tune,
                 contentDescription = "筛选",
                 modifier = Modifier.size(20.dp),
-                tint = if (hasActiveFilter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.primary
             )
         }
 

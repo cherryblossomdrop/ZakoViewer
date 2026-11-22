@@ -55,7 +55,11 @@ fun HomeSearchBar(
                 .onFocusChanged { onSearchFocusChanged(it.isFocused) },
             shape = RoundedCornerShape(28.dp),
             leadingIcon = {
-                Icon(imageVector = AppIcons.Search, contentDescription = "搜索")
+                Icon(
+                    imageVector = AppIcons.Search,
+                    contentDescription = "搜索",
+                    modifier = Modifier.size(24.dp)
+                )
             },
             trailingIcon = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -71,7 +75,8 @@ fun HomeSearchBar(
                         Icon(
                             imageVector = AppIcons.ArrowForward,
                             contentDescription = "提交",
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }

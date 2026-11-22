@@ -137,6 +137,9 @@ fun SettingsDownloadScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasStoragePermission = StoragePermissionHelper.hasAllFilesAccess()
+                if (hasStoragePermission) {
+                    showPermissionGuideDialog = false
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

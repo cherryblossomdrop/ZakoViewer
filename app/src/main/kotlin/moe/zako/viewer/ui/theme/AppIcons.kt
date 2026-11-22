@@ -2,6 +2,7 @@ package moe.zako.viewer.ui.theme
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -22,9 +24,9 @@ object AppIcons {
     val MultiSelect: ImageVector = Icons.Default.Checklist
 
     // 收藏相关
-    val AddToFavorites: ImageVector = Icons.Default.Favorite
-    val Favorite: ImageVector = Icons.Default.Favorite
-    val FavoriteBorder: ImageVector = Icons.Default.FavoriteBorder
+    val AddToFavorites: ImageVector = Icons.Rounded.Star
+    val Favorite: ImageVector = Icons.Rounded.Star
+    val FavoriteBorder: ImageVector = Icons.Outlined.StarOutline
 
     // 稍后再看
     val WatchLater: ImageVector = ZakoIcons.WatchLater
@@ -37,6 +39,7 @@ object AppIcons {
     val PlayCircle: ImageVector = Icons.Default.PlayCircle
     val Pause: ImageVector = Icons.Default.Pause
     val VideoFile: ImageVector = Icons.Default.VideoFile
+    val OpenInNew: ImageVector = Icons.AutoMirrored.Filled.OpenInNew
 
     // 操作管理
     val Delete: ImageVector = Icons.Default.Delete
@@ -46,7 +49,8 @@ object AppIcons {
     val Close: ImageVector = Icons.Default.Close
     val Clear: ImageVector = Icons.Default.Clear
     val ArrowBack: ImageVector = Icons.AutoMirrored.Filled.ArrowBack
-    val ArrowForward: ImageVector = Icons.AutoMirrored.Filled.ArrowForwardIos
+    val ArrowForward: ImageVector = Icons.AutoMirrored.Filled.ArrowForward
+    val ArrowForwardIos: ImageVector = Icons.AutoMirrored.Filled.ArrowForwardIos
     val ChevronRight: ImageVector = Icons.Default.ChevronRight
     val Launch: ImageVector = Icons.AutoMirrored.Filled.Launch
     val Add: ImageVector = Icons.Rounded.Add

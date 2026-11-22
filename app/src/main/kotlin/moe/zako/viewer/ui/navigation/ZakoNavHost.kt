@@ -62,7 +62,7 @@ fun ZakoNavHost(
     )
 
     val coroutineScope = rememberCoroutineScope()
-    // 统一列表点击路由（观看记录、收藏夹、稍后再看）：本地优先播放，未命中则进详情页
+    // 统一列表点击路由（历史记录、收藏夹、稍后再看）：本地优先播放，未命中则进详情页
     val handleListVideoClick: (String) -> Unit = { videoId ->
         coroutineScope.launch {
             val local = app.downloadManager.findLocalCompletedVideo(videoId)
@@ -320,7 +320,7 @@ fun ZakoNavHost(
                         )
                     }
 
-            // 7. 观看记录
+            // 7. 历史记录
             composable(Screen.WatchHistory.route) {
                 val viewModel: HistoryViewModel = viewModel {
                     HistoryViewModel(

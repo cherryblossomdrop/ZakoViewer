@@ -22,14 +22,14 @@ object PublicStorageHelper {
     private const val TAG = "PublicStorageHelper"
 
     /** 备份保存子目录名 (位于系统 Download 下) */
-    const val BACKUPS_SUB_DIR = "ZakoViewer/Backups"
+    const val BACKUPS_SUB_DIR = StorageConstants.BACKUPS_SUB_DIR
     /** 日志保存子目录名 (位于系统 Download 下) */
-    const val LOGS_SUB_DIR = "ZakoViewer/Logs"
+    const val LOGS_SUB_DIR = StorageConstants.LOGS_SUB_DIR
 
     /** UI 常驻展示与说明的备份完整保存目录 */
-    const val BACKUPS_DISPLAY_DIR = "Download/$BACKUPS_SUB_DIR/"
+    const val BACKUPS_DISPLAY_DIR = StorageConstants.BACKUPS_DISPLAY_DIR
     /** UI 常驻展示与说明的日志完整保存目录 */
-    const val LOGS_DISPLAY_DIR = "Download/$LOGS_SUB_DIR/"
+    const val LOGS_DISPLAY_DIR = StorageConstants.LOGS_DISPLAY_DIR
 
     fun formatBytes(bytes: Long): String {
         if (bytes <= 0) return "0.00 B"

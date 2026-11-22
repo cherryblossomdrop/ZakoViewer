@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.core.storage.ExportResult
 import moe.zako.viewer.core.storage.PublicStorageHelper
+import moe.zako.viewer.core.storage.StorageConstants
 import moe.zako.viewer.data.backup.BackupProgress
 import moe.zako.viewer.data.backup.BackupRestoreManager
 import moe.zako.viewer.data.backup.RestoreResult
@@ -119,7 +120,7 @@ class BackupRestoreViewModel(
 
                     context.contentResolver.openInputStream(uri)?.use { input ->
                         tempFile.outputStream().use { output ->
-                            val buffer = ByteArray(65536)
+                            val buffer = ByteArray(StorageConstants.DEFAULT_IO_BUFFER_SIZE)
                             var bytesRead: Int
                             var copiedBytes = 0L
                             var lastReportTime = 0L

@@ -28,6 +28,8 @@ import moe.zako.viewer.core.share.ShareCipherUtil
 import moe.zako.viewer.data.repository.LayoutMode
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import moe.zako.viewer.ui.components.VideoCard
+import moe.zako.viewer.ui.components.clearFocusOnScroll
+import moe.zako.viewer.ui.components.clearFocusOnTap
 import moe.zako.viewer.ui.theme.AppIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -217,6 +219,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .clearFocusOnScroll()
+                .clearFocusOnTap()
                 .nestedScroll(pullToRefreshState.nestedScrollConnection)
         ) {
             if (state.isLoading && displayedVideos.isEmpty()) {

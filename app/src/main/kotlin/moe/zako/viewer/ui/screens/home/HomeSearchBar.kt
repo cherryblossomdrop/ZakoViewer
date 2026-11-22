@@ -109,7 +109,11 @@ fun HomeSearchBar(
                                     )
                                 }
                                 TextButton(
-                                    onClick = onClearAllHistory,
+                                    onClick = {
+                                        onClearAllHistory()
+                                        focusManager.clearFocus()
+                                        onSearchFocusChanged(false)
+                                    },
                                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text("清空全部", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)

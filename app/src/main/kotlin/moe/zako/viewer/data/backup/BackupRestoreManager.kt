@@ -7,6 +7,7 @@ import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.core.storage.ExportResult
 import moe.zako.viewer.core.storage.PublicStorageHelper
+import moe.zako.viewer.core.storage.StorageConstants
 import moe.zako.viewer.data.local.ZakoDatabase
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
@@ -61,7 +62,7 @@ class BackupRestoreManager(
 ) {
     companion object {
         private const val TAG = "BackupRestoreManager"
-        private const val BUFFER_SIZE = 32768 // 32KB
+        private const val BUFFER_SIZE = StorageConstants.STREAM_IO_BUFFER_SIZE
     }
 
     /**

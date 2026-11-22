@@ -6,18 +6,18 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 ## 📊 工程源码规模统计
 
-本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.47**）代码规模统计如下：
+本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.48**）代码规模统计如下：
 
 | 语言 / 类型 | 模块数 | 源码行数 | 核心架构与工程职责 |
 | :--- | :---: | :---: | :--- |
-| **Kotlin (`.kt`)** | 103 | 23,559 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
+| **Kotlin (`.kt`)** | 107 | 24,403 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
 | **C++ / JNI (`.cpp`)** | 3 | 1,885 | libmpv 原生硬件加速渲染、跨语言 JNI 互斥锁、异步 Seek 屏障与原生日志捕获 |
-| **Gradle 构建 (`.kts`)** | 3 | 151 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
+| **Gradle 构建 (`.kts`)** | 3 | 171 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
 | **资源配置 (`.xml`)** | 26 | 338 | 跨版本清单配置、多主题矢量图形及自适应图标资源 |
 | **构建配置 (CMake)** | 1 | 25 | CMake 原生链接编排与编译参数 |
 | **CI/CD 工作流 (`.yml`)** | 1 | 112 | 自动化 GitHub Release 发版与纯源码无污染归档流水线 |
 | **项目规范与文档 (`.md`)** | 3 | 291 | 自动化版本递增、Commit 规范、发版发布、代码索引与编译验证准则 |
-| **总计** | **140** | **26,361** | **全项目共计约 2.64 万行高质量工程源码** |
+| **总计** | **144** | **27,225** | **全项目共计约 2.72 万行高质量工程源码** |
 
 ---
 
@@ -52,6 +52,8 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 - **隐私防社死体系与彩蛋机制**：全局封面智能高斯模糊开关，随时防范公共场合视觉泄露；关于页多击隐藏解锁机制，开启后支持长按分享无损提取完整资源定位符。
 
 ### 5. 🎨 Material 3 Expressive 动态流体美学与自适应响应式拓扑 (M3 Expressive Fluid Design)
+- **全局基础 Design Token 与常量底座建立**：建立 `Dimens`（语义化间距 `Spacing`、圆角 `CornerRadius`、图标尺寸 `IconSize`、触控目标 `TouchTarget`、标高 `Elevation` 与通用封面规格）、`MotionTokens`（语义化动效时长与缓动曲线）及 `Typography`（全层级文字排版与业务角标扩展样式），将局部 Token 统一对齐；建立 `StorageConstants` 统筹系统公共导出子目录与流式 I/O 缓冲区规格；
+- **全域搜索框自动失焦与高亮残留根治**：在 `ZakoSearchBar` 中内建严密的软键盘展开收起监听跳变判定（`wasImeVisible && !isImeVisible`）、搜索提交失焦机制，并抽离出可复用的 `clearFocusOnScroll` 与 `clearFocusOnTap` 修饰符，全面接入首页、收藏夹、历史记录与应用选择器，彻底根除用户退出输入或滑动内容时搜索框高亮残留问题；
 - **全域搜索框组件与带微动效一键清空归一**：抽离 `ZakoSearchBar` 与 `SearchBarTokens`，全应用（首页搜索条、收藏夹内搜索、历史记录搜索及应用选择器）统一 28dp 胶囊轮廓、中性前景色（`onSurfaceVariant`，禁止随主题色变色）与图标规格。彻底移除右侧向右箭头，替换为一键清空按钮，配合 `AnimatedVisibility` 平滑进出过渡，并在点击瞬间触发缩放回弹与轻度旋转的触感微动效；
 - **首页筛选、排序与布局切换圆形按钮着色统一**：抽离 `FilterBarCircleButton` 与 `FilterBarTokens`，统一采用 Material 3 Tonal 逻辑（`secondaryContainer` 底色 + `onSecondaryContainer` 图标色），并在激活态（勾选综合筛选条件或非默认排序）统一切换为高对比主题色（`primary` 底色 + `onPrimary` 图标色），彻底消除视觉割裂与间距硬编码；
 - **系统级莫奈动态取色**：支持随 Android 12+ 动态壁纸主色实时流动重绘，并内置紫色（`#686BDD`）、浅绿、淡黄及无级自定义调色板；

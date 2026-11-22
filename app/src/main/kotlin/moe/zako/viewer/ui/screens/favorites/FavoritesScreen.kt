@@ -17,6 +17,8 @@ import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.ZakoSearchBar
+import moe.zako.viewer.ui.components.clearFocusOnScroll
+import moe.zako.viewer.ui.components.clearFocusOnTap
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.SearchBarTokens
 import kotlinx.coroutines.launch
@@ -131,7 +133,9 @@ fun FavoritesScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(innerPadding)
+                .clearFocusOnScroll()
+                .clearFocusOnTap(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {

@@ -1,14 +1,17 @@
 package moe.zako.viewer.ui.theme
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.AltRoute
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.VolumeMute
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.Add
@@ -33,13 +36,24 @@ object AppIcons {
     val WatchLaterFilled: ImageVector = ZakoIcons.WatchLaterFilled
     val WatchLaterOutlined: ImageVector = ZakoIcons.WatchLaterOutlined
 
-    // 视频详情与播放
+    // 视频详情与播放控制
     val VideoDetail: ImageVector = Icons.AutoMirrored.Filled.Article
     val Play: ImageVector = Icons.Default.PlayArrow
     val PlayCircle: ImageVector = Icons.Default.PlayCircle
     val Pause: ImageVector = Icons.Default.Pause
-    val VideoFile: ImageVector = Icons.Default.VideoFile
     val OpenInNew: ImageVector = Icons.AutoMirrored.Filled.OpenInNew
+    val Speed: ImageVector = Icons.Default.Speed
+    val FastForward: ImageVector = Icons.Default.FastForward
+    val FastRewind: ImageVector = Icons.Default.FastRewind
+    val VolumeUp: ImageVector = Icons.AutoMirrored.Filled.VolumeUp
+    val VolumeMute: ImageVector = Icons.AutoMirrored.Filled.VolumeMute
+    val Brightness: ImageVector = Icons.Default.BrightnessMedium
+    val ScreenRotation: ImageVector = Icons.Default.ScreenRotation
+    val Fullscreen: ImageVector = ZakoIcons.Fullscreen
+    val FullscreenExit: ImageVector = ZakoIcons.FullscreenExit
+    val AspectRatio: ImageVector = ZakoIcons.AspectRatio
+    val Lock: ImageVector = Icons.Default.Lock
+    val LockOpen: ImageVector = Icons.Default.LockOpen
 
     // 操作管理
     val Delete: ImageVector = Icons.Default.Delete
@@ -50,7 +64,7 @@ object AppIcons {
     val Clear: ImageVector = Icons.Default.Clear
     val ArrowBack: ImageVector = Icons.AutoMirrored.Filled.ArrowBack
     val ArrowForward: ImageVector = Icons.AutoMirrored.Filled.ArrowForward
-    val ArrowForwardIos: ImageVector = Icons.AutoMirrored.Filled.ArrowForwardIos
+    val ArrowUpward: ImageVector = Icons.Default.ArrowUpward
     val ChevronRight: ImageVector = Icons.Default.ChevronRight
     val Launch: ImageVector = Icons.AutoMirrored.Filled.Launch
     val Add: ImageVector = Icons.Rounded.Add
@@ -63,22 +77,32 @@ object AppIcons {
     val WorkspacePremium: ImageVector = Icons.Default.WorkspacePremium
     val CheckCircle: ImageVector = Icons.Default.CheckCircle
 
-    // 设置与系统
+    // 设置、系统与硬件
     val Palette: ImageVector = Icons.Default.Palette
     val Share: ImageVector = Icons.Default.Share
     val Download: ImageVector = Icons.Default.Download
     val DownloadForOffline: ImageVector = Icons.Default.DownloadForOffline
+    val DownloadDone: ImageVector = Icons.Default.DownloadDone
+    val OfflinePin: ImageVector = Icons.Outlined.OfflinePin
     val CleaningServices: ImageVector = Icons.Default.CleaningServices
     val Terminal: ImageVector = Icons.Default.Terminal
+    val Apps: ImageVector = Icons.Default.Apps
+    val AltRoute: ImageVector = Icons.AutoMirrored.Filled.AltRoute
+    val Hardware: ImageVector = Icons.Default.Hardware
+    val Memory: ImageVector = Icons.Default.Memory
+    val Upload: ImageVector = Icons.Default.Upload
+    val Sync: ImageVector = Icons.Default.Sync
 
     // 搜索、浏览与视图模式
     val History: ImageVector = Icons.Default.History
     val Check: ImageVector = Icons.Default.Check
     val ExpandLess: ImageVector = Icons.Default.ExpandLess
+    val ExpandMore: ImageVector = Icons.Default.ExpandMore
     val Tune: ImageVector = Icons.Default.Tune
     val Sort: ImageVector = Icons.AutoMirrored.Filled.Sort
     val GridView: ImageVector = Icons.Default.GridView
     val ViewAgenda: ImageVector = Icons.Default.ViewAgenda
+    val Comment: ImageVector = Icons.AutoMirrored.Filled.Comment
 
     // 文件与目录
     val FileInfo: ImageVector = Icons.Default.Info
@@ -86,8 +110,8 @@ object AppIcons {
     val FolderOpen: ImageVector = Icons.Default.FolderOpen
     val FolderSpecial: ImageVector = Icons.Default.FolderSpecial
     val CreateFolder: ImageVector = Icons.Default.CreateNewFolder
+    val Subdirectory: ImageVector = Icons.Default.SubdirectoryArrowRight
     val SdCard: ImageVector = Icons.Default.SdCard
-    val Description: ImageVector = Icons.Default.Description
     val Warning: ImageVector = Icons.Default.Warning
     val WarningAmber: ImageVector = Icons.Default.WarningAmber
     val Security: ImageVector = Icons.Default.Security

@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import moe.zako.viewer.core.external.AppItem
 import moe.zako.viewer.core.external.AppPickerHelper
+import moe.zako.viewer.ui.theme.AppIcons
 
 @Composable
 fun AppPickerDialog(
@@ -69,7 +68,11 @@ fun AppPickerDialog(
             Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         },
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clearFocusOnTap()
+            ) {
                 // Search Field (复用全局统一搜索框)
                 ZakoSearchBar(
                     value = searchQuery,
@@ -108,7 +111,8 @@ fun AppPickerDialog(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 340.dp),
+                            .heightIn(max = 340.dp)
+                            .clearFocusOnScroll(),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         // 1. Reset / Default option: 系统默认选择器
@@ -130,7 +134,7 @@ fun AppPickerDialog(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Apps,
+                                        imageVector = AppIcons.Apps,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(36.dp)
@@ -212,7 +216,7 @@ fun AppPickerDialog(
                                             )
                                         } else {
                                             Icon(
-                                                imageVector = Icons.Default.Apps,
+                                                imageVector = AppIcons.Apps,
                                                 contentDescription = app.appName,
                                                 modifier = Modifier.size(36.dp),
                                                 tint = MaterialTheme.colorScheme.primary

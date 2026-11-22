@@ -18,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import moe.zako.viewer.core.external.AppPickerHelper
 import moe.zako.viewer.core.permission.StoragePermissionHelper
+import moe.zako.viewer.core.storage.StorageConstants
 import moe.zako.viewer.ui.components.AppPickerDialog
 import moe.zako.viewer.ui.components.FolderBrowserDialog
 import moe.zako.viewer.ui.theme.AppIcons
@@ -153,7 +154,7 @@ fun SettingsDownloadScreen(
     }
 
     val defaultDownloadPath = remember {
-        val emulated = File("/storage/emulated/0/Download/ZakoViewer")
+        val emulated = File(StorageConstants.DEFAULT_DOWNLOAD_DIR)
         if (emulated.parentFile?.exists() == true) emulated.absolutePath
         else File(context.getExternalFilesDir(null), "downloads").absolutePath
     }

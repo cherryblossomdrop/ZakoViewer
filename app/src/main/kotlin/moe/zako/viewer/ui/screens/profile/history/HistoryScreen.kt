@@ -31,6 +31,8 @@ import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.VideoActionBottomSheet
 import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.components.ZakoSearchBar
+import moe.zako.viewer.ui.components.clearFocusOnScroll
+import moe.zako.viewer.ui.components.clearFocusOnTap
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 import moe.zako.viewer.ui.theme.SearchBarTokens
@@ -122,6 +124,8 @@ fun HistoryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .clearFocusOnScroll()
+                .clearFocusOnTap()
         ) {
             // Search Bar (复用全局统一搜索框)
             ZakoSearchBar(

@@ -5,6 +5,7 @@ import android.content.Intent
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.core.permission.StoragePermissionHelper
+import moe.zako.viewer.core.storage.StorageConstants
 import moe.zako.viewer.data.local.ZakoDatabase
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.repository.SettingsRepository
@@ -309,7 +310,7 @@ class DownloadManager private constructor(private val context: Context) {
     private suspend fun migrateLegacyNeoViewerDirectory() = withContext(Dispatchers.IO) {
         try {
             val oldDir = File("/storage/emulated/0/Download/NeoViewer")
-            val newDir = File("/storage/emulated/0/Download/ZakoViewer")
+            val newDir = File(StorageConstants.DEFAULT_DOWNLOAD_DIR)
 
             // 1. 如果旧目录存在且包含文件，迁移文件到新目录
             if (oldDir.exists() && oldDir.isDirectory) {
@@ -361,7 +362,7 @@ class DownloadManager private constructor(private val context: Context) {
                 return customDir
             }
         }
-        val defaultDir = File("/storage/emulated/0/Download/ZakoViewer")
+        val defaultDir = File(StorageConstants.DEFAULT_DOWNLOAD_DIR)
         if (hasPermission && defaultDir.parentFile?.exists() == true) {
             if (canWriteToDir(defaultDir)) {
                 return defaultDir
@@ -723,9 +724,9 @@ class DownloadManager private constructor(private val context: Context) {
             )
         }
 
-        // 5. 流式迁移 (64KB 缓冲块)
+        // 5. 流式迁移 (统一 64KB 缓冲块)
         var successCount = 0
-        val buffer = ByteArray(65536)
+        val buffer = ByteArray(StorageConstants.DEFAULT_IO_BUFFER_SIZE)
         ZakoLog.i(TAG, "Starting downloads migration to: $newPath. Total files to migrate: ${existingFiles.size}")
 
         for ((idx, pair) in existingFiles.withIndex()) {

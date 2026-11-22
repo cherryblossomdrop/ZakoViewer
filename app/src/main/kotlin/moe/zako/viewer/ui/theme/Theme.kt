@@ -33,7 +33,7 @@ fun ZakoViewerTheme(
     CompositionLocalProvider(LocalCoverBlurEnabled provides coverBlurEnabled) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography(),
+            typography = ZakoTypography,
             content = content
         )
     }

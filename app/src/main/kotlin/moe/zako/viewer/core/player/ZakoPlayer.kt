@@ -266,6 +266,8 @@ class ZakoPlayer(val context: Context) {
         val durSec = durMs / 1000.0
         val isReady = currentEngineAdapter.isReady
 
+        ZakoLog.d(TAG, "seekTo: engine=${currentEngineAdapter.engineType}, targetMs=$positionMs, durationMs=$durMs, isReady=$isReady")
+
         if (durMs <= 0L || durSec.isNaN() || durSec.isInfinite() || !isReady) {
             ZakoLog.w(TAG, "Seek ignored: video buffering or duration unready (durationMs=$durMs, isReady=$isReady)")
             showBufferingToast()

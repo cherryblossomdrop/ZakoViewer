@@ -49,10 +49,27 @@ fun PlayerBottomControls(
         Column {
             var isScrubbing by remember { mutableStateOf(false) }
             var scrubProgress by remember { mutableFloatStateOf(0f) }
+            var pendingSeekRatio by remember { mutableStateOf<Float?>(null) }
+            var pendingSeekTime by remember { mutableLongStateOf(0L) }
+
+            // 寻道目标保持保护：松手后至底层引擎完成跳转期间保持落点进度，杜绝瞬态闪回旧播放位置
+            if (pendingSeekRatio != null) {
+                val elapsed = System.currentTimeMillis() - pendingSeekTime
+                val diff = kotlin.math.abs(progress - (pendingSeekRatio ?: 0f))
+                if (diff < 0.02f || elapsed > 1200L) {
+                    pendingSeekRatio = null
+                }
+            }
+
+            val effectiveProgress = when {
+                isScrubbing -> scrubProgress
+                pendingSeekRatio != null -> pendingSeekRatio!!
+                else -> progress
+            }
 
             // MD3e 可动波浪进度条
             WavyProgressSlider(
-                progress = if (isScrubbing) scrubProgress else progress,
+                progress = effectiveProgress,
                 bufferedProgress = bufferedProgress,
                 isPlaying = isPlaying,
                 onValueChange = { ratio ->
@@ -63,6 +80,8 @@ fun PlayerBottomControls(
                     isScrubbing = false
                     if (durationMs > 0L) {
                         val targetMs = (ratio * durationMs).toLong().coerceIn(0L, durationMs)
+                        pendingSeekRatio = ratio
+                        pendingSeekTime = System.currentTimeMillis()
                         onSeekTo(targetMs)
                     }
                 },
@@ -92,7 +111,11 @@ fun PlayerBottomControls(
 
                     Spacer(modifier = Modifier.width(PlayerControlDefaults.ControlSpacing))
 
-                    val displayPosMs = if (isScrubbing) (scrubProgress * durationMs).toLong() else currentPositionMs
+                    val displayPosMs = when {
+                        isScrubbing -> (scrubProgress * durationMs).toLong()
+                        pendingSeekRatio != null -> (pendingSeekRatio!! * durationMs).toLong()
+                        else -> currentPositionMs
+                    }
                     val displayPosFormatted = VideoPlayerState.formatTime(displayPosMs)
                     Text(
                         text = "$displayPosFormatted / $durationFormatted",

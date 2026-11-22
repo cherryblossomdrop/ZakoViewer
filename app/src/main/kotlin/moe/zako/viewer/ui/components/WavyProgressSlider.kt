@@ -42,6 +42,10 @@ fun WavyProgressSlider(
     bufferedColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
     inactiveColor: Color = Color.White.copy(alpha = 0.25f)
 ) {
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
+    val currentOnValueChangeFinished by rememberUpdatedState(onValueChangeFinished)
+    val currentOnSeek by rememberUpdatedState(onSeek)
+
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
 
@@ -87,7 +91,7 @@ fun WavyProgressSlider(
                     isDragging = true
                     val startProgress = (down.position.x / width).coerceIn(0f, 1f)
                     dragProgress = startProgress
-                    onValueChange?.invoke(startProgress)
+                    currentOnValueChange?.invoke(startProgress)
 
                     var lastProgress = startProgress
                     while (true) {
@@ -98,7 +102,7 @@ fun WavyProgressSlider(
                             val newProgress = (change.position.x / width).coerceIn(0f, 1f)
                             dragProgress = newProgress
                             lastProgress = newProgress
-                            onValueChange?.invoke(newProgress)
+                            currentOnValueChange?.invoke(newProgress)
                         } else {
                             // 手指抬起 (Up)
                             change.consume()
@@ -107,10 +111,10 @@ fun WavyProgressSlider(
                     }
 
                     isDragging = false
-                    if (onValueChangeFinished != null) {
-                        onValueChangeFinished(lastProgress)
+                    if (currentOnValueChangeFinished != null) {
+                        currentOnValueChangeFinished?.invoke(lastProgress)
                     } else {
-                        onSeek?.invoke(lastProgress)
+                        currentOnSeek?.invoke(lastProgress)
                     }
                 }
             }

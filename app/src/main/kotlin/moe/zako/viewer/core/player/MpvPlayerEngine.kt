@@ -291,7 +291,7 @@ internal class MpvPlayerEngine(
         seekScope.launch {
             if (MPVLib.isReady()) {
                 try {
-                    MPVLib.commandAsync(arrayOf("seek", targetSec.toString(), "absolute+keyframes"))
+                    MPVLib.commandAsync(arrayOf("seek", targetSec.toString(), "absolute"))
                 } catch (e: Throwable) {
                     ZakoLog.e(TAG, "MPV seek error", e)
                 }

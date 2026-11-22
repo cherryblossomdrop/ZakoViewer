@@ -134,6 +134,13 @@ object MPVLib {
         // Direct to ZakoLog based on level
         // mpv log levels: 10=fatal, 20=error, 30=warn, 40=info, 50=v, 60=debug, 70=trace
         val tag = "MPV/$prefix"
+
+        // mediacodec-copy 初始化阶段探针日志，属于预期内正常回退，降级为 DEBUG 避免误报 ERROR
+        if (prefix == "ffmpeg/video" && trimmed.contains("Both surface and native_window are NULL")) {
+            ZakoLog.d(tag, trimmed)
+            return
+        }
+
         when {
             level <= 20 -> ZakoLog.e(tag, trimmed)
             level <= 30 -> ZakoLog.w(tag, trimmed)

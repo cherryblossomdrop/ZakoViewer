@@ -1,6 +1,6 @@
 # ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（`v1.2.35`），全项目核心工程源码共计 **81** 个文件，累计 **22,969** 行代码。  
+> **版本定位**：截至最新构建（`v1.2.36`），全项目核心工程源码共计 **81** 个文件，累计 **23,190** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -69,11 +69,11 @@
 | `app/src/main/kotlin/moe/zako/viewer/data/backup/BackupRestoreManager.kt` | 535 | 跨版本数据库全量导出与导入恢复管理器 | 流式压缩/解压 ZIP 容器，校验版本元数据，原子合并/覆写 Room 表并保持屏幕常亮唤醒锁 |
 | `app/src/main/kotlin/moe/zako/viewer/data/local/ZakoDatabase.kt` | 81 | Room 主数据库入口与单例管理 | 继承 `RoomDatabase`，聚合 Favorite、History、WatchLater、Download 数据表并管理升级迁移 |
 | `app/src/main/kotlin/moe/zako/viewer/data/local/dao/FavoriteDao.kt` | 87 | 树形收藏夹与收藏条目数据库数据访问对象 (DAO) | 定义 Room 查询、层级路径递归遍历、批量复制/移动及唯一根收藏夹的 SQL 事务操作 |
-| `app/src/main/kotlin/moe/zako/viewer/data/local/dao/OtherDaos.kt` | 91 | 历史记录、稍后再看、搜索词历史与离线下载 DAO 集合 | 包含 `WatchHistoryDao`、`WatchLaterDao`、`SearchHistoryDao`、`DownloadDao` 的响应式 SQL 接口 |
+| `app/src/main/kotlin/moe/zako/viewer/data/local/dao/OtherDaos.kt` | 93 | 历史记录、稍后再看、搜索词历史与离线下载 DAO 集合 | 包含 `WatchHistoryDao`、`WatchLaterDao`（支持批量移除）、`SearchHistoryDao`、`DownloadDao` 的响应式 SQL 接口 |
 | `app/src/main/kotlin/moe/zako/viewer/data/local/entities/FavoriteEntities.kt` | 44 | 树形收藏夹目录实体与收藏条目实体定义 | Room 实体 `FavoriteFolderEntity`（自关联 `parentId`）与 `FavoriteItemEntity` |
 | `app/src/main/kotlin/moe/zako/viewer/data/local/entities/LocalEntities.kt` | 76 | 观看历史、稍后再看、搜索历史与下载任务 Room 实体集合 | 定义 `WatchHistoryEntity`、`WatchLaterEntity`、`SearchHistoryEntity`、`DownloadEntity` 数据结构 |
 | `app/src/main/kotlin/moe/zako/viewer/data/repository/FavoriteRepository.kt` | 148 | 收藏体系业务仓库，统一维护无限级收藏夹拓扑与封面保活 | 封装 `FavoriteDao` 异步操作，提供创建/重命名/删除文件夹及条目增删与封面持久化触发 |
-| `app/src/main/kotlin/moe/zako/viewer/data/repository/HistoryAndSettingsRepositories.kt` | 342 | 历史记录、搜索记录与全局 DataStore 配置仓储集合 | 整合 `HistoryRepository`、`SearchHistoryRepository` 及基于 Preferences DataStore 的设置管理 |
+| `app/src/main/kotlin/moe/zako/viewer/data/repository/HistoryAndSettingsRepositories.kt` | 343 | 历史记录、稍后再看、搜索记录与全局 DataStore 配置仓储集合 | 整合 `HistoryRepository`（支持批量移出稍后再看）、`SearchHistoryRepository` 及基于 Preferences DataStore 的设置管理 |
 | `app/src/main/kotlin/moe/zako/viewer/data/source/cosav/CosApiClient.kt` | 192 | 视频源服务端网络请求客户端 | 封装 OkHttp 访问远端列表、检索及详情 API，支持智能线路备选与 JSON 反序列化 |
 | `app/src/main/kotlin/moe/zako/viewer/data/source/cosav/CosCrypto.kt` | 49 | 远端数据源响应报文加解密算法工具 | 实现视频流地址与加密元数据报文的对称解密算法 |
 | `app/src/main/kotlin/moe/zako/viewer/data/source/cosav/CosModels.kt` | 272 | 远端服务业务数据传输模型 (DTO) 集合 | 定义视频条目 `CosVideoItem`、详情 `CosVideoDetail`、评论、标签及分页响应模型 |
@@ -146,8 +146,8 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/history/HistoryViewModel.kt` | 168 | 观看历史业务状态中枢，处理历史检索、批量删除及收藏夹转存 | 调度 `HistoryRepository`，流式过滤历史记录列表并管理单项/多选添加收藏状态 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/SettingsScreen.kt` | 1460 | 全局设置视窗，聚合外观主题、播放引擎、CDN 偏好、下载及存储安全配置 | 结构化提供莫奈动态色、自定义调色盘、桌面图标别名、硬件解码开关与下载目录配置项 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/SettingsViewModel.kt` | 318 | 全局配置业务状态机控制器 | 调度 `SettingsRepository`，响应式更新 DataStore 偏好并触发图标别名同步 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/watchlater/WatchLaterScreen.kt` | 175 | 稍后再看视窗，展现待看列表并集成长按上下文操作菜单 | 基于 `VideoActionMenu` 提供添加到收藏夹、查看详情与移出待看的快捷操作 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/watchlater/WatchLaterViewModel.kt` | 76 | 稍后再看业务控制器 | 监听 `HistoryRepository` 的待看数据流，集成 `FavoriteRepository` 收藏夹选取支持 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/watchlater/WatchLaterScreen.kt` | 295 | 稍后再看视窗，展现待看列表并支持多选模式、批量管理与长按上下文菜单 | 统一多选图标（`AppIcons.MultiSelect`），基于 `VideoActionMenu` 支持一键加入收藏/多选联动，提供批量转存与移除操作 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/watchlater/WatchLaterViewModel.kt` | 174 | 稍后再看业务控制器与多选状态中枢 | 监听待看流，统筹多选模式切换、全选/反选、批量移出待看及联动 `FavoriteRepository` 批量加入收藏夹 |
 
 ---
 

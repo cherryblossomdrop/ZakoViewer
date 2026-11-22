@@ -109,6 +109,8 @@ class HistoryRepository(
 
     suspend fun removeFromWatchLater(videoId: String) = watchLaterDao.deleteByVideoId(videoId)
 
+    suspend fun removeFromWatchLaterList(videoIds: List<String>) = watchLaterDao.deleteByVideoIds(videoIds)
+
     suspend fun isWatchLater(videoId: String): Boolean = watchLaterDao.isWatchLater(videoId)
 
     fun isWatchLaterFlow(videoId: String): Flow<Boolean> = watchLaterDao.isWatchLaterFlow(videoId)

@@ -57,6 +57,9 @@ interface WatchLaterDao {
     @Query("DELETE FROM watch_later WHERE videoId = :videoId")
     suspend fun deleteByVideoId(videoId: String)
 
+    @Query("DELETE FROM watch_later WHERE videoId IN (:videoIds)")
+    suspend fun deleteByVideoIds(videoIds: List<String>)
+
     @Query("SELECT EXISTS(SELECT 1 FROM watch_later WHERE videoId = :videoId)")
     suspend fun isWatchLater(videoId: String): Boolean
 

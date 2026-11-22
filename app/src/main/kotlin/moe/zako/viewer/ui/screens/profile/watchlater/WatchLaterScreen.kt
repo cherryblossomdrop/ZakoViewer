@@ -1,5 +1,6 @@
 ﻿package moe.zako.viewer.ui.screens.profile.watchlater
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -35,17 +36,78 @@ fun WatchLaterScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var menuTargetItem by remember { mutableStateOf<WatchLaterEntity?>(null) }
+    var showBatchDeleteDialog by remember { mutableStateOf(false) }
+
+    // 拦截返回键：多选模式下优先退出多选
+    BackHandler(enabled = state.isSelectionMode) {
+        viewModel.exitSelectionMode()
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("稍后再看 (${state.list.size})") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = AppIcons.ArrowBack, contentDescription = "返回")
+            if (state.isSelectionMode) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "已选 ${state.selectedVideoIds.size} 项",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.exitSelectionMode() }) {
+                            Icon(imageVector = AppIcons.Close, contentDescription = "退出多选")
+                        }
+                    },
+                    actions = {
+                        val allSelected = state.list.isNotEmpty() && state.selectedVideoIds.size == state.list.size
+                        TextButton(onClick = { viewModel.toggleSelectAll() }) {
+                            Text(if (allSelected) "取消全选" else "全选")
+                        }
+                    }
+                )
+            } else {
+                TopAppBar(
+                    title = { Text("稍后再看 (${state.list.size})") },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(imageVector = AppIcons.ArrowBack, contentDescription = "返回")
+                        }
+                    },
+                    actions = {
+                        if (state.list.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.toggleSelectionMode() }) {
+                                Icon(imageVector = AppIcons.MultiSelect, contentDescription = "多选")
+                            }
+                        }
+                    }
+                )
+            }
+        },
+        bottomBar = {
+            if (state.isSelectionMode && state.selectedVideoIds.isNotEmpty()) {
+                BottomAppBar {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { viewModel.showBatchAddToFavoritesDialog() }) {
+                            Icon(imageVector = AppIcons.AddToFavorites, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("加入收藏夹 (${state.selectedVideoIds.size})")
+                        }
+                        TextButton(onClick = { showBatchDeleteDialog = true }) {
+                            Icon(
+                                imageVector = AppIcons.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("移出稍后再看 (${state.selectedVideoIds.size})", color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
-            )
+            }
         }
     ) { innerPadding ->
         if (state.list.isEmpty()) {
@@ -66,17 +128,34 @@ fun WatchLaterScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(state.list, key = { it.videoId }) { item ->
+                    val isSelected = state.selectedVideoIds.contains(item.videoId)
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
                             .combinedClickable(
-                                onClick = { onNavigateToDetail(item.videoId) },
-                                onLongClick = { menuTargetItem = item }
+                                onClick = {
+                                    if (state.isSelectionMode) {
+                                        viewModel.toggleSelection(item.videoId)
+                                    } else {
+                                        onNavigateToDetail(item.videoId)
+                                    }
+                                },
+                                onLongClick = {
+                                    if (state.isSelectionMode) {
+                                        viewModel.toggleSelection(item.videoId)
+                                    } else {
+                                        menuTargetItem = item
+                                    }
+                                }
                             ),
                         shape = RoundedCornerShape(10.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            containerColor = if (isSelected) {
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            }
                         )
                     ) {
                         Row(
@@ -85,6 +164,14 @@ fun WatchLaterScreen(
                                 .padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            if (state.isSelectionMode) {
+                                Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = { viewModel.toggleSelection(item.videoId) }
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
+
                             val isCoverBlurEnabled = LocalCoverBlurEnabled.current
                             val context = LocalContext.current
                             AsyncImage(
@@ -119,11 +206,13 @@ fun WatchLaterScreen(
                                 }
                             }
 
-                            IconButton(onClick = { viewModel.remove(item.videoId) }) {
-                                Icon(
-                                    imageVector = AppIcons.DeleteOutline,
-                                    contentDescription = "移除"
-                                )
+                            if (!state.isSelectionMode) {
+                                IconButton(onClick = { viewModel.remove(item.videoId) }) {
+                                    Icon(
+                                        imageVector = AppIcons.DeleteOutline,
+                                        contentDescription = "移除"
+                                    )
+                                }
                             }
                         }
                     }
@@ -136,6 +225,14 @@ fun WatchLaterScreen(
     if (menuTargetItem != null) {
         val target = menuTargetItem!!
         val actions = listOf(
+            VideoMenuAction(
+                id = "multi_select",
+                title = "多选",
+                icon = AppIcons.MultiSelect,
+                onClick = {
+                    viewModel.enterSelectionWithItem(target.videoId)
+                }
+            ),
             VideoMenuAction(
                 id = "add_to_favorites",
                 title = "添加到收藏夹",
@@ -173,11 +270,37 @@ fun WatchLaterScreen(
         )
     }
 
+    // 批量移出二次确认弹窗
+    if (showBatchDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showBatchDeleteDialog = false },
+            icon = { Icon(AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("确认移出稍后再看") },
+            text = { Text("确定要将选中的 ${state.selectedVideoIds.size} 个视频从稍后再看列表中移除吗？") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBatchDeleteDialog = false
+                        viewModel.deleteSelected()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认移出")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatchDeleteDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
     if (state.showFolderSelector) {
         FolderTreeDialog(
             folders = state.allFolders,
             onDismiss = { viewModel.dismissFolderSelector() },
-            onFolderSelected = { folderId -> viewModel.addToFavoriteFolder(folderId) },
+            onFolderSelected = { folderId -> viewModel.onFolderSelected(folderId) },
             onCreateFolder = { name, parentId -> viewModel.createFolder(name, parentId) }
         )
     }

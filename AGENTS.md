@@ -26,9 +26,9 @@
 - **日志纪律**：统一走项目日志入口（级别固定 `debug/info/warn/error`，崩溃 `fatal`）；严禁空 `catch`、静默引擎降级或跨引擎误导性日志。
 
 ## 五、构建、文档与发版流程
-### 1. 版本号递增规则（仅限源码改动）
-- **触发条件**：**仅当改动了应用源代码**（`app/src/` 下的代码、C++、JNI、资源、清单，或影响二进制产物的 Gradle 构建依赖配置）并进行功能新增或 Bug 修复时，才允许且必须递增版本号；纯文档（如 `README.md`）、开发规范文件（如 `AGENTS.md`）或非源码调整**严禁修改版本号**。
-- **递增方式**：读取 `app/build.gradle.kts` 中的 `defaultConfig`，将 `versionCode` 自动加 `1`，`versionName` 顺延递增（如 `1.2.13` 递增至 `1.2.14`）。
+### 1. 版本号递增规则（代码改动强制更新）
+- **触发条件与强制性**：**每次改动应用源代码**（`app/src/` 下的代码、C++、JNI、资源、清单，或影响二进制产物的 Gradle 构建依赖配置），**必须更新版本号**；纯文档（如 `README.md`）、开发规范文件（如 `AGENTS.md`）或非源码调整**严禁修改版本号**。
+- **递增方式**：读取 `app/build.gradle.kts` 中的 `defaultConfig`，将 `versionCode` 自动加 `1`，`versionName` 顺延递增（如 `1.2.40` 递增至 `1.2.41`）。
 
 ### 2. 双版本编译与 R8 验收
 - **双版本编译**：当且仅当改动源码且递增版本号后，必须执行以下命令验证 Debug 与 Release 双版本编译通过，确认 `:app:assembleDebug` 与 `:app:assembleRelease` 均 `BUILD SUCCESSFUL`（**严禁**添加 `--stacktrace` 参数）：
@@ -57,8 +57,10 @@
 - **主动评估与同步**：改动影响功能、交互、路径或配置时，必须主动评估并同步更新根目录 `README.md`。
 - **内容风格与严谨性**：更新 `README.md` 时重点介绍核心与特色能力，行文精炼高级，并及时更新代码规模等动态数据，确保文档真实、准确地反映项目最新状态。
 
-### 6. GitHub Release 规范
-执行发版并推送到 GitHub 时，须按以下顺序操作：
-1. 确认 `versionCode` / `versionName` 已按本次发版更新，并按文档同步规则视情况更新 `README.md`。
-2. 确认工作区不包含 `.apk` 或敏感配置文件后，提交改动并推送当前分支到 GitHub。
-3. 基于最新提交创建并推送对应的语义化版本 Tag（如 `git tag vX.Y.Z && git push origin vX.Y.Z`），由 GitHub Actions 自动创建对应版本的 Release 并生成更新日志（GitHub 官方将自动附带纯净源码包，严禁额外编译或上传 APK）。
+### 6. GitHub Release 同步发布规范（推送后必须发布）
+- **强绑定与自动发版**：**每次改动代码并在推送主分支（`git push origin main`）后，必须立即同步发布 GitHub Release**，严禁只推代码分支而遗漏发布 Release。
+- **发版执行步骤**：
+  1. 确认 `versionCode` / `versionName` 已按本次代码改动更新，并同步更新 `CODEBASE_INDEX.md` 与 `README.md`。
+  2. 确认工作区不包含 `.apk` 或敏感配置文件后，提交改动并推送当前分支到 GitHub：`git push origin main`。
+  3. **推送成功后立即基于最新提交创建并推送对应的语义化版本 Tag**（如 `git tag vX.Y.Z && git push origin vX.Y.Z`）。
+  4. 触发 GitHub Actions 自动化流水线自动创建对应版本的 Release 并生成更新日志（GitHub 官方将自动附带纯净源码包，严禁额外编译或手动上传 APK）。

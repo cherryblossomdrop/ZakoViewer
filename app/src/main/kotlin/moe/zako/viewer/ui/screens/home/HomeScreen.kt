@@ -44,7 +44,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -78,6 +77,7 @@ fun HomeScreen(
     val staggeredGridState = rememberLazyStaggeredGridState()
 
     var showFilterSheet by remember { mutableStateOf(false) }
+    var showJumpDialog by remember { mutableStateOf(false) }
     var isSearchFocused by remember { mutableStateOf(false) }
 
     // Scroll to top when page changes in Paginated mode
@@ -386,6 +386,7 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.width(Spacing.Lg))
 
                             Surface(
+                                onClick = { showJumpDialog = true },
                                 shape = RoundedCornerShape(CornerRadius.Sm),
                                 color = MaterialTheme.colorScheme.primaryContainer,
                                 modifier = Modifier.padding(horizontal = Spacing.Sm)
@@ -443,6 +444,18 @@ fun HomeScreen(
                 viewModel.appendTagToSearch(tag)
             },
             onDismissRequest = { showFilterSheet = false }
+        )
+    }
+
+    // 分页跳转指定页弹窗
+    if (showJumpDialog) {
+        HomeJumpPageDialog(
+            currentPage = state.page + 1,
+            totalPages = state.totalPages,
+            onConfirm = { targetPage ->
+                viewModel.jumpToPage(targetPage)
+            },
+            onDismiss = { showJumpDialog = false }
         )
     }
 }

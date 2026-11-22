@@ -51,6 +51,7 @@ data class HomeUiState(
     val includeVip: Boolean = true, // 包含VIP抢先看视频 (默认包含)
     val page: Int = 0,
     val hasMore: Boolean = true,
+    val totalPages: Int? = null,
     val errorMessage: String? = null,
     val layoutMode: LayoutMode = LayoutMode.WATERFALL,
     val searchHistory: List<String> = emptyList(),
@@ -216,6 +217,21 @@ class HomeViewModel(
         }
     }
 
+    /**
+     * 跳转到指定页（1-based 自然页码，如第 1 页传 1）
+     * 复用当前激活的分类、排序与搜索筛选条件拉取目标页数据
+     * @param page 目标页码（1-based 正整数）
+     */
+    fun jumpToPage(page: Int) {
+        val targetZeroBased = (page - 1).coerceAtLeast(0)
+        if (targetZeroBased == _uiState.value.page && _uiState.value.videos.isNotEmpty()) {
+            return
+        }
+        if (!_uiState.value.isLoading) {
+            loadVideos(refresh = false, targetPage = targetZeroBased)
+        }
+    }
+
     fun filterSearchByTag(tag: String) {
         val target = if (tag in listOf("全部", "推荐")) "" else tag
         val current = _uiState.value.selectedTag
@@ -303,7 +319,8 @@ class HomeViewModel(
                 isLoading = !isPullRefresh,
                 isRefreshing = isPullRefresh,
                 errorMessage = null,
-                page = if (refresh) 0 else current.page
+                page = if (refresh) 0 else current.page,
+                totalPages = if (refresh) null else current.totalPages
             )
         }
 
@@ -344,6 +361,7 @@ class HomeViewModel(
                                 videos = filtered,
                                 page = currentPage,
                                 hasMore = response.items.isNotEmpty() && (currentPage + 1) * 20 < response.totalCount,
+                                totalPages = if (response.totalCount > 0) ((response.totalCount + 19) / 20).coerceAtLeast(1) else null,
                                 isLoading = false,
                                 isRefreshing = false
                             )
@@ -393,6 +411,7 @@ class HomeViewModel(
                                     videos = combined,
                                     page = currentPage,
                                     hasMore = response.items.isNotEmpty() && combined.size < response.totalCount,
+                                    totalPages = if (response.totalCount > 0) ((response.totalCount + 19) / 20).coerceAtLeast(1) else null,
                                     isLoading = false,
                                     isRefreshing = false
                                 )
@@ -406,10 +425,11 @@ class HomeViewModel(
 
                     if (cat == "推荐" && tag.isEmpty() && timeRange == TimeRange.ALL) {
                         if (isPaginated) {
+                            val response = if (currentPage == 0) null else apiClient.getVideoLists(page = currentPage, order = "mv", limit = 20)
                             val items = if (currentPage == 0) {
                                 apiClient.getVideoRecommend()
                             } else {
-                                apiClient.getVideoLists(page = currentPage, order = "mv", limit = 20).items
+                                response?.items ?: emptyList()
                             }
                             if (!isActive) return@launch
                             _uiState.update { current ->
@@ -417,6 +437,7 @@ class HomeViewModel(
                                     videos = items,
                                     page = currentPage,
                                     hasMore = items.isNotEmpty(),
+                                    totalPages = response?.let { if (it.totalCount > 0) ((it.totalCount + 19) / 20).coerceAtLeast(1) else null },
                                     isLoading = false,
                                     isRefreshing = false
                                 )
@@ -481,6 +502,7 @@ class HomeViewModel(
                                 videos = combined,
                                 page = currentPage,
                                 hasMore = newItems.isNotEmpty() && (if (isPaginated) (currentPage + 1) * 20 < response.totalCount else combined.size < response.totalCount),
+                                totalPages = if (response.totalCount > 0) ((response.totalCount + 19) / 20).coerceAtLeast(1) else null,
                                 isLoading = false,
                                 isRefreshing = false
                             )

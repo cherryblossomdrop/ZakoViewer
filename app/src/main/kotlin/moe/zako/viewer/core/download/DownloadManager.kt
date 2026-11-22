@@ -2,6 +2,13 @@
 
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.core.permission.StoragePermissionHelper
@@ -10,19 +17,18 @@ import moe.zako.viewer.data.local.ZakoDatabase
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.data.source.cosav.CosApiClient
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
-import java.io.FileOutputStream
-import java.util.concurrent.TimeUnit
 
+/**
+ * 离线下载全生命周期管理中枢门面 (DownloadManager)
+ *
+ * 【跨模块门面契约】：
+ * 1. 任务调度与状态机核心：统一调度多节点并发下载引擎 MultiNodeDownloader，响应式维护下载任务全生命周期状态机；
+ * 2. 前台服务协同：统筹调度 DownloadService 前台服务保活与常驻通知栏刷新，支持暂停、恢复、重下及批量删除任务；
+ * 3. 本地完成态文件校验与寻址：提供 findLocalCompletedVideo 与 reconcileLocalDownloadFiles，负责本地磁盘文件校验、对齐与封面离线化；
+ * 4. 物理存储迁移委托：对外保留 migrateDownloadsDirectory 兼容契约，底层委托至 DownloadMigrationHelper 实施流式物理搬迁与旧版目录兼容；
+ * 5. 协程安全与生命周期：所有耗时 I/O 均调度于 Dispatchers.IO，提供 Flow 响应式数据流，严禁主线程阻塞。
+ */
 class DownloadManager private constructor(private val context: Context) {
     companion object {
         private const val TAG = "DownloadManager"
@@ -42,14 +48,14 @@ class DownloadManager private constructor(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO)
     private val settingsRepository = SettingsRepository(context)
 
-    private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build()
+    private val migrationHelper = DownloadMigrationHelper(
+        downloadDao = downloadDao,
+        settingsRepository = settingsRepository,
+        onReconcile = { reconcileLocalDownloadFiles() },
+        onPauseDownload = { videoId -> pauseDownload(videoId) }
+    )
 
-    fun getCoverFile(videoId: String): File {
-        return CoverCacheManager.getCoverFile(context, videoId)
-    }
+    fun getCoverFile(videoId: String): File = CoverCacheManager.getCoverFile(context, videoId)
 
     data class LocalVideoInfo(
         val file: File,
@@ -73,11 +79,7 @@ class DownloadManager private constructor(private val context: Context) {
                 val f = File(candidatePath)
                 if (f.exists() && f.isFile && f.canRead() && f.length() > 0L) {
                     val record = downloadDao.getDownloadByVideoId(videoId)
-                    return@withContext LocalVideoInfo(
-                        file = f,
-                        title = record?.title ?: f.nameWithoutExtension,
-                        coverUrl = record?.coverUrl ?: ""
-                    )
+                    return@withContext LocalVideoInfo(f, record?.title ?: f.nameWithoutExtension, record?.coverUrl ?: "")
                 }
             } catch (_: Exception) {}
         }
@@ -87,11 +89,7 @@ class DownloadManager private constructor(private val context: Context) {
         if (record != null && record.status == DownloadEntity.STATUS_COMPLETED) {
             val file = File(record.savePath)
             if (file.exists() && file.isFile && file.canRead() && file.length() > 0L) {
-                return@withContext LocalVideoInfo(
-                    file = file,
-                    title = record.title,
-                    coverUrl = record.coverUrl
-                )
+                return@withContext LocalVideoInfo(file, record.title, record.coverUrl)
             } else {
                 ZakoLog.w(TAG, "Record exists for $videoId with status COMPLETED, but file missing or empty at: ${record.savePath}")
             }
@@ -107,11 +105,7 @@ class DownloadManager private constructor(private val context: Context) {
             val files = dir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4", ignoreCase = true) } ?: emptyList()
             val matchedFile = files.firstOrNull { f ->
                 val fn = f.name
-                val parsedId = if (fn.contains("-")) {
-                    fn.substringBeforeLast(".mp4").substringAfterLast("-").trim()
-                } else {
-                    fn.substringBeforeLast(".mp4").trim()
-                }
+                val parsedId = if (fn.contains("-")) fn.substringBeforeLast(".mp4").substringAfterLast("-").trim() else fn.substringBeforeLast(".mp4").trim()
                 parsedId.equals(videoId, ignoreCase = true) || fn.contains(videoId)
             }
 
@@ -136,11 +130,7 @@ class DownloadManager private constructor(private val context: Context) {
                 )
                 downloadDao.insertOrUpdate(updated)
                 ZakoLog.i(TAG, "Found local video in directory scan for $videoId: ${matchedFile.absolutePath}, updated database.")
-                return@withContext LocalVideoInfo(
-                    file = matchedFile,
-                    title = updated.title,
-                    coverUrl = updated.coverUrl
-                )
+                return@withContext LocalVideoInfo(matchedFile, updated.title, updated.coverUrl)
             }
         }
 
@@ -156,9 +146,7 @@ class DownloadManager private constructor(private val context: Context) {
     suspend fun cacheCoverLocally(videoId: String, sourceUrl: String): String = withContext(Dispatchers.IO) {
         if (sourceUrl.isEmpty()) return@withContext ""
         val coverFile = getCoverFile(videoId)
-        if (coverFile.exists() && coverFile.length() > 0L) {
-            return@withContext coverFile.absolutePath
-        }
+        if (coverFile.exists() && coverFile.length() > 0L) return@withContext coverFile.absolutePath
         CoverCacheManager.ensureCoverPersisted(context, videoId, sourceUrl)
         if (coverFile.exists() && coverFile.length() > 0L) coverFile.absolutePath else sourceUrl
     }
@@ -170,18 +158,13 @@ class DownloadManager private constructor(private val context: Context) {
 
     fun initialize() {
         scope.launch {
-            migrateLegacyNeoViewerDirectory()
+            migrationHelper.migrateLegacyNeoViewerDirectory()
             reconcileLocalDownloadFiles()
             try {
                 val list = downloadDao.getAllDownloadsList()
                 for (item in list) {
                     if (item.status == DownloadEntity.STATUS_DOWNLOADING) {
-                        downloadDao.insertOrUpdate(
-                            item.copy(
-                                status = DownloadEntity.STATUS_PAUSED,
-                                speedBps = 0L
-                            )
-                        )
+                        downloadDao.insertOrUpdate(item.copy(status = DownloadEntity.STATUS_PAUSED, speedBps = 0L))
                     }
                 }
             } catch (e: Exception) {
@@ -226,20 +209,12 @@ class DownloadManager private constructor(private val context: Context) {
                             ?: matchedLater?.title
                             ?: if (fileName.contains("-")) fileName.substringBeforeLast(".mp4").substringBeforeLast("-").trim() else fileName.substringBeforeLast(".mp4").trim()
 
-                        val sourceCover = matchedFav?.coverUrl
-                            ?: matchedHist?.coverUrl
-                            ?: matchedLater?.coverUrl
-                            ?: ""
+                        val sourceCover = matchedFav?.coverUrl ?: matchedHist?.coverUrl ?: matchedLater?.coverUrl ?: ""
+                        val cleanSourceCover = if (sourceCover.startsWith("http://", true) || sourceCover.startsWith("https://", true)) sourceCover else ""
 
                         val existing = downloadDao.getDownloadByVideoId(videoId)
                         if (existing == null) {
-                            val cleanSourceCover = if (sourceCover.startsWith("http://", true) || sourceCover.startsWith("https://", true)) {
-                                sourceCover
-                            } else {
-                                ""
-                            }
                             CoverCacheManager.ensureCoverPersistedAsync(context, videoId, cleanSourceCover, file.absolutePath)
-
                             val newEntity = DownloadEntity(
                                 videoId = videoId,
                                 title = title.ifEmpty { "视频 $videoId" },
@@ -268,14 +243,9 @@ class DownloadManager private constructor(private val context: Context) {
                             if (existing.coverUrl.startsWith("/data/user/") || existing.coverUrl.startsWith("/data/data/") ||
                                 (existing.coverUrl.startsWith("/") && !File(existing.coverUrl).exists())
                             ) {
-                                val cleanUrl = if (sourceCover.startsWith("http://", true) || sourceCover.startsWith("https://", true)) {
-                                    sourceCover
-                                } else {
-                                    ""
-                                }
-                                updated = updated.copy(coverUrl = cleanUrl)
+                                updated = updated.copy(coverUrl = cleanSourceCover)
                             }
-                            val cand = if (updated.coverUrl.isNotBlank()) updated.coverUrl else sourceCover
+                            val cand = updated.coverUrl.ifBlank { sourceCover }
                             CoverCacheManager.ensureCoverPersistedAsync(context, videoId, cand, file.absolutePath)
                             if (updated != existing) {
                                 downloadDao.insertOrUpdate(updated)
@@ -307,84 +277,113 @@ class DownloadManager private constructor(private val context: Context) {
         }
     }
 
-    private suspend fun migrateLegacyNeoViewerDirectory() = withContext(Dispatchers.IO) {
-        try {
-            val oldDir = File("/storage/emulated/0/Download/NeoViewer")
-            val newDir = File(StorageConstants.DEFAULT_DOWNLOAD_DIR)
-
-            // 1. 如果旧目录存在且包含文件，迁移文件到新目录
-            if (oldDir.exists() && oldDir.isDirectory) {
-                if (!newDir.exists()) newDir.mkdirs()
-                val oldFiles = oldDir.listFiles() ?: emptyArray()
-                for (oldFile in oldFiles) {
-                    val newFile = File(newDir, oldFile.name)
-                    if (!newFile.exists()) {
-                        oldFile.renameTo(newFile)
-                    }
-                }
-                if (oldDir.listFiles()?.isEmpty() == true) {
-                    oldDir.delete()
-                }
-            }
-
-            // 2. 同步更新数据库中保存的旧路径
-            val allDownloads = downloadDao.getAllDownloadsList()
-            for (item in allDownloads) {
-                if (item.savePath.contains("/Download/NeoViewer/")) {
-                    val updatedPath = item.savePath.replace("/Download/NeoViewer/", "/Download/ZakoViewer/")
-                    downloadDao.insertOrUpdate(item.copy(savePath = updatedPath))
-                }
-            }
-
-            // 3. 检查并迁移设置中的自定义下载路径
-            val currentSettingPath = try { settingsRepository.downloadPathFlow.first() } catch (_: Exception) { "" }
-            if (currentSettingPath.contains("/Download/NeoViewer")) {
-                val updatedSettingPath = currentSettingPath.replace("/Download/NeoViewer", "/Download/ZakoViewer")
-                settingsRepository.setDownloadPath(updatedSettingPath)
-            }
-        } catch (e: Exception) {
-            ZakoLog.w(TAG, "Legacy NeoViewer directory migration warning: ${e.message}")
-        }
-    }
+    private fun canWriteToDir(dir: File): Boolean = DownloadMigrationHelper.canWriteToDir(dir)
 
     fun getDownloadDir(): File {
         val hasPermission = StoragePermissionHelper.hasAllFilesAccess()
         val customPath = runBlocking {
-            try {
-                settingsRepository.downloadPathFlow.first()
-            } catch (_: Exception) {
-                ""
-            }
+            try { settingsRepository.downloadPathFlow.first() } catch (_: Exception) { "" }
         }
         if (hasPermission && customPath.isNotBlank()) {
             val customDir = File(customPath)
-            if (canWriteToDir(customDir)) {
-                return customDir
-            }
+            if (canWriteToDir(customDir)) return customDir
         }
         val defaultDir = File(StorageConstants.DEFAULT_DOWNLOAD_DIR)
-        if (hasPermission && defaultDir.parentFile?.exists() == true) {
-            if (canWriteToDir(defaultDir)) {
-                return defaultDir
-            }
+        if (hasPermission && defaultDir.parentFile?.exists() == true && canWriteToDir(defaultDir)) {
+            return defaultDir
         }
         val dir = File(context.getExternalFilesDir(null), "downloads")
         if (!dir.exists()) dir.mkdirs()
         return dir
     }
 
-    private fun canWriteToDir(dir: File): Boolean {
-        return try {
-            if (!dir.exists() && !dir.mkdirs()) return false
-            val testFile = File(dir, ".test_write_${System.currentTimeMillis()}")
-            if (testFile.createNewFile()) {
-                testFile.delete()
-                true
-            } else {
-                false
+    /**
+     * 启动前台下载通知服务
+     */
+    private fun startForegroundDownloadService(videoId: String, title: String) {
+        try {
+            val serviceIntent = Intent(context, DownloadService::class.java).apply {
+                action = DownloadService.ACTION_START_DOWNLOAD
+                putExtra("videoId", videoId)
+                putExtra("title", title)
             }
-        } catch (_: Exception) {
-            false
+            context.startForegroundService(serviceIntent)
+        } catch (e: Exception) {
+            ZakoLog.w(TAG, "Could not start foreground service: ${e.message}")
+        }
+    }
+
+    /**
+     * 统一绑定多节点下载引擎事件监听与数据库持久化更新
+     */
+    private suspend fun startMultiNodeDownloadSession(
+        videoId: String,
+        title: String,
+        cdnUrls: List<String>,
+        outputFile: File
+    ) {
+        multiNodeDownloader.startDownload(
+            videoId = videoId,
+            title = title,
+            cdnUrls = cdnUrls,
+            outputFile = outputFile,
+            onProgress = { downloaded, total, speed, _ ->
+                scope.launch {
+                    downloadDao.updateProgress(
+                        videoId = videoId,
+                        downloaded = downloaded,
+                        total = total,
+                        speed = speed,
+                        status = DownloadEntity.STATUS_DOWNLOADING
+                    )
+                }
+            },
+            onComplete = { file ->
+                scope.launch {
+                    val current = downloadDao.getDownloadByVideoId(videoId)
+                    if (current != null) {
+                        downloadDao.insertOrUpdate(
+                            current.copy(
+                                status = DownloadEntity.STATUS_COMPLETED,
+                                downloadedBytes = file.length(),
+                                totalBytes = file.length(),
+                                speedBps = 0L,
+                                completedAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                }
+            },
+            onError = { err ->
+                scope.launch {
+                    val current = downloadDao.getDownloadByVideoId(videoId)
+                    if (current != null) {
+                        downloadDao.insertOrUpdate(
+                            current.copy(
+                                status = DownloadEntity.STATUS_FAILED,
+                                errorMessage = err.message,
+                                speedBps = 0L
+                            )
+                        )
+                    }
+                }
+            }
+        )
+    }
+
+    /**
+     * 安全清理目标视频在本地磁盘上的完整产物及分片中间文件
+     */
+    private fun deletePhysicalDownloadArtifacts(savePath: String) {
+        try {
+            val file = File(savePath)
+            if (file.exists()) file.delete()
+            val partFile = File(file.parentFile, "${file.name}.part")
+            if (partFile.exists()) partFile.delete()
+            val metaFile = File(file.parentFile, "${file.name}.meta")
+            if (metaFile.exists()) metaFile.delete()
+        } catch (e: Exception) {
+            ZakoLog.w(TAG, "Error deleting physical download artifacts: ${e.message}")
         }
     }
 
@@ -405,11 +404,7 @@ class DownloadManager private constructor(private val context: Context) {
             val outputFile = File(targetDir, "$sanitizedName-$videoId.mp4")
 
             // 保持数据库中存储原始网络 URL，不使用本地沙盒路径覆盖；封面由 CoverCacheManager 统一管理
-            val cleanCoverUrl = if (coverUrl.startsWith("http://", true) || coverUrl.startsWith("https://", true)) {
-                coverUrl
-            } else {
-                ""
-            }
+            val cleanCoverUrl = if (coverUrl.startsWith("http://", true) || coverUrl.startsWith("https://", true)) coverUrl else ""
 
             val entity = DownloadEntity(
                 videoId = videoId,
@@ -426,65 +421,8 @@ class DownloadManager private constructor(private val context: Context) {
             // 离线持久化封面到统一目录
             CoverCacheManager.ensureCoverPersistedAsync(context, videoId, coverUrl, outputFile.absolutePath)
 
-            // Start foreground service
-            try {
-                val serviceIntent = Intent(context, DownloadService::class.java).apply {
-                    action = DownloadService.ACTION_START_DOWNLOAD
-                    putExtra("videoId", videoId)
-                    putExtra("title", title)
-                }
-                context.startForegroundService(serviceIntent)
-            } catch (e: Exception) {
-                ZakoLog.w(TAG, "Could not start foreground service: ${e.message}")
-            }
-
-            multiNodeDownloader.startDownload(
-                videoId = videoId,
-                title = title,
-                cdnUrls = cdnUrls,
-                outputFile = outputFile,
-                onProgress = { downloaded, total, speed, activeNodes ->
-                    scope.launch {
-                        downloadDao.updateProgress(
-                            videoId = videoId,
-                            downloaded = downloaded,
-                            total = total,
-                            speed = speed,
-                            status = DownloadEntity.STATUS_DOWNLOADING
-                        )
-                    }
-                },
-                onComplete = { file ->
-                    scope.launch {
-                        val current = downloadDao.getDownloadByVideoId(videoId)
-                        if (current != null) {
-                            downloadDao.insertOrUpdate(
-                                current.copy(
-                                    status = DownloadEntity.STATUS_COMPLETED,
-                                    downloadedBytes = file.length(),
-                                    totalBytes = file.length(),
-                                    speedBps = 0L,
-                                    completedAt = System.currentTimeMillis()
-                                )
-                            )
-                        }
-                    }
-                },
-                onError = { err ->
-                    scope.launch {
-                        val current = downloadDao.getDownloadByVideoId(videoId)
-                        if (current != null) {
-                            downloadDao.insertOrUpdate(
-                                current.copy(
-                                    status = DownloadEntity.STATUS_FAILED,
-                                    errorMessage = err.message,
-                                    speedBps = 0L
-                                )
-                            )
-                        }
-                    }
-                }
-            )
+            startForegroundDownloadService(videoId, title)
+            startMultiNodeDownloadSession(videoId, title, cdnUrls, outputFile)
         }
     }
 
@@ -523,65 +461,8 @@ class DownloadManager private constructor(private val context: Context) {
                 )
             )
 
-            // Start foreground service
-            try {
-                val serviceIntent = Intent(context, DownloadService::class.java).apply {
-                    action = DownloadService.ACTION_START_DOWNLOAD
-                    putExtra("videoId", videoId)
-                    putExtra("title", entity.title)
-                }
-                context.startForegroundService(serviceIntent)
-            } catch (e: Exception) {
-                ZakoLog.w(TAG, "Could not start foreground service: ${e.message}")
-            }
-
-            multiNodeDownloader.startDownload(
-                videoId = videoId,
-                title = entity.title,
-                cdnUrls = cdnUrls,
-                outputFile = outputFile,
-                onProgress = { downloaded, total, speed, activeNodes ->
-                    scope.launch {
-                        downloadDao.updateProgress(
-                            videoId = videoId,
-                            downloaded = downloaded,
-                            total = total,
-                            speed = speed,
-                            status = DownloadEntity.STATUS_DOWNLOADING
-                        )
-                    }
-                },
-                onComplete = { file ->
-                    scope.launch {
-                        val current = downloadDao.getDownloadByVideoId(videoId)
-                        if (current != null) {
-                            downloadDao.insertOrUpdate(
-                                current.copy(
-                                    status = DownloadEntity.STATUS_COMPLETED,
-                                    downloadedBytes = file.length(),
-                                    totalBytes = file.length(),
-                                    speedBps = 0L,
-                                    completedAt = System.currentTimeMillis()
-                                )
-                            )
-                        }
-                    }
-                },
-                onError = { err ->
-                    scope.launch {
-                        val current = downloadDao.getDownloadByVideoId(videoId)
-                        if (current != null) {
-                            downloadDao.insertOrUpdate(
-                                current.copy(
-                                    status = DownloadEntity.STATUS_FAILED,
-                                    errorMessage = err.message,
-                                    speedBps = 0L
-                                )
-                            )
-                        }
-                    }
-                }
-            )
+            startForegroundDownloadService(videoId, entity.title)
+            startMultiNodeDownloadSession(videoId, entity.title, cdnUrls, outputFile)
         }
     }
 
@@ -589,12 +470,7 @@ class DownloadManager private constructor(private val context: Context) {
         multiNodeDownloader.pauseDownload(videoId)
         scope.launch {
             val entity = downloadDao.getDownloadByVideoId(videoId) ?: return@launch
-            val outputFile = File(entity.savePath)
-            if (outputFile.exists()) outputFile.delete()
-            val partFile = File(outputFile.parentFile, "${outputFile.name}.part")
-            if (partFile.exists()) partFile.delete()
-            val metaFile = File(outputFile.parentFile, "${outputFile.name}.meta")
-            if (metaFile.exists()) metaFile.delete()
+            deletePhysicalDownloadArtifacts(entity.savePath)
 
             downloadDao.insertOrUpdate(
                 entity.copy(
@@ -618,199 +494,27 @@ class DownloadManager private constructor(private val context: Context) {
     fun deleteDownload(videoId: String) {
         multiNodeDownloader.pauseDownload(videoId)
         scope.launch {
-            val entity = downloadDao.getDownloadByVideoId(videoId)
-            entity?.let {
-                val file = File(it.savePath)
-                if (file.exists()) file.delete()
-                val partFile = File(file.parentFile, "${file.name}.part")
-                if (partFile.exists()) partFile.delete()
-                val metaFile = File(file.parentFile, "${file.name}.meta")
-                if (metaFile.exists()) metaFile.delete()
-            }
+            downloadDao.getDownloadByVideoId(videoId)?.let { deletePhysicalDownloadArtifacts(it.savePath) }
             downloadDao.deleteByVideoId(videoId)
         }
     }
 
     fun deleteDownloads(videoIds: List<String>) {
         if (videoIds.isEmpty()) return
-        videoIds.forEach { id ->
-            multiNodeDownloader.pauseDownload(id)
-        }
+        videoIds.forEach { id -> multiNodeDownloader.pauseDownload(id) }
         scope.launch {
             for (id in videoIds) {
-                val entity = downloadDao.getDownloadByVideoId(id)
-                entity?.let {
-                    val file = File(it.savePath)
-                    if (file.exists()) file.delete()
-                    val partFile = File(file.parentFile, "${file.name}.part")
-                    if (partFile.exists()) partFile.delete()
-                    val metaFile = File(file.parentFile, "${file.name}.meta")
-                    if (metaFile.exists()) metaFile.delete()
-                }
+                downloadDao.getDownloadByVideoId(id)?.let { deletePhysicalDownloadArtifacts(it.savePath) }
             }
             downloadDao.deleteByVideoIds(videoIds)
         }
     }
 
     /**
-     * 切换下载目录时安全迁移已有视频文件
+     * 切换下载目录时安全迁移已有视频文件（平滑委托至 DownloadMigrationHelper）
      */
     suspend fun migrateDownloadsDirectory(
         newPath: String,
         onProgress: (current: Int, total: Int, fileName: String) -> Unit
-    ): MigrationResult = withContext(Dispatchers.IO) {
-        if (newPath.isBlank()) {
-            return@withContext MigrationResult(0, 0, "目标路径不能为空")
-        }
-        val targetDir = File(newPath)
-        if (!targetDir.exists() && !targetDir.mkdirs()) {
-            return@withContext MigrationResult(0, 0, "无法创建目标目录，请检查文件写入权限")
-        }
-
-        // 1. 检查新目录写入权限
-        val testFile = File(targetDir, ".write_test_${System.currentTimeMillis()}")
-        val canWrite = try {
-            if (testFile.createNewFile()) {
-                testFile.delete()
-                true
-            } else {
-                false
-            }
-        } catch (_: Exception) {
-            false
-        }
-        if (!canWrite) {
-            return@withContext MigrationResult(0, 0, "新目录无写入权限，请重新授权或选择其他目录")
-        }
-
-        // 2. 优雅暂停所有正在下载的任务
-        val allDownloads = downloadDao.getAllDownloadsList()
-        for (d in allDownloads) {
-            if (d.status == DownloadEntity.STATUS_DOWNLOADING) {
-                pauseDownload(d.videoId)
-            }
-        }
-
-        // 3. 统计待迁移文件
-        val targetCanonical = try { targetDir.canonicalPath } catch (_: Exception) { targetDir.absolutePath }
-        val existingFiles = allDownloads.mapNotNull { entity ->
-            val f = File(entity.savePath)
-            if (f.exists() && f.isFile && f.length() > 0L) {
-                entity to f
-            } else {
-                null
-            }
-        }.filter { (_, f) ->
-            val srcCanonical = try { f.parentFile?.canonicalPath } catch (_: Exception) { f.parentFile?.absolutePath }
-            srcCanonical != targetCanonical
-        }
-
-        if (existingFiles.isEmpty()) {
-            settingsRepository.setDownloadPath(newPath)
-            reconcileLocalDownloadFiles()
-            return@withContext MigrationResult(0, 0, null)
-        }
-
-        // 4. 存储空间检查
-        val totalBytesNeeded = existingFiles.sumOf { (_, f) -> f.length() }
-        val usableSpace = targetDir.usableSpace
-        if (usableSpace in 1 until totalBytesNeeded) {
-            val neededMb = totalBytesNeeded / (1024 * 1024)
-            val usableMb = usableSpace / (1024 * 1024)
-            return@withContext MigrationResult(
-                0,
-                existingFiles.size,
-                "新目录可用存储空间不足（可用: ${usableMb}MB，所需: ${neededMb}MB）"
-            )
-        }
-
-        // 5. 流式迁移 (统一 64KB 缓冲块)
-        var successCount = 0
-        val buffer = ByteArray(StorageConstants.DEFAULT_IO_BUFFER_SIZE)
-        ZakoLog.i(TAG, "Starting downloads migration to: $newPath. Total files to migrate: ${existingFiles.size}")
-
-        for ((idx, pair) in existingFiles.withIndex()) {
-            val (entity, srcFile) = pair
-            val currentNumber = idx + 1
-            onProgress(currentNumber, existingFiles.size, srcFile.name)
-            ZakoLog.i(TAG, "Migrating file [$currentNumber/${existingFiles.size}]: ${srcFile.name} (${srcFile.length()} bytes)")
-
-            val destFile = File(targetDir, srcFile.name)
-
-            // 若新目录已存在同名且大小一致的文件，直接重用并对齐数据库记录
-            if (destFile.exists() && destFile.length() == srcFile.length()) {
-                downloadDao.updateSavePath(entity.videoId, destFile.absolutePath)
-                val deleted = try {
-                    srcFile.delete()
-                } catch (e: Exception) {
-                    ZakoLog.w(TAG, "Exception deleting source file ${srcFile.absolutePath}: ${e.message}")
-                    false
-                }
-                if (!deleted) {
-                    ZakoLog.w(TAG, "Failed to delete source file after reuse: ${srcFile.absolutePath}")
-                } else {
-                    ZakoLog.i(TAG, "Deleted source file successfully (reused): ${srcFile.absolutePath}")
-                }
-                successCount++
-                continue
-            }
-
-            val tmpFile = File(targetDir, "${srcFile.name}.migrating_tmp")
-            try {
-                if (tmpFile.exists()) tmpFile.delete()
-
-                srcFile.inputStream().use { input ->
-                    FileOutputStream(tmpFile).use { output ->
-                        var read: Int
-                        while (input.read(buffer).also { read = it } != -1) {
-                            output.write(buffer, 0, read)
-                        }
-                        output.flush()
-                    }
-                }
-
-                if (tmpFile.exists() && tmpFile.length() == srcFile.length()) {
-                    if (destFile.exists()) destFile.delete()
-                    if (tmpFile.renameTo(destFile)) {
-                        downloadDao.updateSavePath(entity.videoId, destFile.absolutePath)
-                        val deleted = try {
-                            srcFile.delete()
-                        } catch (e: Exception) {
-                            ZakoLog.w(TAG, "Exception deleting source file ${srcFile.absolutePath}: ${e.message}")
-                            false
-                        }
-                        if (!deleted) {
-                            ZakoLog.w(TAG, "Failed to delete source file after migration: ${srcFile.absolutePath}")
-                        } else {
-                            ZakoLog.i(TAG, "Deleted source file successfully: ${srcFile.absolutePath}")
-                        }
-                        successCount++
-                    } else {
-                        ZakoLog.e(TAG, "Failed to rename temp file to ${destFile.name}")
-                        tmpFile.delete()
-                    }
-                } else {
-                    ZakoLog.e(TAG, "Migrated file size mismatch for ${srcFile.name}: expected ${srcFile.length()}, got ${tmpFile.length()}")
-                    tmpFile.delete()
-                }
-            } catch (e: Exception) {
-                ZakoLog.e(TAG, "Failed migrating file ${srcFile.name}: ${e.message}", e)
-                try { if (tmpFile.exists()) tmpFile.delete() } catch (_: Exception) {}
-            }
-        }
-
-        ZakoLog.i(TAG, "Migration completed: $successCount/${existingFiles.size} files migrated successfully to $newPath")
-
-        // 6. 更新配置并刷新
-        settingsRepository.setDownloadPath(newPath)
-        reconcileLocalDownloadFiles()
-
-        MigrationResult(successCount, existingFiles.size, null)
-    }
+    ): MigrationResult = migrationHelper.migrateDownloadsDirectory(newPath, onProgress)
 }
-
-data class MigrationResult(
-    val successCount: Int,
-    val totalCount: Int,
-    val errorMessage: String? = null
-)

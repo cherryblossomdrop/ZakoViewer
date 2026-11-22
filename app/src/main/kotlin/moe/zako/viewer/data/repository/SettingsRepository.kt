@@ -1,4 +1,4 @@
-﻿package moe.zako.viewer.data.repository
+package moe.zako.viewer.data.repository
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -7,148 +7,16 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import moe.zako.viewer.data.local.dao.SearchHistoryDao
-import moe.zako.viewer.data.local.dao.WatchHistoryDao
-import moe.zako.viewer.data.local.dao.WatchLaterDao
-import moe.zako.viewer.data.local.entities.FavoriteItemEntity
-import moe.zako.viewer.data.local.entities.SearchHistoryEntity
-import moe.zako.viewer.data.local.entities.WatchHistoryEntity
-import moe.zako.viewer.ZakoApplication
-import moe.zako.viewer.core.cover.CoverCacheManager
-import moe.zako.viewer.data.local.entities.WatchLaterEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import moe.zako.viewer.ui.theme.ThemePreset
 import org.json.JSONArray
-
-class HistoryRepository(
-    private val watchHistoryDao: WatchHistoryDao,
-    private val watchLaterDao: WatchLaterDao,
-    private val favoriteRepository: FavoriteRepository
-) {
-    fun getAllHistory(): Flow<List<WatchHistoryEntity>> = watchHistoryDao.getAllHistoryFlow()
-
-    suspend fun getHistory(videoId: String): WatchHistoryEntity? = watchHistoryDao.getHistoryByVideoId(videoId)
-
-    fun searchHistory(query: String): Flow<List<WatchHistoryEntity>> =
-        watchHistoryDao.searchHistoryFlow(query)
-
-    suspend fun recordWatch(
-        videoId: String,
-        title: String,
-        coverUrl: String,
-        duration: String = "",
-        isVip: Boolean = false,
-        positionMs: Long = 0L,
-        totalDurationMs: Long = 0L
-    ) {
-        watchHistoryDao.insertOrUpdate(
-            WatchHistoryEntity(
-                videoId = videoId,
-                title = title,
-                coverUrl = coverUrl,
-                duration = duration,
-                isVip = isVip,
-                watchedAt = System.currentTimeMillis(),
-                playbackPositionMs = positionMs,
-                totalDurationMs = totalDurationMs
-            )
-        )
-        try {
-            CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, coverUrl)
-        } catch (_: Exception) {}
-    }
-
-    suspend fun deleteHistory(videoId: String) = watchHistoryDao.deleteByVideoId(videoId)
-
-    suspend fun deleteHistoryList(videoIds: List<String>) = watchHistoryDao.deleteByVideoIds(videoIds)
-
-    suspend fun clearAllHistory() = watchHistoryDao.clearAll()
-
-    /**
-     * Batch add selected history items to a target favorite folder
-     */
-    suspend fun batchAddToFavorites(items: List<WatchHistoryEntity>, targetFolderId: Long) {
-        val favoriteItems = items.map {
-            FavoriteItemEntity(
-                folderId = targetFolderId,
-                videoId = it.videoId,
-                title = it.title,
-                coverUrl = it.coverUrl,
-                duration = it.duration,
-                isVip = it.isVip,
-                addedAt = System.currentTimeMillis()
-            )
-        }
-        favoriteRepository.batchCopy(favoriteItems, targetFolderId)
-    }
-
-    // --- Watch Later ---
-    fun getWatchLaterFlow(): Flow<List<WatchLaterEntity>> = watchLaterDao.getAllFlow()
-
-    suspend fun addToWatchLater(
-        videoId: String,
-        title: String,
-        coverUrl: String,
-        duration: String = "",
-        isVip: Boolean = false
-    ) {
-        watchLaterDao.insert(
-            WatchLaterEntity(
-                videoId = videoId,
-                title = title,
-                coverUrl = coverUrl,
-                duration = duration,
-                isVip = isVip
-            )
-        )
-        try {
-            CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, coverUrl)
-        } catch (_: Exception) {}
-    }
-
-    suspend fun removeFromWatchLater(videoId: String) = watchLaterDao.deleteByVideoId(videoId)
-
-    suspend fun removeFromWatchLaterList(videoIds: List<String>) = watchLaterDao.deleteByVideoIds(videoIds)
-
-    suspend fun isWatchLater(videoId: String): Boolean = watchLaterDao.isWatchLater(videoId)
-
-    fun isWatchLaterFlow(videoId: String): Flow<Boolean> = watchLaterDao.isWatchLaterFlow(videoId)
-}
-
-class SearchHistoryRepository(
-    private val searchHistoryDao: SearchHistoryDao
-) {
-    val searchHistoryFlow: Flow<List<SearchHistoryEntity>> = searchHistoryDao.getAllFlow()
-
-    suspend fun saveSearchQuery(query: String) {
-        val trimmed = query.trim()
-        if (trimmed.isEmpty()) return
-        searchHistoryDao.insertOrUpdate(
-            SearchHistoryEntity(query = trimmed, searchedAt = System.currentTimeMillis())
-        )
-        searchHistoryDao.trimToMax50()
-    }
-
-    suspend fun deleteSearchQuery(query: String) {
-        searchHistoryDao.delete(query.trim())
-    }
-
-    suspend fun deleteSearchQueries(queries: List<String>) {
-        if (queries.isNotEmpty()) {
-            searchHistoryDao.deleteByQueries(queries.map { it.trim() })
-        }
-    }
-
-    suspend fun clearAll() {
-        searchHistoryDao.clearAll()
-    }
-}
+import java.io.File
 
 private fun migratePreferencesIfNeeded(context: Context) {
     try {
-        val oldFile = java.io.File(context.filesDir, "datastore/neoviewer_settings.preferences_pb")
-        val newFile = java.io.File(context.filesDir, "datastore/zakoviewer_settings.preferences_pb")
+        val oldFile = File(context.filesDir, "datastore/neoviewer_settings.preferences_pb")
+        val newFile = File(context.filesDir, "datastore/zakoviewer_settings.preferences_pb")
         if (oldFile.exists() && !newFile.exists()) {
             newFile.parentFile?.mkdirs()
             oldFile.copyTo(newFile, overwrite = true)
@@ -164,6 +32,10 @@ private val Context.dataStore by preferencesDataStore(
     }
 )
 
+/**
+ * 全局用户偏好与设置仓储 (SettingsRepository)
+ * 基于 AndroidX Preferences DataStore 提供响应式配置读取与持久化修改
+ */
 class SettingsRepository(private val context: Context) {
     companion object {
         val KEY_LONG_PRESS_SPEED = floatPreferencesKey("long_press_speed")

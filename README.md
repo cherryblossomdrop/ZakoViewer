@@ -10,14 +10,14 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 | 语言 / 类型 | 模块数 | 源码行数 | 核心架构与工程职责 |
 | :--- | :---: | :---: | :--- |
-| **Kotlin (`.kt`)** | 107 | 24,403 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
+| **Kotlin (`.kt`)** | 109 | 26,202 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
 | **C++ / JNI (`.cpp`)** | 3 | 1,885 | libmpv 原生硬件加速渲染、跨语言 JNI 互斥锁、异步 Seek 屏障与原生日志捕获 |
 | **Gradle 构建 (`.kts`)** | 3 | 171 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
 | **资源配置 (`.xml`)** | 26 | 338 | 跨版本清单配置、多主题矢量图形及自适应图标资源 |
 | **构建配置 (CMake)** | 1 | 25 | CMake 原生链接编排与编译参数 |
 | **CI/CD 工作流 (`.yml`)** | 1 | 112 | 自动化 GitHub Release 发版与纯源码无污染归档流水线 |
 | **项目规范与文档 (`.md`)** | 3 | 291 | 自动化版本递增、Commit 规范、发版发布、代码索引与编译验证准则 |
-| **总计** | **144** | **27,225** | **全项目共计约 2.72 万行高质量工程源码** |
+| **总计** | **146** | **29,024** | **全项目共计约 2.90 万行高质量工程源码** |
 
 ---
 
@@ -101,7 +101,7 @@ app/src/main/
 │   ├── core/                      # 核心基建与能力驱动
 │   │   ├── cdn/                   # CDN 动态并发测速引擎与在线选线调度中枢 (CdnSpeedTester, CdnSmartRouter, PlaybackSourceCoordinator)
 │   │   ├── cover/                 # 核心业务封面持久化与按需补全引擎 (CoverCacheManager)
-│   │   ├── download/              # 多并发分片断点续传下载引擎与本地视频检测仲裁 (DownloadManager)
+│   │   ├── download/              # 多并发分片断点续传下载引擎、物理目录迁移与本地检测仲裁 (DownloadManager, DownloadMigrationHelper)
 │   │   ├── external/              # 外部播放器与多态应用调用适配
 │   │   ├── icon/                  # 动态桌面图标动态切换管理
 │   │   ├── logger/                # 结构化日志追踪、公共导出与原子截断清空
@@ -113,7 +113,7 @@ app/src/main/
 │   ├── data/                      # 统一数据持久化与外部服务模型
 │   │   ├── backup/                # 数据库与多媒体归档导入导出、分阶段流式解压与恢复管理器
 │   │   ├── local/                 # Room 数据库实体、DAO 接口与迁移
-│   │   ├── repository/            # 数据仓库层 (History, Settings, Favorites)
+│   │   ├── repository/            # 数据仓库层 (HistoryRepository, SettingsRepository, FavoriteRepository)
 │   │   └── source/                # 外部 API 通信与实体反序列化
 │   └── ui/                        # Compose 声明式表现层
 │       ├── components/            # 高级复用组件 (视频卡片、封面时长角标 DurationBadge、本地文件信息弹窗等)

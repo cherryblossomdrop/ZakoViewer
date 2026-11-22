@@ -62,11 +62,13 @@ fun PlayerBottomControls(
                 },
                 onValueChangeFinished = { ratio ->
                     isScrubbing = false
-                    val now = System.currentTimeMillis()
-                    if (now - lastSeekTriggerTime >= 150L) {
-                        lastSeekTriggerTime = now
-                        val targetMs = (ratio * durationMs).toLong()
-                        onSeekTo(targetMs)
+                    if (durationMs > 0L) {
+                        val now = System.currentTimeMillis()
+                        if (now - lastSeekTriggerTime >= 150L) {
+                            lastSeekTriggerTime = now
+                            val targetMs = (ratio * durationMs).toLong().coerceIn(0L, durationMs)
+                            onSeekTo(targetMs)
+                        }
                     }
                 },
                 modifier = Modifier

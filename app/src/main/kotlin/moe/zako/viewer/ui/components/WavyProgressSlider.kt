@@ -80,6 +80,7 @@ fun WavyProgressSlider(
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     val targetProgress = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                    onValueChange?.invoke(targetProgress)
                     if (onValueChangeFinished != null) {
                         onValueChangeFinished(targetProgress)
                     } else {

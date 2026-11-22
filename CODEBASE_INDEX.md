@@ -1,6 +1,6 @@
 # ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（`v1.2.42`），全项目核心工程源码共计 **103** 个文件，累计 **24,028** 行代码。  
+> **版本定位**：截至最新构建（`v1.2.42`），全项目核心工程源码共计 **106** 个文件，累计 **24,254** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -44,10 +44,13 @@
 | `app/src/main/kotlin/moe/zako/viewer/core/icon/AppIconManager.kt` | 93 | 桌面动态图标别名热切换器 | 操纵 `PackageManager.setComponentEnabledSetting` 切换 Manifest 中的 `<activity-alias>` |
 | `app/src/main/kotlin/moe/zako/viewer/core/logger/ZakoLog.kt` | 521 | 结构化诊断日志框架，提供内存缓冲、磁盘滚动落盘与系统信息采集 | 单例封装双端日志输出，支持日志级别过滤、公共下载目录原子导出与崩溃诊断头组装 |
 | `app/src/main/kotlin/moe/zako/viewer/core/permission/StoragePermissionHelper.kt` | 54 | 外部存储与所有文件访问权限（MANAGE_EXTERNAL_STORAGE）检查适配器 | 区分 Android 11+（`Environment.isExternalStorageManager`）与低版本运行时权限检查与设置跳转 |
-| `app/src/main/kotlin/moe/zako/viewer/core/player/MPVLib.kt` | 172 | libmpv 原生 JNI 跨语言调用桥梁 | 声明 `create`、`init`、`destroy`、`command`、`setOptionString` 等 external JNI 原生句柄方法 |
-| `app/src/main/kotlin/moe/zako/viewer/core/player/MPVView.kt` | 146 | libmpv 原生视频 SurfaceView 渲染承载组件 | 继承 `SurfaceView` 实现 `SurfaceHolder.Callback`，协同原生 OpenGL/EGL 绘制表面生命周期 |
-| `app/src/main/kotlin/moe/zako/viewer/core/player/MultiNodeStreamBuffer.kt` | 690 | 流媒体本地微型代理网关，提供分片缓冲与边下边播 | 基于嵌入式 Socket 建立本地代理，处理 MPV 发起的 Range 请求并并发拉取远端源 |
-| `app/src/main/kotlin/moe/zako/viewer/core/player/ZakoPlayer.kt` | 1044 | 播放器核心业务封装门面，统筹状态流转、播放模式与手势调控 | 维护 MPV 原生状态流（StateFlow），封装起播、暂停、平滑 Seek、画幅比例与音频管线调度 |
+| `app/src/main/kotlin/moe/zako/viewer/core/player/MPVLib.kt` | 152 | libmpv 原生 JNI 跨语言调用桥梁 | 声明 `create`、`init`、`destroy`、`command`、`setOptionString` 等 external JNI 原生句柄方法 |
+| `app/src/main/kotlin/moe/zako/viewer/core/player/MPVView.kt` | 129 | libmpv 原生视频 SurfaceView 渲染承载组件 | 继承 `SurfaceView` 实现 `SurfaceHolder.Callback`，协同原生 OpenGL/EGL 绘制表面生命周期 |
+| `app/src/main/kotlin/moe/zako/viewer/core/player/MultiNodeStreamBuffer.kt` | 620 | 流媒体本地微型代理网关，提供分片缓冲与边下边播 | 基于嵌入式 Socket 建立本地代理，处理 MPV 发起的 Range 请求并并发拉取远端源 |
+| `app/src/main/kotlin/moe/zako/viewer/core/player/PlayerEngine.kt` | 124 | 内部播放引擎适配器统一接口与状态定义 | 定义 `PlayerEngineAdapter` 接口、`EngineCallback` 回调契约与状态流数据模型 |
+| `app/src/main/kotlin/moe/zako/viewer/core/player/MpvPlayerEngine.kt` | 538 | libmpv 原生渲染播放引擎适配器实现 | 承载 `MPVLib` JNI 驱动、OpenGL/EGL 渲染时序、Seek 瞬态防抖与零值抑制、新规范画幅调控与精准日志过滤 |
+| `app/src/main/kotlin/moe/zako/viewer/core/player/SystemPlayerEngine.kt` | 415 | 系统 MediaPlayer 播放引擎适配器实现 | 后台独立单线程安全串行派发 IPC、主线程同步解绑 Surface 杜绝 EGL 争抢、Seek 瞬态保护与线程安全释放 |
+| `app/src/main/kotlin/moe/zako/viewer/core/player/ZakoPlayer.kt` | 350 | 播放器核心对外轻量封装门面 | 适配器模式调度 MPV 与系统引擎，聚合对外 `StateFlow`，隔离跨引擎过期回调与消除双重起播竞态 |
 | `app/src/main/kotlin/moe/zako/viewer/core/search/SearchQueryParser.kt` | 104 | 复合搜索词法解析引擎，支持高级布尔语法与暗号解析 | 词法拆解查询字串为 Tag/关键词过滤器，自动嗅探并隔离提取 SFW 汉字隐写特征码 |
 | `app/src/main/kotlin/moe/zako/viewer/core/share/ShareCipherUtil.kt` | 91 | 语义级 SFW 汉字隐写编解码分享协议工具 | 建立 Base64/Hex 与自然汉字字库的高维双向映射表，实现零外链敏感拦截的暗号编解码 |
 | `app/src/main/kotlin/moe/zako/viewer/core/storage/PublicStorageHelper.kt` | 107 | 分区存储公共空间直出与 MediaStore 写入适配器 | 遵循 Android 10+ Scoped Storage，通过 `MediaStore.Downloads` 写入备份包与导出日志 |
@@ -106,13 +109,13 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/MultiSelectTopBar.kt` | 59 | 全局统一多选态顶栏组件 | 封装退出多选导航图标、已选数量计数、全选/反选操作、动态返回键拦截与 actions 扩展插槽 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/VideoActionMenu.kt` | 131 | 全局统一视频长按上下文操作菜单组件 | 基于 `ModalBottomSheet` 消费 `MenuTokens`，接收 `List<VideoMenuAction>` 驱动选项与危险色渲染 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/VideoCard.kt` | 148 | 瀑布流与列表通用视频卡片组件 | 展示视频封面（支持模糊脱敏）、VIP 标识、复用 `DurationBadge` 呈现时长及点击事件分发 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/components/WavyProgressSlider.kt` | 209 | Material 3 Expressive 动态可动波浪阻尼滑块 | 结合动画过渡与正弦波振幅，实现播放进度条在拖拽/播放态下的流体波浪动效 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/components/WavyProgressSlider.kt` | 210 | Material 3 Expressive 动态可动波浪阻尼滑块 | 结合动画过渡与正弦波振幅，实现播放进度条在拖拽/播放态下的流体波浪动效及点击预览预派发 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/ZakoBottomBar.kt` | 49 | 应用底部导航栏组件 | 封装 NavigationBar，提供首页、收藏（五角星 Token）、我的三大核心标签切换 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/ZakoToast.kt` | 222 | 全局防抖悬浮轻量提示组件 (Toast) | 协程通道防抖排队调度，提供带动画淡入淡出的自定义界面悬浮提示条 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/player/CdnNodeSelectorDialog.kt` | 97 | CDN 节点实时测速与线路切换抽屉 | 消费 `MenuTokens` 与 `AppIcons`，跨全屏与详情页内嵌播放器复用测速/手动选线 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/player/GestureOverlays.kt` | 228 | 播放器手势调节（音量/亮度/快进）视觉反馈浮层 | 在播放视口中央弹出带图标与百分比进度的半透明胶囊/卡片 HUD 反馈 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/player/PlaybackSpeedDialog.kt` | 140 | 播放倍速调节浮动弹窗 | 约束视口高度并阻断底层手势穿透，提供从 0.5x 到 3.0x 多档倍速平滑切换 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/components/player/PlayerBottomControls.kt` | 137 | 全局共享播放底部控制栏与波浪进度条 | 统筹播放/暂停、时间进度、波浪滑块、全屏切换插槽与参数化功能扩展 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/components/player/PlayerBottomControls.kt` | 139 | 全局共享播放底部控制栏与波浪进度条 | 统筹播放/暂停、时间进度、波浪滑块、全屏切换插槽与时长安全校验 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/player/PlayerBrightnessVolumeHelper.kt` | 161 | 屏幕亮度与媒体音量手势调控辅助计算器 | 结合 WindowManager 与 AudioManager，提供线性平滑归一化与防跳变调控机制 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/player/PlayerControlDefaults.kt` | 26 | 播放器全域控制层几何尺寸与视觉补偿规范 | 标定控件图标（24dp）、触控容器（40dp）及异形图标视觉等重补偿常量 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/player/PlayerEngineAndHwDecDialogs.kt` | 114 | 播放内核与硬件解码切换弹窗集 | 提供 ExoPlayer/MPV 播放引擎切换与 MPV 硬件解码模式选择，跨播放场景复用 |

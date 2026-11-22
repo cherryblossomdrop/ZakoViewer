@@ -6,18 +6,18 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 ## 📊 工程源码规模统计
 
-本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.41**）代码规模统计如下：
+本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.43**）代码规模统计如下：
 
 | 语言 / 类型 | 模块数 | 源码行数 | 核心架构与工程职责 |
 | :--- | :---: | :---: | :--- |
-| **Kotlin (`.kt`)** | 95 | 24,774 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、下载引擎、播放器组件库与 Scoped Storage 适配 |
+| **Kotlin (`.kt`)** | 99 | 25,297 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
 | **C++ / JNI (`.cpp`)** | 1 | 634 | libmpv 原生硬件加速渲染、跨语言 JNI 互斥锁、异步 Seek 屏障与原生日志捕获 |
 | **Gradle 构建 (`.kts`)** | 3 | 171 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
 | **资源配置 (`.xml`)** | 26 | 355 | 跨版本清单配置、多主题矢量图形及自适应图标资源 |
 | **构建配置 (CMake)** | 1 | 32 | CMake 原生链接编排与编译参数 |
 | **CI/CD 工作流 (`.yml`)** | 1 | 130 | 自动化 GitHub Release 发版与纯源码无污染归档流水线 |
 | **项目规范与文档 (`.md`)** | 3 | 322 | 自动化版本递增、Commit 规范、发版发布、代码索引与编译验证准则 |
-| **总计** | **130** | **26,418** | **全项目共计约 2.64 万行高质量工程源码** |
+| **总计** | **134** | **26,941** | **全项目共计约 2.69 万行高质量工程源码** |
 
 ---
 
@@ -37,11 +37,13 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 - **断点记忆无缝热切**：彻底修复切线重播缺陷，切换节点时精确透传 `currentPositionMs` 维持播放连续性，彻底消除重载黑屏与进度丢失；
 - **持久化数据源策略**：播放设置深度集成「数据源与 CDN 选线」持久化区块，支持自由切换「自动选择最优节点（推荐）」与「固定默认线路（线路 1 ~ 5）」，满足个性化网络调度诉求。
 
-### 3. 🛡️ MPV 原生播放器内核与渲染管线 (libmpv Native Pipeline)
+### 3. 🛡️ 播放引擎适配器架构与渲染管线 (Player Engine Adapter Architecture)
+- **引擎适配器解耦与轻量门面**：抽离 `PlayerEngineAdapter` 接口，将 `ZakoPlayer` 重构为轻量门面（~350 行），将底层 `libmpv` 原生渲染管线（`MpvPlayerEngine`）与系统 `MediaPlayer` 异步管线（`SystemPlayerEngine`）彻底解耦，并建立带身份校验的 `EngineCallback` 彻底隔离旧引擎迟到回调；
+- **Seek 瞬态防抖与零值抑制**：在引擎适配器与播放门面建立双层 Seek 保护窗口期，抑制底层解复用重定位瞬态上报的 0 进度与残留脏数据，彻底解决进度条点击归零问题；主线程同步断开旧引擎 Surface 占用，杜绝跨引擎切换时的 EGL 创建冲突与双重起播异步竞态；
 - **libmpv 原生硬件加速**：基于高性能 libmpv 底层驱动音视频管线，支持 GPU 渲染输出直通与多格式硬件解码加速；
-- **Surface 引用缓存与起播零冗余绑定**：重构 `ZakoPlayer` 渲染管道，维护活动 Surface 实例，起播与切片完全跳过重复的 EGL 重建与无效尺寸设置；严格遵循 MPV 现代规范弃用旧版 `video-aspect-override` 整数指令，消除起播停顿与控制台废弃警告；
+- **Surface 引用缓存与起播零冗余绑定**：维护活动 Surface 实例，起播与切片完全跳过重复的 EGL 重建与无效尺寸设置；严格遵循 MPV 现代规范弃用旧版 `video-aspect-override` 整数指令，消除起播停顿与控制台废弃警告；
 - **JNI 互斥锁与生命周期同步**：底层跨语言交互引入互斥锁（Mutex）与异步 Seek 屏障，严密协同 Surface 生命周期，杜绝引擎热切换与跨线程竞争崩溃；
-- **渲染死锁与起播保护**：深度优化视频输出绑定与配置管线，规避重复初始化与渲染死锁，保障无缝起播体验；
+- **系统内核全异步串行 IPC**：系统 `MediaPlayer` 的全部生命周期与 Surface 解绑操作统一收敛至独立单线程队列串行派发，彻底消除主线程阻塞与线程泄漏；
 - **本地微型反向代理网关**：内置支持流式 HTTP Range 请求的专用本地代理网关，高效适配原生播放内核与网络分片拉取。
 
 ### 4. 🔏 语义级 SFW 汉字隐写编解码分享协议 (Steganographic SFW Cipher Protocol)
@@ -100,7 +102,7 @@ app/src/main/
 │   │   ├── icon/                  # 动态桌面图标动态切换管理
 │   │   ├── logger/                # 结构化日志追踪、公共导出与原子截断清空
 │   │   ├── permission/            # 存储与 Scoped Storage 权限处理适配
-│   │   ├── player/                # MPV 播放器封装、JNI 线程锁、手势阻尼与流缓冲代理
+│   │   ├── player/                # 播放引擎适配器架构 (MpvPlayerEngine, SystemPlayerEngine, ZakoPlayer 门面)
 │   │   ├── search/                # 复合词法解析引擎
 │   │   ├── share/                 # SFW 语义级汉字隐写编解码核心
 │   │   └── storage/               # 公共 Downloads 空间适配器 (PublicStorageHelper)

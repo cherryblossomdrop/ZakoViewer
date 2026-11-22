@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -25,9 +26,13 @@ import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.ui.components.DurationBadge
+import moe.zako.viewer.ui.components.VideoListItemCard
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.IconSize
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 import moe.zako.viewer.ui.theme.OverlayBlack
+import moe.zako.viewer.ui.theme.Spacing
 import moe.zako.viewer.ui.theme.VipGold
 
 /**
@@ -161,9 +166,8 @@ fun FavoriteFolderItem(
 }
 
 /**
- * 收藏视频条目卡片
+ * 收藏视频条目卡片 (复用全局统一 VideoListItemCard)
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FavoriteVideoItem(
     item: FavoriteItemEntity,
@@ -177,127 +181,71 @@ fun FavoriteVideoItem(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val coverBlurEnabled = LocalCoverBlurEnabled.current
+    val coverModel = remember(item.videoId, item.coverUrl) {
+        CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true)
+    }
 
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
+    VideoListItemCard(
+        coverModel = coverModel,
+        title = item.title,
+        duration = item.duration,
+        isSelectionMode = isSelectionMode,
+        isSelected = isSelected,
+        onSelectToggle = onSelectToggle,
+        onClick = {
+            if (isSelectionMode) {
+                onSelectToggle()
             } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                onPlayClick()
             }
-        ),
+        },
+        onLongClick = onMenuClick,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 3.dp)
-            .combinedClickable(
-                onClick = {
-                    if (isSelectionMode) {
-                        onSelectToggle()
-                    } else {
-                        onPlayClick()
-                    }
-                },
-                onLongClick = onMenuClick
-            )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (isSelectionMode) {
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = { onSelectToggle() },
-                    modifier = Modifier.padding(end = 4.dp)
-                )
-            }
-
-            // 视频封面卡片
-            Box(
-                modifier = Modifier
-                    .width(110.dp)
-                    .height(68.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .clipToBounds()
-            ) {
-                AsyncImage(
-                    model = CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true),
-                    contentDescription = item.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(if (coverBlurEnabled) Modifier.blur(18.dp) else Modifier)
-                )
-
-                if (item.isVip) {
-                    Surface(
-                        color = VipGold,
-                        shape = RoundedCornerShape(bottomEnd = 4.dp),
-                        modifier = Modifier.align(Alignment.TopStart)
-                    ) {
-                        Icon(
-                            imageVector = AppIcons.WorkspacePremium,
-                            contentDescription = "VIP",
-                            tint = Color(0xFF2E1C00),
-                            modifier = Modifier
-                                .size(16.dp)
-                                .padding(2.dp)
-                        )
-                    }
-                }
-
-                // 时长角标 (统一组件与格式化)
-                DurationBadge(duration = item.duration)
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // 标题与信息
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "视频编号: ${item.videoId}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 11.sp
-                    )
-                    if (isSearchMode && parentFolderName != null) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "来自: $parentFolderName",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 11.sp
-                        )
-                    }
-                }
-            }
-
-            // 菜单触发器
-            if (!isSelectionMode) {
-                IconButton(onClick = onMenuClick) {
+            .padding(horizontal = Spacing.Lg, vertical = Spacing.Xxs),
+        coverBadge = if (item.isVip) {
+            {
+                Surface(
+                    color = VipGold,
+                    shape = RoundedCornerShape(bottomEnd = CornerRadius.Xs),
+                    modifier = Modifier.align(Alignment.TopStart)
+                ) {
                     Icon(
-                        imageVector = AppIcons.MoreVert,
-                        contentDescription = "选项",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = AppIcons.WorkspacePremium,
+                        contentDescription = "VIP",
+                        tint = Color(0xFF2E1C00),
+                        modifier = Modifier
+                            .size(IconSize.Sm)
+                            .padding(Spacing.Xxs)
                     )
                 }
+            }
+        } else null,
+        subtitle = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "视频编号: ${item.videoId}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (isSearchMode && parentFolderName != null) {
+                    Spacer(modifier = Modifier.width(Spacing.Sm))
+                    Text(
+                        text = "来自: $parentFolderName",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
+        actions = {
+            IconButton(onClick = onMenuClick) {
+                Icon(
+                    imageVector = AppIcons.MoreVert,
+                    contentDescription = "选项",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
-    }
+    )
 }

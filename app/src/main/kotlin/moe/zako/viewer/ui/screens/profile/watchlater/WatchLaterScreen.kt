@@ -30,9 +30,11 @@ import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.VideoActionBottomSheet
+import moe.zako.viewer.ui.components.VideoListItemCard
 import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
+import moe.zako.viewer.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -134,90 +136,27 @@ fun WatchLaterScreen(
             ) {
                 items(state.list, key = { it.videoId }) { item ->
                     val isSelected = state.selectedVideoIds.contains(item.videoId)
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .combinedClickable(
-                                onClick = {
-                                    if (state.isSelectionMode) {
-                                        viewModel.toggleSelection(item.videoId)
-                                    } else {
-                                        onNavigateToDetail(item.videoId)
-                                    }
-                                },
-                                onLongClick = {
-                                    if (state.isSelectionMode) {
-                                        viewModel.toggleSelection(item.videoId)
-                                    } else {
-                                        menuTargetItem = item
-                                    }
-                                }
-                            ),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) {
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                            }
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    WatchLaterItemCard(
+                        item = item,
+                        isSelectionMode = state.isSelectionMode,
+                        isSelected = isSelected,
+                        onSelectToggle = { viewModel.toggleSelection(item.videoId) },
+                        onClick = {
                             if (state.isSelectionMode) {
-                                Checkbox(
-                                    checked = isSelected,
-                                    onCheckedChange = { viewModel.toggleSelection(item.videoId) }
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                viewModel.toggleSelection(item.videoId)
+                            } else {
+                                onNavigateToDetail(item.videoId)
                             }
-
-                            val isCoverBlurEnabled = LocalCoverBlurEnabled.current
-                            Box(
-                                modifier = Modifier
-                                    .width(100.dp)
-                                    .aspectRatio(16f / 9f)
-                                    .clip(RoundedCornerShape(8.dp))
-                            ) {
-                                AsyncImage(
-                                    model = CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true),
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .then(
-                                            if (isCoverBlurEnabled) Modifier.blur(18.dp).clipToBounds() else Modifier
-                                        ),
-                                    contentScale = ContentScale.Crop
-                                )
-                                DurationBadge(duration = item.duration)
+                        },
+                        onLongClick = {
+                            if (state.isSelectionMode) {
+                                viewModel.toggleSelection(item.videoId)
+                            } else {
+                                menuTargetItem = item
                             }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = item.title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 2
-                                )
-                            }
-
-                            if (!state.isSelectionMode) {
-                                IconButton(onClick = { viewModel.remove(item.videoId) }) {
-                                    Icon(
-                                        imageVector = AppIcons.DeleteOutline,
-                                        contentDescription = "移除"
-                                    )
-                                }
-                            }
-                        }
-                    }
+                        },
+                        onRemove = { viewModel.remove(item.videoId) }
+                    )
                 }
             }
         }
@@ -334,4 +273,44 @@ fun WatchLaterScreen(
             onCreateFolder = { name, parentId -> viewModel.createFolder(name, parentId) }
         )
     }
+}
+
+/**
+ * 稍后再看条目卡片 (复用全局统一 VideoListItemCard)
+ */
+@Composable
+fun WatchLaterItemCard(
+    item: WatchLaterEntity,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onSelectToggle: () -> Unit,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val coverModel = remember(item.videoId, item.coverUrl) {
+        CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true)
+    }
+
+    VideoListItemCard(
+        coverModel = coverModel,
+        title = item.title,
+        duration = item.duration,
+        isSelectionMode = isSelectionMode,
+        isSelected = isSelected,
+        onSelectToggle = onSelectToggle,
+        onClick = onClick,
+        onLongClick = onLongClick,
+        modifier = modifier,
+        actions = {
+            IconButton(onClick = onRemove) {
+                Icon(
+                    imageVector = AppIcons.DeleteOutline,
+                    contentDescription = "移除"
+                )
+            }
+        }
+    )
 }

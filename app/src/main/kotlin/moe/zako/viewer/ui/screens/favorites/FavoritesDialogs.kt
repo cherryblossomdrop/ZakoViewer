@@ -15,9 +15,8 @@ import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.theme.AppIcons
 
 /**
- * 子收藏夹长按操作抽屉
+ * 子收藏夹长按操作抽屉 (基于 VideoActionBottomSheet 与 MenuTokens)
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FolderActionBottomSheet(
     folder: FavoriteFolderEntity,
@@ -27,46 +26,39 @@ fun FolderActionBottomSheet(
     onDelete: (Long) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismissRequest) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = folder.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+    val actions = listOf(
+        VideoMenuAction(
+            id = "multi_select",
+            title = "多选",
+            icon = AppIcons.MultiSelect,
+            onClick = { onStartSelection(folder.id) }
+        ),
+        VideoMenuAction(
+            id = "rename",
+            title = "重命名",
+            icon = AppIcons.Edit,
+            onClick = { onRename(folder) }
+        ),
+        VideoMenuAction(
+            id = "move",
+            title = "移动到",
+            icon = AppIcons.Move,
+            onClick = { onMove(folder.id) }
+        ),
+        VideoMenuAction(
+            id = "delete",
+            title = "删除",
+            icon = AppIcons.Delete,
+            isDangerous = true,
+            onClick = { onDelete(folder.id) }
+        )
+    )
 
-            ListItem(
-                headlineContent = { Text("多选") },
-                leadingContent = { Icon(AppIcons.MultiSelect, contentDescription = null) },
-                modifier = Modifier.clickable { onStartSelection(folder.id) }
-            )
-
-            ListItem(
-                headlineContent = { Text("重命名") },
-                leadingContent = { Icon(AppIcons.Edit, contentDescription = null) },
-                modifier = Modifier.clickable { onRename(folder) }
-            )
-
-            ListItem(
-                headlineContent = { Text("移动到") },
-                leadingContent = { Icon(AppIcons.Move, contentDescription = null) },
-                modifier = Modifier.clickable { onMove(folder.id) }
-            )
-
-            ListItem(
-                headlineContent = { Text("删除", color = MaterialTheme.colorScheme.error) },
-                leadingContent = { Icon(AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-                modifier = Modifier.clickable { onDelete(folder.id) }
-            )
-        }
-    }
+    VideoActionBottomSheet(
+        title = folder.name,
+        actions = actions,
+        onDismissRequest = onDismissRequest
+    )
 }
 
 /**

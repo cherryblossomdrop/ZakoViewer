@@ -29,6 +29,7 @@ import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.VideoActionBottomSheet
+import moe.zako.viewer.ui.components.VideoListItemCard
 import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.components.ZakoSearchBar
 import moe.zako.viewer.ui.components.clearFocusOnScroll
@@ -36,6 +37,7 @@ import moe.zako.viewer.ui.components.clearFocusOnTap
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 import moe.zako.viewer.ui.theme.SearchBarTokens
+import moe.zako.viewer.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -291,7 +293,6 @@ fun HistoryScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HistoryRowItem(
     item: WatchHistoryEntity,
@@ -301,67 +302,29 @@ fun HistoryRowItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (isSelectionMode) {
-            Checkbox(checked = isSelected, onCheckedChange = { onSelectToggle() })
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-
-        // Thumbnail
-        val isCoverBlurEnabled = LocalCoverBlurEnabled.current
-        val context = LocalContext.current
-        Box(
-            modifier = Modifier
-                .width(110.dp)
-                .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp))
-        ) {
-            AsyncImage(
-                model = CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (isCoverBlurEnabled) Modifier.blur(18.dp).clipToBounds() else Modifier
-                    ),
-                contentScale = ContentScale.Crop
-            )
-            DurationBadge(duration = item.duration)
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Exact time formatted as HH:mm (e.g. 14:35)
-                Text(
-                    text = "观看时间: ${item.timeExactString}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
+    val context = LocalContext.current
+    val coverModel = remember(item.videoId, item.coverUrl) {
+        CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true)
     }
+
+    VideoListItemCard(
+        coverModel = coverModel,
+        title = item.title,
+        duration = item.duration,
+        isSelectionMode = isSelectionMode,
+        isSelected = isSelected,
+        onSelectToggle = onSelectToggle,
+        onClick = {
+            if (isSelectionMode) onSelectToggle() else onClick()
+        },
+        onLongClick = onLongClick,
+        modifier = Modifier.padding(horizontal = Spacing.Lg, vertical = Spacing.Xxs),
+        subtitle = {
+            Text(
+                text = "观看时间: ${item.timeExactString}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    )
 }

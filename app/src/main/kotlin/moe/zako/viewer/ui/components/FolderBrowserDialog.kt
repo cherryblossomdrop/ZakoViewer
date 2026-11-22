@@ -14,13 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.ui.theme.AppIcons
 import java.io.File
@@ -47,21 +44,12 @@ fun FolderBrowserDialog(
     }
 
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     var hasStoragePermission by remember { mutableStateOf(StoragePermissionHelper.hasAllFilesAccess()) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                hasStoragePermission = StoragePermissionHelper.hasAllFilesAccess()
-                refreshTrigger++
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+    ObserveStoragePermissionOnResume { granted ->
+        hasStoragePermission = granted
+        refreshTrigger++
     }
     var showCreateDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }

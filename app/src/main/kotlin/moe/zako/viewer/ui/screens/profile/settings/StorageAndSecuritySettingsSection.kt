@@ -21,6 +21,8 @@ import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.core.storage.StorageConstants
 import moe.zako.viewer.ui.components.AppPickerDialog
 import moe.zako.viewer.ui.components.FolderBrowserDialog
+import moe.zako.viewer.ui.components.MigrationProgressDialog
+import moe.zako.viewer.ui.components.ObserveStoragePermissionOnResume
 import moe.zako.viewer.ui.theme.AppIcons
 import java.io.File
 
@@ -126,7 +128,6 @@ fun SettingsDownloadScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.uiState.collectAsState()
 
     var hasStoragePermission by remember { mutableStateOf(StoragePermissionHelper.hasAllFilesAccess()) }
@@ -134,18 +135,10 @@ fun SettingsDownloadScreen(
     var showFolderBrowserDialog by remember { mutableStateOf(false) }
     var showDownloaderPickerDialog by remember { mutableStateOf(false) }
 
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                hasStoragePermission = StoragePermissionHelper.hasAllFilesAccess()
-                if (hasStoragePermission) {
-                    showPermissionGuideDialog = false
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+    ObserveStoragePermissionOnResume { granted ->
+        hasStoragePermission = granted
+        if (granted) {
+            showPermissionGuideDialog = false
         }
     }
 
@@ -377,9 +370,9 @@ fun SettingsDownloadScreen(
         )
     }
 
-    // Migration Confirmation & Progress Dialog
+    // Migration Confirmation & Progress Dialog (复用全局统一 MigrationProgressDialog)
     if (state.showMigrationDialog) {
-        DownloadMigrationDialog(
+        MigrationProgressDialog(
             isMigrating = state.isMigrating,
             progressText = state.migrationProgressText,
             filesCount = state.filesToMigrateCount,

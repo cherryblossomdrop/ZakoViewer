@@ -76,6 +76,8 @@ object AppIcons {
     val MoreVert: ImageVector = Icons.Default.MoreVert
     val WorkspacePremium: ImageVector = Icons.Default.WorkspacePremium
     val CheckCircle: ImageVector = Icons.Default.CheckCircle
+    val Info: ImageVector = Icons.Default.Info
+    val Error: ImageVector = Icons.Default.Error
 
     // 设置、系统与硬件
     val Palette: ImageVector = Icons.Default.Palette
@@ -99,6 +101,7 @@ object AppIcons {
     val ExpandLess: ImageVector = Icons.Default.ExpandLess
     val ExpandMore: ImageVector = Icons.Default.ExpandMore
     val Tune: ImageVector = Icons.Default.Tune
+    val FilterList: ImageVector = Icons.Default.FilterList
     val Sort: ImageVector = Icons.AutoMirrored.Filled.Sort
     val GridView: ImageVector = Icons.Default.GridView
     val ViewAgenda: ImageVector = Icons.Default.ViewAgenda

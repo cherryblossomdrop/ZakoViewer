@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +24,14 @@ import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.core.storage.ExportResult
 import moe.zako.viewer.core.storage.PublicStorageHelper
+import moe.zako.viewer.ui.components.ZakoSearchBar
 import moe.zako.viewer.ui.components.ZakoToast
+import moe.zako.viewer.ui.components.clearFocusOnScroll
+import moe.zako.viewer.ui.components.clearFocusOnTap
+import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.CornerRadius
+import moe.zako.viewer.ui.theme.IconSize
+import moe.zako.viewer.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +45,12 @@ fun LogViewerScreen(
     val includeHistory by ZakoLog.includeHistoryFlow.collectAsState()
     var exportedResult by remember { mutableStateOf<ExportResult?>(null) }
     var isExporting by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredLogs = remember(logs, searchQuery) {
+        if (searchQuery.isBlank()) logs
+        else logs.filter { it.formatted().contains(searchQuery, ignoreCase = true) }
+    }
 
     // 日志导出成功结果弹窗（替代纯 Toast）
     if (exportedResult != null) {
@@ -49,23 +60,23 @@ fun LogViewerScreen(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.CheckCircle,
+                        imageVector = AppIcons.CheckCircle,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(IconSize.Lg)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.Sm))
                     Text("日志导出成功")
                 }
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
                     Text(
                         text = "日志文件已写入公共存储目录：",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(CornerRadius.Sm),
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -75,7 +86,7 @@ fun LogViewerScreen(
                             }
                     ) {
                         Row(
-                            modifier = Modifier.padding(10.dp),
+                            modifier = Modifier.padding(Spacing.Sm),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -86,10 +97,10 @@ fun LogViewerScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             Icon(
-                                imageVector = Icons.Default.ContentCopy,
+                                imageVector = AppIcons.Copy,
                                 contentDescription = "复制路径",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(IconSize.Sm)
                             )
                         }
                     }
@@ -136,10 +147,15 @@ fun LogViewerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("运行日志 (${logs.size})") },
+                title = {
+                    Text(
+                        if (searchQuery.isBlank()) "运行日志 (${logs.size})"
+                        else "运行日志 (${filteredLogs.size}/${logs.size})"
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "返回")
+                        Icon(imageVector = AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 },
                 actions = {
@@ -147,7 +163,7 @@ fun LogViewerScreen(
                         ZakoLog.clear()
                         ZakoToast.show("运行日志已清空")
                     }) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = "清空日志")
+                        Icon(imageVector = AppIcons.Delete, contentDescription = "清空日志")
                     }
                     IconButton(
                         enabled = !isExporting,
@@ -170,9 +186,9 @@ fun LogViewerScreen(
                         }
                     ) {
                         if (isExporting) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(IconSize.Md), strokeWidth = 2.dp)
                         } else {
-                            Icon(imageVector = Icons.Default.Share, contentDescription = "导出日志")
+                            Icon(imageVector = AppIcons.Share, contentDescription = "导出日志")
                         }
                     }
                 }
@@ -184,30 +200,42 @@ fun LogViewerScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(Color(0xFF0F0F0F))
+                .clearFocusOnScroll()
+                .clearFocusOnTap()
         ) {
+            // 全局统一搜索框
+            ZakoSearchBar(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholderText = "搜索运行日志关键词...",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.Sm, vertical = Spacing.Xs)
+            )
+
             // 常驻显示日志保存目录 (随时可查，点击复制)
             Surface(
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(CornerRadius.Sm),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .padding(horizontal = Spacing.Sm, vertical = Spacing.Xs)
                     .clickable {
                         clipboardManager.setText(AnnotatedString(PublicStorageHelper.LOGS_DISPLAY_DIR))
                         ZakoToast.show("已复制日志目录到剪贴板")
                     }
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.Md, vertical = Spacing.Sm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Folder,
+                        imageVector = AppIcons.Folder,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(IconSize.Sm)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.Sm))
                     Text(
                         text = "日志保存目录：${PublicStorageHelper.LOGS_DISPLAY_DIR}",
                         style = MaterialTheme.typography.bodySmall,
@@ -216,10 +244,10 @@ fun LogViewerScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Icon(
-                        imageVector = Icons.Default.ContentCopy,
+                        imageVector = AppIcons.Copy,
                         contentDescription = "复制目录路径",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(IconSize.Sm)
                     )
                 }
             }
@@ -228,19 +256,19 @@ fun LogViewerScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                    .padding(horizontal = Spacing.Sm, vertical = Spacing.Xxs),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
+                    shape = RoundedCornerShape(CornerRadius.Xs),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
                 ) {
                     Text(
                         text = "当前版本: ${ZakoLog.CURRENT_VERSION_TAG}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = Spacing.Sm, vertical = Spacing.Xs),
                         fontFamily = FontFamily.Monospace
                     )
                 }
@@ -256,9 +284,9 @@ fun LogViewerScreen(
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = if (includeHistory) Icons.Default.History else Icons.Default.FilterList,
+                            imageVector = if (includeHistory) AppIcons.History else AppIcons.FilterList,
                             contentDescription = null,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(IconSize.Xs)
                         )
                     }
                 )
@@ -267,10 +295,10 @@ fun LogViewerScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    .padding(Spacing.Sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.Xs)
             ) {
-                items(logs) { log ->
+                items(filteredLogs) { log ->
                     val color = when (log.level) {
                         "ERROR" -> Color(0xFFFF5252)
                         "WARN" -> Color(0xFFFFD740)

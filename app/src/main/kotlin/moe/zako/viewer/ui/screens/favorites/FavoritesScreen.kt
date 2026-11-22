@@ -16,7 +16,9 @@ import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
+import moe.zako.viewer.ui.components.ZakoSearchBar
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.SearchBarTokens
 import kotlinx.coroutines.launch
 
 /**
@@ -141,24 +143,14 @@ fun FavoritesScreen(
                 )
             }
 
-            // 2. In-folder Search Bar
+            // 2. In-folder Search Bar (复用全局统一搜索框)
             item {
-                OutlinedTextField(
+                ZakoSearchBar(
                     value = state.searchQuery,
                     onValueChange = { viewModel.onSearchQueryChange(it) },
-                    leadingIcon = { Icon(imageVector = AppIcons.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (state.searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                Icon(imageVector = AppIcons.Clear, contentDescription = "清空")
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 2.dp),
-                    singleLine = true
+                        .padding(horizontal = SearchBarTokens.DefaultHorizontalPadding, vertical = 2.dp)
                 )
             }
 

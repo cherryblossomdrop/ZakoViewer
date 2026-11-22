@@ -5,18 +5,15 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import moe.zako.viewer.ui.components.ZakoSearchBar
 import moe.zako.viewer.ui.theme.AppIcons
 
 /**
@@ -46,44 +43,16 @@ fun HomeSearchBar(
     val focusManager = LocalFocusManager.current
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // 搜索输入框
-        OutlinedTextField(
+        // 统一搜索输入框（右侧箭头已彻底移除，复用公共组件与一键清空微动效）
+        ZakoSearchBar(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { onSearchFocusChanged(it.isFocused) },
-            shape = RoundedCornerShape(28.dp),
-            leadingIcon = {
-                Icon(
-                    imageVector = AppIcons.Search,
-                    contentDescription = "搜索",
-                    modifier = Modifier.size(24.dp)
-                )
+            onSearch = onPerformSearch,
+            onClear = {
+                onPerformSearch()
             },
-            trailingIcon = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = {
-                            onSearchQueryChange("")
-                            onPerformSearch()
-                        }) {
-                            Icon(imageVector = AppIcons.Clear, contentDescription = "清空")
-                        }
-                    }
-                    IconButton(onClick = onPerformSearch) {
-                        Icon(
-                            imageVector = AppIcons.ArrowForward,
-                            contentDescription = "提交",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onPerformSearch() })
+            onFocusChanged = onSearchFocusChanged,
+            modifier = Modifier.fillMaxWidth()
         )
 
         // 搜索历史面板（当点击搜索框获得焦点时展开，支持单选与多选批量删除）

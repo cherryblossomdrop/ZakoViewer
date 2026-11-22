@@ -13,7 +13,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import moe.zako.viewer.data.repository.LayoutMode
 import moe.zako.viewer.data.source.cosav.CosVideoItem
+import moe.zako.viewer.ui.components.FilterBarCircleButton
 import moe.zako.viewer.ui.theme.AppIcons
+import moe.zako.viewer.ui.theme.FilterBarTokens
 import java.util.Calendar
 
 /**
@@ -38,42 +40,31 @@ fun HomeFilterBar(
 ) {
     var showSortMenu by remember { mutableStateOf(false) }
 
+    val isSortActive = sortDimension != SortDimension.VIEWS || sortDirection != SortDirection.DESCENDING
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(FilterBarTokens.ItemSpacing),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 1. 扩充筛选抽屉入口
-        FilledTonalIconButton(
+        // 1. 扩充筛选抽屉入口（统一采用 Material 3 Tonal 逻辑与高对比激活态）
+        FilterBarCircleButton(
             onClick = onOpenFilterSheet,
-            modifier = Modifier.size(36.dp),
-            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = if (hasActiveFilter) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Icon(
-                imageVector = AppIcons.Tune,
-                contentDescription = "筛选",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
+            icon = AppIcons.Tune,
+            contentDescription = "筛选",
+            isActive = hasActiveFilter
+        )
 
-        // 2. 排序交互重构图标按钮与弹出菜单
+        // 2. 排序交互重构图标按钮与弹出菜单（激活态跟随非默认排序维度与方向）
         Box {
-            FilledTonalIconButton(
+            FilterBarCircleButton(
                 onClick = { showSortMenu = true },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = AppIcons.Sort,
-                    contentDescription = "排序",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+                icon = AppIcons.Sort,
+                contentDescription = "排序",
+                isActive = isSortActive
+            )
 
             DropdownMenu(
                 expanded = showSortMenu,
@@ -137,17 +128,13 @@ fun HomeFilterBar(
             }
         }
 
-        // 3. 布局模式切换按钮 (瀑布流 / 分页排布)
-        FilledTonalIconButton(
+        // 3. 布局模式切换按钮 (瀑布流 / 分页排布，非默认态激活高亮)
+        FilterBarCircleButton(
             onClick = onToggleLayoutMode,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = if (layoutMode == LayoutMode.WATERFALL) AppIcons.GridView else AppIcons.ViewAgenda,
-                contentDescription = if (layoutMode == LayoutMode.WATERFALL) "切换为分页排布" else "切换为瀑布流",
-                modifier = Modifier.size(20.dp)
-            )
-        }
+            icon = if (layoutMode == LayoutMode.WATERFALL) AppIcons.GridView else AppIcons.ViewAgenda,
+            contentDescription = if (layoutMode == LayoutMode.WATERFALL) "切换为分页排布" else "切换为瀑布流",
+            isActive = layoutMode != LayoutMode.WATERFALL
+        )
 
         // 4. 快速分类与热门标签
         val allChips = remember {

@@ -30,8 +30,10 @@ import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.VideoActionBottomSheet
 import moe.zako.viewer.ui.components.VideoMenuAction
+import moe.zako.viewer.ui.components.ZakoSearchBar
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
+import moe.zako.viewer.ui.theme.SearchBarTokens
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -121,16 +123,13 @@ fun HistoryScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Search Bar
-            OutlinedTextField(
+            // Search Bar (复用全局统一搜索框)
+            ZakoSearchBar(
                 value = state.searchQuery,
                 onValueChange = { viewModel.onSearchQueryChange(it) },
-                leadingIcon = { Icon(imageVector = AppIcons.Search, contentDescription = null) },
-                shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                singleLine = true
+                    .padding(horizontal = SearchBarTokens.DefaultHorizontalPadding, vertical = SearchBarTokens.DefaultVerticalPadding)
             )
 
             if (state.historyList.isEmpty()) {

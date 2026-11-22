@@ -81,95 +81,78 @@ fun FavoriteItemActionBottomSheet(
     onCopy: (FavoriteItemEntity) -> Unit,
     onDetail: (FavoriteItemEntity) -> Unit,
     onDelete: (Long) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    hasLocalFile: Boolean = false,
+    onShowFileInfo: (() -> Unit)? = null
 ) {
-    val actions = listOf(
-        VideoMenuAction(
-            id = "multi_select",
-            title = "多选",
-            icon = AppIcons.MultiSelect,
-            onClick = { onStartSelection(item.id) }
-        ),
-        VideoMenuAction(
-            id = "rename",
-            title = "重命名",
-            icon = AppIcons.Edit,
-            onClick = { onRename(item) }
-        ),
-        VideoMenuAction(
-            id = "move",
-            title = "移动到",
-            icon = AppIcons.Move,
-            onClick = { onMove(item.id) }
-        ),
-        VideoMenuAction(
-            id = "copy",
-            title = "复制到",
-            icon = AppIcons.Copy,
-            onClick = { onCopy(item) }
-        ),
-        VideoMenuAction(
-            id = "detail",
-            title = "查看详情",
-            icon = AppIcons.FileInfo,
-            supportingText = "本地视频显示文件信息，在线视频查看详情页",
-            onClick = { onDetail(item) }
-        ),
-        VideoMenuAction(
-            id = "delete",
-            title = "从收藏夹删除",
-            icon = AppIcons.Delete,
-            isDangerous = true,
-            onClick = { onDelete(item.id) }
+    val actions = buildList {
+        add(
+            VideoMenuAction(
+                id = "multi_select",
+                title = "多选",
+                icon = AppIcons.MultiSelect,
+                onClick = { onStartSelection(item.id) }
+            )
         )
-    )
+        add(
+            VideoMenuAction(
+                id = "rename",
+                title = "重命名",
+                icon = AppIcons.Edit,
+                onClick = { onRename(item) }
+            )
+        )
+        add(
+            VideoMenuAction(
+                id = "move",
+                title = "移动到",
+                icon = AppIcons.Move,
+                onClick = { onMove(item.id) }
+            )
+        )
+        add(
+            VideoMenuAction(
+                id = "copy",
+                title = "复制到",
+                icon = AppIcons.Copy,
+                onClick = { onCopy(item) }
+            )
+        )
+        add(
+            VideoMenuAction(
+                id = "detail",
+                title = "查看详情",
+                icon = AppIcons.VideoDetail,
+                supportingText = "查看本视频应用内详情页",
+                onClick = { onDetail(item) }
+            )
+        )
+        if (hasLocalFile && onShowFileInfo != null) {
+            add(
+                VideoMenuAction(
+                    id = "file_info",
+                    title = "文件信息",
+                    icon = AppIcons.FileInfo,
+                    supportingText = "查看文件名、本地存储路径与大小",
+                    onClick = onShowFileInfo
+                )
+            )
+        }
+        add(
+            VideoMenuAction(
+                id = "delete",
+                title = "从收藏夹删除",
+                icon = AppIcons.Delete,
+                isDangerous = true,
+                onClick = { onDelete(item.id) }
+            )
+        )
+    }
 
     VideoActionBottomSheet(
         title = item.title,
         actions = actions,
         onDismissRequest = onDismissRequest
-    )
-}
-
-/**
- * 本地视频文件信息详情弹窗
- */
-@Composable
-fun LocalVideoInfoDialog(
-    info: LocalVideoInfo,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = AppIcons.VideoFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("本地视频文件信息")
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "视频名称: ${info.title}",
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(text = "文件大小: ${info.fileSizeFormatted}", style = MaterialTheme.typography.bodySmall)
-                Text(text = "下载/创建时间: ${info.createdAtFormatted}", style = MaterialTheme.typography.bodySmall)
-                Text(text = "时长: ${info.duration}", style = MaterialTheme.typography.bodySmall)
-                Text(
-                    text = "存储路径:\n${info.filePath}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = onDismiss) {
-                Text("确定")
-            }
-        }
     )
 }
 

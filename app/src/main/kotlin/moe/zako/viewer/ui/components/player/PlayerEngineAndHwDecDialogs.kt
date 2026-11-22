@@ -1,0 +1,114 @@
+package moe.zako.viewer.ui.components.player
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import moe.zako.viewer.core.player.HwDecMode
+import moe.zako.viewer.core.player.PlayerEngine
+
+/**
+ * 播放内核切换弹窗 (系统 / MPV)
+ */
+@Composable
+fun PlayerEngineDialog(
+    currentEngine: PlayerEngine,
+    onSelectEngine: (PlayerEngine) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("选择播放引擎内核") },
+        text = {
+            Column {
+                Text(
+                    text = "系统内核基于 Android 原生 MediaPlayer，能耗低、稳定性高；MPV 内核支持流媒体激进缓冲、NextPlayer 调优参数及硬件解码切换：",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                PlayerEngine.values().forEach { engine ->
+                    val isSelected = currentEngine == engine
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelectEngine(engine) }
+                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { onSelectEngine(engine) }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = engine.label,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("完成")
+            }
+        }
+    )
+}
+
+/**
+ * 硬件解码设置弹窗 (NextPlayer 规范)
+ */
+@Composable
+fun PlayerHwDecDialog(
+    currentMode: HwDecMode,
+    onSelectMode: (HwDecMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("硬件解码设置 (NextPlayer 规范)") },
+        text = {
+            Column {
+                Text(
+                    text = "选择视频硬件解码模式，建议开启以降低发热与提高播放流畅度：",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                HwDecMode.values().forEach { mode ->
+                    val isSelected = currentMode == mode
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelectMode(mode) }
+                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { onSelectMode(mode) }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = mode.label,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("完成")
+            }
+        }
+    )
+}

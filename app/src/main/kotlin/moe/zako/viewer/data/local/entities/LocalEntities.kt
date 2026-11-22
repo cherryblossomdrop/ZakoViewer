@@ -61,7 +61,8 @@ data class DownloadEntity(
     val activeNodesCount: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val completedAt: Long? = null,
-    val cdnUrlsJson: String = ""
+    val cdnUrlsJson: String = "",
+    val duration: String = ""
 ) {
     companion object {
         const val STATUS_PENDING = "PENDING"

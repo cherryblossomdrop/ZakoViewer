@@ -78,7 +78,7 @@ class WatchLaterViewModel(
     fun toggleSelectAll() {
         _uiState.update { current ->
             val allIds = current.list.map { it.videoId }.toSet()
-            val isAllSelected = current.selectedVideoIds.containsAll(allIds) && allIds.isNotEmpty()
+            val isAllSelected = allIds.isNotEmpty() && allIds.all { current.selectedVideoIds.contains(it) }
             current.copy(selectedVideoIds = if (isAllSelected) emptySet() else allIds)
         }
     }

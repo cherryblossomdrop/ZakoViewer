@@ -18,9 +18,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.cover.CoverCacheManager
+import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
+import moe.zako.viewer.ui.components.DurationBadge
 import moe.zako.viewer.ui.components.FolderTreeDialog
+import moe.zako.viewer.ui.components.LocalFileInfo
+import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.VideoActionBottomSheet
 import moe.zako.viewer.ui.components.VideoMenuAction
@@ -35,9 +41,23 @@ fun HistoryScreen(
     onNavigateToDetail: (videoId: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     // 长按上下文操作菜单状态
     var menuTargetItem by remember { mutableStateOf<WatchHistoryEntity?>(null) }
+    var localInfoForTarget by remember { mutableStateOf<LocalFileInfo?>(null) }
+    var showFileInfoDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(menuTargetItem) {
+        localInfoForTarget = null
+        val target = menuTargetItem ?: return@LaunchedEffect
+        val local = withContext(Dispatchers.IO) {
+            DownloadManager.getInstance(context).findLocalCompletedVideo(target.videoId)
+        }
+        if (local != null) {
+            localInfoForTarget = LocalFileInfo.fromFile(local.file, target.title, target.duration)
+        }
+    }
 
     // Group history items by calendar day
     val groupedHistory = remember(state.historyList) {
@@ -47,18 +67,12 @@ fun HistoryScreen(
     Scaffold(
         topBar = {
             if (state.isSelectionMode) {
-                val allSelected = state.historyList.isNotEmpty() && state.selectedVideoIds.size == state.historyList.size
+                val allSelected = state.historyList.isNotEmpty() && state.historyList.all { state.selectedVideoIds.contains(it.videoId) }
                 MultiSelectTopBar(
                     selectedCount = state.selectedVideoIds.size,
                     onExitSelection = { viewModel.toggleSelectionMode() },
                     allSelected = allSelected,
-                    onToggleSelectAll = {
-                        if (allSelected) {
-                            state.selectedVideoIds.toList().forEach { viewModel.toggleSelection(it) }
-                        } else {
-                            viewModel.selectAll()
-                        }
-                    }
+                    onToggleSelectAll = { viewModel.toggleSelectAll() }
                 )
             } else {
                 TopAppBar(
@@ -179,58 +193,88 @@ fun HistoryScreen(
     // 全局长按上下文操作菜单
     if (menuTargetItem != null) {
         val target = menuTargetItem!!
-        val actions = listOf(
-            VideoMenuAction(
-                id = "multi_select",
-                title = "多选",
-                icon = AppIcons.MultiSelect,
-                onClick = {
-                    viewModel.enterSelectionWithItem(target.videoId)
-                }
-            ),
-            VideoMenuAction(
-                id = "add_to_favorites",
-                title = "添加到收藏夹",
-                icon = AppIcons.AddToFavorites,
-                supportingText = "将视频添加到自定义收藏夹",
-                onClick = {
-                    viewModel.showAddToFavoritesForSingleItem(target)
-                }
-            ),
-            VideoMenuAction(
-                id = "detail",
-                title = "详情页",
-                icon = AppIcons.VideoDetail,
-                supportingText = "查看本视频应用内详情页",
-                onClick = {
-                    onNavigateToDetail(target.videoId)
-                }
-            ),
-            VideoMenuAction(
-                id = "watch_later",
-                title = "稍后再看",
-                icon = AppIcons.WatchLater,
-                supportingText = "添加至稍后再看列表",
-                onClick = {
-                    viewModel.addToWatchLater(target)
-                }
-            ),
-            VideoMenuAction(
-                id = "delete",
-                title = "删除记录",
-                icon = AppIcons.Delete,
-                supportingText = "从历史记录中移除此条目",
-                isDangerous = true,
-                onClick = {
-                    viewModel.deleteHistory(target.videoId)
-                }
+        val actions = buildList {
+            add(
+                VideoMenuAction(
+                    id = "multi_select",
+                    title = "多选",
+                    icon = AppIcons.MultiSelect,
+                    onClick = {
+                        viewModel.enterSelectionWithItem(target.videoId)
+                    }
+                )
             )
-        )
+            add(
+                VideoMenuAction(
+                    id = "add_to_favorites",
+                    title = "添加到收藏夹",
+                    icon = AppIcons.AddToFavorites,
+                    supportingText = "将视频添加到自定义收藏夹",
+                    onClick = {
+                        viewModel.showAddToFavoritesForSingleItem(target)
+                    }
+                )
+            )
+            add(
+                VideoMenuAction(
+                    id = "detail",
+                    title = "查看详情",
+                    icon = AppIcons.VideoDetail,
+                    supportingText = "查看本视频应用内详情页",
+                    onClick = {
+                        onNavigateToDetail(target.videoId)
+                    }
+                )
+            )
+            if (localInfoForTarget != null) {
+                add(
+                    VideoMenuAction(
+                        id = "file_info",
+                        title = "文件信息",
+                        icon = AppIcons.FileInfo,
+                        supportingText = "查看文件名、本地存储路径与大小",
+                        onClick = {
+                            showFileInfoDialog = true
+                        }
+                    )
+                )
+            }
+            add(
+                VideoMenuAction(
+                    id = "watch_later",
+                    title = "稍后再看",
+                    icon = AppIcons.WatchLater,
+                    supportingText = "添加至稍后再看列表",
+                    onClick = {
+                        viewModel.addToWatchLater(target)
+                    }
+                )
+            )
+            add(
+                VideoMenuAction(
+                    id = "delete",
+                    title = "删除记录",
+                    icon = AppIcons.Delete,
+                    supportingText = "从历史记录中移除此条目",
+                    isDangerous = true,
+                    onClick = {
+                        viewModel.deleteHistory(target.videoId)
+                    }
+                )
+            )
+        }
 
         VideoActionBottomSheet(
             title = target.title,
             actions = actions,
             onDismissRequest = { menuTargetItem = null }
+        )
+    }
+
+    if (showFileInfoDialog && localInfoForTarget != null) {
+        LocalFileInfoDialog(
+            info = localInfoForTarget!!,
+            onDismiss = { showFileInfoDialog = false }
         )
     }
 
@@ -272,18 +316,24 @@ fun HistoryRowItem(
         // Thumbnail
         val isCoverBlurEnabled = LocalCoverBlurEnabled.current
         val context = LocalContext.current
-        AsyncImage(
-            model = CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true),
-            contentDescription = null,
+        Box(
             modifier = Modifier
                 .width(110.dp)
                 .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(8.dp))
-                .then(
-                    if (isCoverBlurEnabled) Modifier.blur(18.dp).clipToBounds() else Modifier
-                ),
-            contentScale = ContentScale.Crop
-        )
+        ) {
+            AsyncImage(
+                model = CoverCacheManager.getCoverModel(context, item.videoId, item.coverUrl, autoFetch = true),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (isCoverBlurEnabled) Modifier.blur(18.dp).clipToBounds() else Modifier
+                    ),
+                contentScale = ContentScale.Crop
+            )
+            DurationBadge(duration = item.duration)
+        }
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -308,14 +358,6 @@ fun HistoryRowItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
-
-                if (item.duration.isNotEmpty()) {
-                    Text(
-                        text = item.duration,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         }
     }

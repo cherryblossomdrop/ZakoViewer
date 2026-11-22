@@ -79,6 +79,14 @@ class HistoryViewModel(
         }
     }
 
+    fun toggleSelectAll() {
+        _uiState.update { current ->
+            val allIds = current.historyList.map { it.videoId }.toSet()
+            val allSelected = allIds.isNotEmpty() && allIds.all { current.selectedVideoIds.contains(it) }
+            current.copy(selectedVideoIds = if (allSelected) emptySet() else allIds)
+        }
+    }
+
     fun enterSelectionWithItem(videoId: String) {
         _uiState.update {
             it.copy(

@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.ui.components.FolderTreeDialog
+import moe.zako.viewer.ui.components.LocalFileInfo
+import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.theme.AppIcons
 import kotlinx.coroutines.launch
@@ -28,7 +30,6 @@ fun FavoritesScreen(
     onNavigateToDetail: (videoId: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
-    val scope = rememberCoroutineScope()
 
     // Dialog & Menu States
     var showCreateFolderDialog by remember { mutableStateOf(false) }
@@ -36,12 +37,19 @@ fun FavoritesScreen(
     var itemToRename by remember { mutableStateOf<FavoriteItemEntity?>(null) }
     var folderMenuTarget by remember { mutableStateOf<FavoriteFolderEntity?>(null) }
     var itemMenuTarget by remember { mutableStateOf<FavoriteItemEntity?>(null) }
-    var localVideoInfoToShow by remember { mutableStateOf<LocalVideoInfo?>(null) }
+    var localVideoInfoToShow by remember { mutableStateOf<LocalFileInfo?>(null) }
+    var localInfoForTarget by remember { mutableStateOf<LocalFileInfo?>(null) }
+
+    LaunchedEffect(itemMenuTarget) {
+        localInfoForTarget = null
+        val target = itemMenuTarget ?: return@LaunchedEffect
+        localInfoForTarget = viewModel.checkLocalVideoInfo(target)
+    }
 
     val selectableFolderCount = state.subFolders.count { it.parentId != null }
     val isAllSelected = (selectableFolderCount + state.items.size) > 0 &&
-            state.selectedFolderIds.size == selectableFolderCount &&
-            state.selectedItemIds.size == state.items.size
+            state.items.all { state.selectedItemIds.contains(it.id) } &&
+            state.subFolders.filter { it.parentId != null }.all { state.selectedFolderIds.contains(it.id) }
 
     Scaffold(
         topBar = {
@@ -50,7 +58,7 @@ fun FavoritesScreen(
                     selectedCount = state.totalSelectedCount,
                     onExitSelection = { viewModel.toggleSelectionMode() },
                     allSelected = isAllSelected,
-                    onToggleSelectAll = { viewModel.selectAll() }
+                    onToggleSelectAll = { viewModel.toggleSelectAll() }
                 )
             } else {
                 TopAppBar(
@@ -276,14 +284,13 @@ fun FavoritesScreen(
             },
             onDetail = { itm ->
                 itemMenuTarget = null
-                scope.launch {
-                    val localInfo = viewModel.checkLocalVideoInfo(itm)
-                    if (localInfo != null) {
-                        localVideoInfoToShow = localInfo
-                    } else {
-                        onNavigateToDetail(itm.videoId)
-                    }
-                }
+                onNavigateToDetail(itm.videoId)
+            },
+            hasLocalFile = localInfoForTarget != null,
+            onShowFileInfo = {
+                val info = localInfoForTarget
+                itemMenuTarget = null
+                localVideoInfoToShow = info
             },
             onDelete = { iid ->
                 itemMenuTarget = null
@@ -295,7 +302,7 @@ fun FavoritesScreen(
 
     // 3. 本地视频文件信息弹窗
     localVideoInfoToShow?.let { info ->
-        LocalVideoInfoDialog(
+        LocalFileInfoDialog(
             info = info,
             onDismiss = { localVideoInfoToShow = null }
         )

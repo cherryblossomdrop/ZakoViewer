@@ -1,4 +1,4 @@
-package moe.zako.viewer.ui.components
+package moe.zako.viewer.ui.components.player
 
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable

@@ -15,6 +15,8 @@ import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.ui.components.FolderBrowserDialog
 import moe.zako.viewer.ui.components.FolderTreeDialog
+import moe.zako.viewer.ui.components.LocalFileInfo
+import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.theme.AppIcons
@@ -93,7 +95,7 @@ fun DownloadsScreen(
     }
 
     val currentList = if (state.selectedTab == 0) state.completedList else state.activeList
-    val allSelected = currentList.isNotEmpty() && state.selectedIds.containsAll(currentList.map { it.videoId })
+    val allSelected = currentList.isNotEmpty() && currentList.all { state.selectedIds.contains(it.videoId) }
 
     Scaffold(
         topBar = {
@@ -290,8 +292,8 @@ fun DownloadsScreen(
 
     // 2. 查看文件信息弹窗
     if (showFileInfoDialog && fileInfoTargetItem != null) {
-        DownloadFileInfoDialog(
-            target = fileInfoTargetItem!!,
+        LocalFileInfoDialog(
+            info = LocalFileInfo.fromDownload(fileInfoTargetItem!!),
             onDismiss = { showFileInfoDialog = false }
         )
     }

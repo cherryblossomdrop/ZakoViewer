@@ -1,62 +1,36 @@
 ﻿package moe.zako.viewer.ui.screens.player
 
 import android.app.Activity
-import android.content.Context
 import android.content.pm.ActivityInfo
-import android.media.AudioManager
-import android.provider.Settings
 import android.view.WindowManager
-import moe.zako.viewer.ui.components.ZakoToast
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.automirrored.filled.AltRoute
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.OfflinePin
-import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import moe.zako.viewer.core.cdn.CdnNode
-import moe.zako.viewer.core.player.HwDecMode
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import moe.zako.viewer.core.player.MPVView
-import moe.zako.viewer.core.player.PlayerEngine
 import moe.zako.viewer.ui.components.FolderTreeDialog
-import moe.zako.viewer.ui.components.GestureFeedbackOverlays
-import moe.zako.viewer.ui.components.PlaybackSpeedDialog
-import moe.zako.viewer.ui.components.PlayerControlDefaults
-import moe.zako.viewer.ui.components.SpeedBadge
-import moe.zako.viewer.ui.components.WavyProgressSlider
-import moe.zako.viewer.ui.components.PlayerBrightnessHelper
-import moe.zako.viewer.ui.components.playerGestureDetector
+import moe.zako.viewer.ui.components.ZakoToast
+import moe.zako.viewer.ui.components.player.*
 import moe.zako.viewer.ui.theme.AppIcons
-import moe.zako.viewer.ui.theme.ZakoIcons
 import moe.zako.viewer.ui.theme.OverlayBlack
-import kotlin.math.abs
-import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
     viewModel: PlayerViewModel,
@@ -67,10 +41,10 @@ fun PlayerScreen(
     val activity = context as? Activity
     val state by viewModel.uiState.collectAsState()
 
-    // Screen Orientation and Immersive Fullscreen handling
+    // 屏幕方向与沉浸式全屏处理
     LaunchedEffect(state.isLandscape) {
-        val window = activity?.window
-        if (window != null && activity != null) {
+        if (activity != null) {
+            val window = activity.window
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
             insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             insetsController.hide(WindowInsetsCompat.Type.systemBars())
@@ -97,12 +71,12 @@ fun PlayerScreen(
         }
     }
 
-    androidx.activity.compose.BackHandler(enabled = true) {
+    BackHandler(enabled = true) {
         handleBack()
     }
 
     DisposableEffect(Unit) {
-        // Keep screen on during playback
+        // 播放期间保持屏幕常亮
         activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -138,7 +112,7 @@ fun PlayerScreen(
                 onVolumeDragEnd = { viewModel.onVolumeGestureEnd() }
             )
     ) {
-        // 1. MPV SurfaceView Core
+        // 1. MPV SurfaceView 核心视口（稳定树节点）
         if (!isExiting) {
             key(state.playerState.engine) {
                 AndroidView(
@@ -169,7 +143,7 @@ fun PlayerScreen(
             }
         }
 
-        // 2. Visual Animated Gesture Feedback HUD Overlays
+        // 2. 动画手势 HUD 反馈浮层 (播放/暂停、快进退、亮度、音量、倍速加速)
         GestureFeedbackOverlays(
             showPlayPauseIndicator = state.showPlayPauseIndicator,
             isPlaying = state.isIndicatorPlaying,
@@ -181,7 +155,7 @@ fun PlayerScreen(
             boostSpeed = state.boostSpeed
         )
 
-        // 3. Floating Unlock Button (Visible only when locked)
+        // 3. 锁屏浮动解锁按钮 (仅锁定时呈现)
         if (state.playerState.isLocked) {
             Surface(
                 shape = CircleShape,
@@ -202,204 +176,98 @@ fun PlayerScreen(
             }
         }
 
-        // 4. Player Controls Overlay (Top bar, center, bottom bar)
+        // 4. 播放控制条浮层 (顶部操作栏、锁定按钮、底部波浪进度条与功能按钮)
         AnimatedVisibility(
             visible = state.showControls && !state.playerState.isLocked,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                // Top Control Bar
-                Box(
+                // 顶部控制栏 (复用 PlayerTopBar)
+                PlayerTopBar(
+                    title = state.video?.title ?: "",
+                    onBack = handleBack,
+                    aspectRatioLabel = state.playerState.aspectRatio.label,
+                    onCycleAspectRatio = {
+                        val nextMode = viewModel.cycleAspectRatio()
+                        ZakoToast.show("画面比例: ${nextMode.label}")
+                    },
+                    showMoreMenu = state.showMoreMenu,
+                    onShowMoreMenu = { viewModel.showMoreMenu(it) },
+                    isLocalPlayback = state.isLocalPlayback,
+                    showOrientationToggle = true,
+                    onToggleOrientation = { viewModel.toggleOrientation() },
                     modifier = Modifier
-                        .fillMaxWidth()
                         .align(Alignment.TopCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent)
-                            )
-                        )
                         .statusBarsPadding()
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = handleBack,
-                            modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "返回",
-                                tint = Color.White,
-                                modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
-                            )
+                    DropdownMenuItem(
+                        text = { Text("添加到收藏夹") },
+                        leadingIcon = { Icon(imageVector = AppIcons.AddToFavorites, contentDescription = null) },
+                        onClick = { viewModel.openAddToFavorites() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("添加到稍后再看") },
+                        leadingIcon = { Icon(imageVector = AppIcons.WatchLater, contentDescription = null) },
+                        onClick = {
+                            viewModel.addToWatchLater()
+                            ZakoToast.show("已加入稍后再看")
                         }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(horizontal = PlayerControlDefaults.ControlSpacing)
-                        ) {
-                            Text(
-                                text = state.video?.title ?: "",
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleMedium,
-                                maxLines = 1,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                            if (state.isLocalPlayback) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                CompositionLocalProvider(LocalContentColor provides Color.White) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.OfflinePin,
-                                        contentDescription = "本地视频",
-                                        tint = LocalContentColor.current,
-                                        modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
-                                    )
-                                }
-                            }
-                        }
-
-                        // 画面比例切换 (适应屏幕、填充、16:9、4:3) - 方正圆角画框矢量图标
-                        IconButton(
-                            onClick = {
-                                val nextMode = viewModel.cycleAspectRatio()
-                                ZakoToast.show("画面比例: ${nextMode.label}")
-                            },
-                            modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
-                        ) {
-                            Icon(
-                                imageVector = ZakoIcons.AspectRatio,
-                                contentDescription = "画面比例 (${state.playerState.aspectRatio.label})",
-                                tint = Color.White,
-                                modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
-                            )
-                        }
-
-                        // 屏幕方向旋转 (横竖屏切换) - 斜向异形图标通过居中盒模型进行视觉减重补偿至 21.dp
-                        IconButton(
-                            onClick = { viewModel.toggleOrientation() },
-                            modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
-                        ) {
-                            Box(
-                                modifier = Modifier.size(PlayerControlDefaults.ControlIconSize),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ScreenRotation,
-                                    contentDescription = "旋转屏幕",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(PlayerControlDefaults.CompensatedIconSize)
-                                )
-                            }
-                        }
-
-                        // “更多选项” 菜单 (⋮)
-                        Box {
-                            IconButton(
-                                onClick = { viewModel.showMoreMenu(true) },
-                                modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "更多选项",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
-                                )
-                            }
-
-                            // 功能菜单
-                            DropdownMenu(
-                                expanded = state.showMoreMenu,
-                                onDismissRequest = { viewModel.showMoreMenu(false) }
-                            ) {
-                                // 1. 添加到收藏夹
-                                DropdownMenuItem(
-                                    text = { Text("添加到收藏夹") },
-                                    leadingIcon = { Icon(imageVector = AppIcons.AddToFavorites, contentDescription = null) },
-                                    onClick = { viewModel.openAddToFavorites() }
-                                )
-
-                                // 2. 添加到稍后再看
-                                DropdownMenuItem(
-                                    text = { Text("添加到稍后再看") },
-                                    leadingIcon = { Icon(imageVector = AppIcons.WatchLater, contentDescription = null) },
-                                    onClick = {
-                                        viewModel.addToWatchLater()
-                                        ZakoToast.show("已加入稍后再看")
-                                    }
-                                )
-
-                                // 本地播放界面专属：查看视频详情页
-                                if (state.isLocalPlayback && onNavigateToDetail != null) {
-                                    DropdownMenuItem(
-                                        text = { Text("查看视频详情页") },
-                                        leadingIcon = { Icon(imageVector = Icons.Default.Info, contentDescription = null) },
-                                        onClick = { viewModel.onViewDetailClicked(onNavigateToDetail) }
-                                    )
-                                }
-
-                                // 3. 使用外部播放器打开
-                                DropdownMenuItem(
-                                    text = { Text("使用外部播放器打开") },
-                                    leadingIcon = { Icon(imageVector = Icons.Default.OpenInNew, contentDescription = null) },
-                                    onClick = { viewModel.openWithExternalPlayer(context) }
-                                )
-
-                                // 4. 选择 CDN 节点播放
-                                DropdownMenuItem(
-                                    text = { Text("选择 CDN 节点播放") },
-                                    leadingIcon = { Icon(imageVector = Icons.Default.AltRoute, contentDescription = null) },
-                                    onClick = { viewModel.showSelectCdnDialog() }
-                                )
-
-                                // 5. 切换播放内核 (系统 / MPV)
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text("播放内核切换")
-                                            Text(
-                                                text = "当前: ${state.playerState.engine.label}",
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    },
-                                    leadingIcon = { Icon(imageVector = Icons.Default.Memory, contentDescription = null) },
-                                    onClick = {
-                                        viewModel.showMoreMenu(false)
-                                        viewModel.showEngineDialog(true)
-                                    }
-                                )
-
-                                // 7. 硬件解码设置 (MPV / 系统)
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text("硬件解码设置")
-                                            Text(
-                                                text = "当前: ${state.playerState.hwDecMode.label}",
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    },
-                                    leadingIcon = { Icon(imageVector = Icons.Default.Hardware, contentDescription = null) },
-                                    onClick = {
-                                        viewModel.showMoreMenu(false)
-                                        viewModel.showHwDecDialog(true)
-                                    }
-                                )
-                            }
-                        }
+                    )
+                    if (state.isLocalPlayback && onNavigateToDetail != null) {
+                        DropdownMenuItem(
+                            text = { Text("查看视频详情页") },
+                            leadingIcon = { Icon(imageVector = Icons.Default.Info, contentDescription = null) },
+                            onClick = { viewModel.onViewDetailClicked(onNavigateToDetail) }
+                        )
                     }
+                    DropdownMenuItem(
+                        text = { Text("使用外部播放器打开") },
+                        leadingIcon = { Icon(imageVector = AppIcons.OpenInNew, contentDescription = null) },
+                        onClick = { viewModel.openWithExternalPlayer(context) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("选择 CDN 节点播放") },
+                        leadingIcon = { Icon(imageVector = Icons.AutoMirrored.Filled.AltRoute, contentDescription = null) },
+                        onClick = { viewModel.showSelectCdnDialog() }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text("播放内核切换")
+                                Text(
+                                    text = "当前: ${state.playerState.engine.label}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        leadingIcon = { Icon(imageVector = Icons.Default.Memory, contentDescription = null) },
+                        onClick = {
+                            viewModel.showMoreMenu(false)
+                            viewModel.showEngineDialog(true)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text("硬件解码设置")
+                                Text(
+                                    text = "当前: ${state.playerState.hwDecMode.label}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        leadingIcon = { Icon(imageVector = Icons.Default.Hardware, contentDescription = null) },
+                        onClick = {
+                            viewModel.showMoreMenu(false)
+                            viewModel.showHwDecDialog(true)
+                        }
+                    )
                 }
 
-                // Center: Lock Button
+                // 居中偏左：锁屏按钮
                 Surface(
                     shape = CircleShape,
                     color = OverlayBlack,
@@ -418,181 +286,40 @@ fun PlayerScreen(
                     )
                 }
 
-                // Bottom Control Bar
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
-                            )
-                        )
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Column {
-                        var isScrubbing by remember { mutableStateOf(false) }
-                        var scrubProgress by remember { mutableFloatStateOf(0f) }
-                        var lastSeekTriggerTime by remember { mutableLongStateOf(0L) }
-
-                        // MD3e 可动波浪进度条 (遵循 Material Design 3 Expressive 规范，含高亮缓冲指示)
-                        WavyProgressSlider(
-                            progress = if (isScrubbing) scrubProgress else state.playerState.progress,
-                            bufferedProgress = state.playerState.bufferedProgress,
-                            isPlaying = state.playerState.isPlaying,
-                            onValueChange = { percent ->
-                                isScrubbing = true
-                                scrubProgress = percent
-                            },
-                            onValueChangeFinished = { percent ->
-                                isScrubbing = false
-                                val now = System.currentTimeMillis()
-                                if (now - lastSeekTriggerTime >= 150L) {
-                                    lastSeekTriggerTime = now
-                                    val targetMs = (percent * state.playerState.durationMs).toLong()
-                                    viewModel.player.seekTo(targetMs)
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { viewModel.togglePlayPause() },
-                                    modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
-                                ) {
-                                    Icon(
-                                        imageVector = if (state.playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                        contentDescription = "播放/暂停",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(PlayerControlDefaults.ControlSpacing))
-
-                                val displayPosMs = if (isScrubbing) (scrubProgress * state.playerState.durationMs).toLong() else state.playerState.currentPositionMs
-                                val displayPosFormatted = moe.zako.viewer.core.player.VideoPlayerState.formatTime(displayPosMs)
-                                Text(
-                                    text = "$displayPosFormatted / ${state.playerState.durationFormatted}",
-                                    color = Color.White,
-                                    fontSize = 13.sp
-                                )
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(PlayerControlDefaults.ControlSpacing)
-                            ) {
-                                // 播放倍速切换按钮 - 动态倍速矢量徽标
-                                val currentSpeed = if (state.playerState.isSpeedBoosted) state.playerState.boostSpeed else state.playerState.normalSpeed
-                                IconButton(
-                                    onClick = { viewModel.showSpeedDialog(true) },
-                                    modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
-                                ) {
-                                    SpeedBadge(
-                                        speed = currentSpeed,
-                                        tint = Color.White
-                                    )
-                                }
-
-                                // 退出全屏按钮（控制栏右下角退出全屏入口）
-                                IconButton(
-                                    onClick = handleBack,
-                                    modifier = Modifier.size(PlayerControlDefaults.ControlButtonSize)
-                                ) {
-                                    Icon(
-                                        imageVector = ZakoIcons.FullscreenExit,
-                                        contentDescription = "退出全屏",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(PlayerControlDefaults.ControlIconSize)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                // 底部控制条 (复用 PlayerBottomControls)
+                val currentSpeed = if (state.playerState.isSpeedBoosted) state.playerState.boostSpeed else state.playerState.normalSpeed
+                PlayerBottomControls(
+                    progress = state.playerState.progress,
+                    bufferedProgress = state.playerState.bufferedProgress,
+                    isPlaying = state.playerState.isPlaying,
+                    currentPositionMs = state.playerState.currentPositionMs,
+                    durationMs = state.playerState.durationMs,
+                    durationFormatted = state.playerState.durationFormatted,
+                    onSeekTo = { viewModel.player.seekTo(it) },
+                    onTogglePlayPause = { viewModel.togglePlayPause() },
+                    currentSpeed = currentSpeed,
+                    onOpenSpeedDialog = { viewModel.showSpeedDialog(true) },
+                    onToggleFullscreen = handleBack,
+                    isFullscreen = true,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
             }
         }
     }
 
-    // Modal Sheet / Dialog: 选择 CDN 节点播放 (打开即自动并发测速并展示实时指标，测速完成后自动优选)
+    // CDN 节点选择弹窗
     if (state.showCdnDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissCdnDialog() },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("选择 CDN 播放节点")
-                    if (state.isCdnTesting) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        text = if (state.isCdnTesting) "正在并发对所有线路测速，完成后将自动切至最优节点..." else "已测速完成并按质量排序，点击任意节点可手动切换：",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                        items(state.cdnNodes) { node ->
-                            val isCurrent = !state.isLocalPlayback && node.url == state.currentCdnNode?.url
-                            ListItem(
-                                headlineContent = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(node.name, fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal)
-                                        if (isCurrent) {
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text("(当前)", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
-                                        }
-                                    }
-                                },
-                                supportingContent = {
-                                    // 实时标注测速结果 (如延迟 / 下载速率)
-                                    Text(
-                                        text = "测速指标: ${node.displayMetric}",
-                                        color = if (node.testSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                leadingContent = {
-                                    Icon(
-                                        imageVector = if (isCurrent) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                                        contentDescription = null,
-                                        tint = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                modifier = Modifier.clickable { viewModel.selectCdnNode(node) }
-                            )
-                            HorizontalDivider()
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissCdnDialog() }) {
-                    Text("关闭")
-                }
-            }
+        CdnNodeSelectorDialog(
+            cdnNodes = state.cdnNodes,
+            currentNode = state.currentCdnNode,
+            isLocalPlayback = state.isLocalPlayback,
+            isTesting = state.isCdnTesting,
+            onSelectNode = { viewModel.selectCdnNode(it) },
+            onDismiss = { viewModel.dismissCdnDialog() }
         )
     }
 
-    // Favorite Folder Selection Dialog
+    // 收藏夹层级选择弹窗
     if (state.showFolderSelector) {
         FolderTreeDialog(
             folders = state.allFolders,
@@ -607,107 +334,31 @@ fun PlayerScreen(
         )
     }
 
-    // 播放内核切换弹窗 (系统 / MPV)
+    // 播放内核切换弹窗
     if (state.showEngineDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.showEngineDialog(false) },
-            title = { Text("选择播放引擎内核") },
-            text = {
-                Column {
-                    Text(
-                        text = "系统内核基于 Android 原生 MediaPlayer，能耗低、稳定性高；MPV 内核支持流媒体激进缓冲、NextPlayer 调优参数及硬件解码切换：",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    PlayerEngine.values().forEach { engine ->
-                        val isSelected = state.playerState.engine == engine
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.switchEngine(engine)
-                                    ZakoToast.show("已切换为: ${engine.label}")
-                                }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = {
-                                    viewModel.switchEngine(engine)
-                                    ZakoToast.show("已切换为: ${engine.label}")
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = engine.label,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
+        PlayerEngineDialog(
+            currentEngine = state.playerState.engine,
+            onSelectEngine = {
+                viewModel.switchEngine(it)
+                ZakoToast.show("已切换为: ${it.label}")
             },
-            confirmButton = {
-                TextButton(onClick = { viewModel.showEngineDialog(false) }) {
-                    Text("完成")
-                }
-            }
+            onDismiss = { viewModel.showEngineDialog(false) }
         )
     }
 
-    // 硬件解码设置弹窗 (NextPlayer 规范)
+    // 硬件解码设置弹窗
     if (state.showHwDecDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.showHwDecDialog(false) },
-            title = { Text("硬件解码设置 (NextPlayer 规范)") },
-            text = {
-                Column {
-                    Text(
-                        text = "选择视频硬件解码模式，建议开启以降低发热与提高播放流畅度：",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HwDecMode.values().forEach { mode ->
-                        val isSelected = state.playerState.hwDecMode == mode
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.switchHwDecMode(mode)
-                                    ZakoToast.show("已切换为: ${mode.label}")
-                                }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = {
-                                    viewModel.switchHwDecMode(mode)
-                                    ZakoToast.show("已切换为: ${mode.label}")
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = mode.label,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
+        PlayerHwDecDialog(
+            currentMode = state.playerState.hwDecMode,
+            onSelectMode = {
+                viewModel.switchHwDecMode(it)
+                ZakoToast.show("已切换为: ${it.label}")
             },
-            confirmButton = {
-                TextButton(onClick = { viewModel.showHwDecDialog(false) }) {
-                    Text("完成")
-                }
-            }
+            onDismiss = { viewModel.showHwDecDialog(false) }
         )
     }
 
-    // 播放速度选择弹窗 (全场景支持滚动与高度自适应约束)
+    // 播放速度选择弹窗
     if (state.showSpeedDialog) {
         val currentSpeed = if (state.playerState.isSpeedBoosted) state.playerState.boostSpeed else state.playerState.normalSpeed
         PlaybackSpeedDialog(

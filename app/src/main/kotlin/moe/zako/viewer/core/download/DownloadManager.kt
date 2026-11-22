@@ -395,7 +395,8 @@ class DownloadManager private constructor(private val context: Context) {
         title: String,
         coverUrl: String,
         cdnUrls: List<String>,
-        customStorageDir: File? = null
+        customStorageDir: File? = null,
+        duration: String = ""
     ) {
         scope.launch {
             val targetDir = customStorageDir ?: getDownloadDir()
@@ -416,7 +417,8 @@ class DownloadManager private constructor(private val context: Context) {
                 savePath = outputFile.absolutePath,
                 status = DownloadEntity.STATUS_DOWNLOADING,
                 createdAt = System.currentTimeMillis(),
-                cdnUrlsJson = cdnUrls.joinToString("\n")
+                cdnUrlsJson = cdnUrls.joinToString("\n"),
+                duration = duration
             )
             downloadDao.insertOrUpdate(entity)
 

@@ -342,7 +342,8 @@ class VideoDetailViewModel(
             videoId = current.id,
             title = current.title,
             coverUrl = current.displayCover,
-            cdnUrls = urls
+            cdnUrls = urls,
+            duration = current.duration ?: ""
         )
         _uiState.update { it.copy(showDownloadChoiceDialog = false) }
     }

@@ -103,24 +103,10 @@ fun VideoCard(
                 }
 
                 // Duration badge (Bottom-Right)
-                val formattedDur = video.formattedDuration
-                if (formattedDur.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 8.dp, bottom = 8.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color.Black.copy(alpha = 0.75f))
-                            .padding(horizontal = 5.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = formattedDur,
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
+                DurationBadge(
+                    duration = video.duration,
+                    modifier = Modifier.padding(end = 4.dp, bottom = 4.dp)
+                )
             }
 
             // Info Section

@@ -51,7 +51,7 @@ fun DownloadActionBottomSheet(
         ),
         VideoMenuAction(
             id = "detail",
-            title = "详情页",
+            title = "查看详情",
             icon = AppIcons.VideoDetail,
             supportingText = "查看本视频应用内详情页",
             onClick = { onNavigateToDetail(target.videoId) }
@@ -69,90 +69,6 @@ fun DownloadActionBottomSheet(
         title = target.title,
         actions = actions,
         onDismissRequest = onDismissRequest
-    )
-}
-
-/**
- * 文件信息详情弹窗
- */
-@Composable
-fun DownloadFileInfoDialog(
-    target: DownloadEntity,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    val file = File(target.savePath)
-    val fileExists = file.exists()
-
-    val formatBytes = { bytes: Long ->
-        if (bytes <= 0) "0 B"
-        else {
-            val units = arrayOf("B", "KB", "MB", "GB")
-            val i = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.size - 1)
-            String.format(Locale.getDefault(), "%.2f %s", bytes / Math.pow(1024.0, i.toDouble()), units[i])
-        }
-    }
-
-    val sizeText = if (target.status == DownloadEntity.STATUS_COMPLETED) {
-        val bytes = if (fileExists) file.length() else target.totalBytes
-        formatBytes(bytes)
-    } else {
-        "${formatBytes(target.downloadedBytes)} / ${formatBytes(target.totalBytes)}"
-    }
-
-    val statusText = when (target.status) {
-        DownloadEntity.STATUS_COMPLETED -> "已完成"
-        DownloadEntity.STATUS_DOWNLOADING -> "下载中"
-        DownloadEntity.STATUS_PAUSED -> "已暂停"
-        DownloadEntity.STATUS_FAILED -> "拉取中断"
-        else -> "准备中"
-    }
-
-    val lastModifiedText = if (fileExists) {
-        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(file.lastModified()))
-    } else if (target.completedAt != null && target.completedAt > 0) {
-        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(target.completedAt))
-    } else {
-        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(target.createdAt))
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(AppIcons.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = { Text("文件信息") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("视频标题: ${target.title}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                Text("文件名: ${file.name}", style = MaterialTheme.typography.bodySmall)
-                Text("文件大小: $sizeText", style = MaterialTheme.typography.bodySmall)
-                Text("下载状态: $statusText", style = MaterialTheme.typography.bodySmall)
-                Text("最后修改时间: $lastModifiedText", style = MaterialTheme.typography.bodySmall)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "本地存储路径:\n${target.savePath}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    cm.setPrimaryClip(ClipData.newPlainText("FilePath", target.savePath))
-                    ZakoToast.show("已复制路径到剪贴板")
-                }
-            ) {
-                Icon(AppIcons.Copy, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("复制路径")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
     )
 }
 

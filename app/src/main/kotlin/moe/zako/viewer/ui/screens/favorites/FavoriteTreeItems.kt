@@ -24,6 +24,7 @@ import coil.compose.AsyncImage
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
+import moe.zako.viewer.ui.components.DurationBadge
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 import moe.zako.viewer.ui.theme.OverlayBlack
@@ -249,22 +250,8 @@ fun FavoriteVideoItem(
                     }
                 }
 
-                if (item.duration.isNotBlank()) {
-                    Surface(
-                        color = OverlayBlack,
-                        shape = RoundedCornerShape(3.dp),
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(3.dp)
-                    ) {
-                        Text(
-                            text = item.duration,
-                            color = Color.White,
-                            fontSize = 9.sp,
-                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
-                        )
-                    }
-                }
+                // 时长角标 (统一组件与格式化)
+                DurationBadge(duration = item.duration)
             }
 
             Spacer(modifier = Modifier.width(12.dp))

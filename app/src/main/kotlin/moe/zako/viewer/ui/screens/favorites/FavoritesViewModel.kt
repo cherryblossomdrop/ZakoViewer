@@ -8,20 +8,13 @@ import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.data.repository.FavoriteRepository
+import moe.zako.viewer.ui.components.LocalFileInfo
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-data class LocalVideoInfo(
-    val title: String,
-    val filePath: String,
-    val fileSizeFormatted: String,
-    val createdAtFormatted: String,
-    val duration: String
-)
 
 data class FavoritesUiState(
     val currentFolder: FavoriteFolderEntity? = null,
@@ -232,6 +225,28 @@ class FavoritesViewModel(
         }
     }
 
+    fun toggleSelectAll() {
+        _uiState.update { current ->
+            val selectableFolderIds = current.subFolders.filter { it.parentId != null }.map { it.id }.toSet()
+            val allItemIds = current.items.map { it.id }.toSet()
+            val totalCount = selectableFolderIds.size + allItemIds.size
+            val isAllSelected = totalCount > 0 &&
+                    current.selectedFolderIds.size == selectableFolderIds.size &&
+                    current.selectedItemIds.size == allItemIds.size
+            if (isAllSelected) {
+                current.copy(
+                    selectedItemIds = emptySet(),
+                    selectedFolderIds = emptySet()
+                )
+            } else {
+                current.copy(
+                    selectedItemIds = allItemIds,
+                    selectedFolderIds = selectableFolderIds
+                )
+            }
+        }
+    }
+
     fun batchDeleteSelected() {
         viewModelScope.launch {
             val itemIds = _uiState.value.selectedItemIds.toList()
@@ -380,41 +395,19 @@ class FavoritesViewModel(
         }
     }
 
-    suspend fun checkLocalVideoInfo(item: FavoriteItemEntity): LocalVideoInfo? {
+    suspend fun checkLocalVideoInfo(item: FavoriteItemEntity): LocalFileInfo? {
         val download = downloadDao.getDownloadByVideoId(item.videoId)
         if (download != null && download.status == DownloadEntity.STATUS_COMPLETED) {
             val file = File(download.savePath)
             if (file.exists()) {
-                val sizeStr = when {
-                    file.length() > 1024L * 1024L * 1024L -> String.format(Locale.getDefault(), "%.2f GB", file.length() / (1024.0 * 1024.0 * 1024.0))
-                    file.length() > 1024L * 1024L -> String.format(Locale.getDefault(), "%.1f MB", file.length() / (1024.0 * 1024.0))
-                    else -> String.format(Locale.getDefault(), "%.1f KB", file.length() / 1024.0)
-                }
-                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                val completed = download.completedAt ?: 0L
-                val timeMs = if (completed > 0L) completed else file.lastModified()
-                return LocalVideoInfo(
-                    title = item.title,
-                    filePath = file.absolutePath,
-                    fileSizeFormatted = sizeStr,
-                    createdAtFormatted = sdf.format(Date(timeMs)),
-                    duration = item.duration.ifEmpty { "未知" }
-                )
+                return LocalFileInfo.fromFile(file, item.title, item.duration)
             }
         }
 
         // Direct local file path check
         val directFile = File(item.videoId)
         if (directFile.exists() && directFile.isFile) {
-            val sizeStr = String.format(Locale.getDefault(), "%.1f MB", directFile.length() / (1024.0 * 1024.0))
-            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            return LocalVideoInfo(
-                title = item.title,
-                filePath = directFile.absolutePath,
-                fileSizeFormatted = sizeStr,
-                createdAtFormatted = sdf.format(Date(directFile.lastModified())),
-                duration = item.duration.ifEmpty { "未知" }
-            )
+            return LocalFileInfo.fromFile(directFile, item.title, item.duration)
         }
 
         return null

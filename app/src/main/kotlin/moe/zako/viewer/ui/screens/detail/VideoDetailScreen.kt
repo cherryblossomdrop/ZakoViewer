@@ -22,7 +22,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import moe.zako.viewer.ui.components.FolderTreeDialog
-import moe.zako.viewer.ui.components.PlayerBrightnessHelper
+import moe.zako.viewer.ui.components.player.PlayerBrightnessHelper
 import moe.zako.viewer.ui.components.ZakoToast
 
 /**
@@ -49,8 +49,8 @@ fun VideoDetailScreen(
 
     // 全屏模式下的屏幕旋转与状态栏沉浸式隐藏调度
     LaunchedEffect(state.isFullscreen) {
-        val window = activity?.window
-        if (window != null && activity != null) {
+        if (activity != null) {
+            val window = activity.window
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
             if (state.isFullscreen) {
                 insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE

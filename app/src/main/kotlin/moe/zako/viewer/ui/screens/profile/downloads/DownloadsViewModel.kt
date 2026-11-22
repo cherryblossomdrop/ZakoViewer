@@ -204,11 +204,11 @@ class DownloadsViewModel(
     }
 
     fun toggleSelectAll() {
-        val currentTabItems = if (_uiState.value.selectedTab == 0) _uiState.value.completedList else _uiState.value.activeList
-        val currentIds = currentTabItems.map { it.videoId }.toSet()
-        _uiState.update {
-            val allSelected = it.selectedIds.containsAll(currentIds)
-            it.copy(selectedIds = if (allSelected) emptySet() else currentIds)
+        _uiState.update { current ->
+            val currentTabItems = if (current.selectedTab == 0) current.completedList else current.activeList
+            val currentIds = currentTabItems.map { it.videoId }.toSet()
+            val allSelected = currentIds.isNotEmpty() && currentIds.all { current.selectedIds.contains(it) }
+            current.copy(selectedIds = if (allSelected) emptySet() else currentIds)
         }
     }
 

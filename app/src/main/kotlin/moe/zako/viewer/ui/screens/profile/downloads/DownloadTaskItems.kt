@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.DownloadEntity
+import moe.zako.viewer.ui.components.DurationBadge
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 import java.io.File
@@ -87,18 +88,24 @@ fun CompletedDownloadItem(
             }
 
             // 视频缩略图封面展示（本地文件已删除则去色置灰）
-            AsyncImage(
-                model = coverModel,
-                contentDescription = null,
-                colorFilter = if (!fileExists) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null,
+            Box(
                 modifier = Modifier
                     .width(100.dp)
                     .aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(8.dp))
-                    .then(if (isCoverBlurEnabled) Modifier.blur(18.dp).clipToBounds() else Modifier),
-                contentScale = ContentScale.Crop,
-                alpha = if (!fileExists) 0.5f else 1f
-            )
+            ) {
+                AsyncImage(
+                    model = coverModel,
+                    contentDescription = null,
+                    colorFilter = if (!fileExists) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (isCoverBlurEnabled) Modifier.blur(18.dp).clipToBounds() else Modifier),
+                    contentScale = ContentScale.Crop,
+                    alpha = if (!fileExists) 0.5f else 1f
+                )
+                DurationBadge(duration = item.duration)
+            }
 
             Spacer(modifier = Modifier.width(10.dp))
 

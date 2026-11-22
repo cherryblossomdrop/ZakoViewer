@@ -1,4 +1,4 @@
-package moe.zako.viewer.ui.components
+package moe.zako.viewer.ui.components.player
 
 import androidx.compose.ui.unit.dp
 

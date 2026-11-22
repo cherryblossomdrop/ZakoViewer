@@ -2,11 +2,14 @@ package moe.zako.viewer.ui.theme
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -42,7 +45,10 @@ object AppIcons {
     val Close: ImageVector = Icons.Default.Close
     val Clear: ImageVector = Icons.Default.Clear
     val ArrowBack: ImageVector = Icons.AutoMirrored.Filled.ArrowBack
+    val ArrowForward: ImageVector = Icons.AutoMirrored.Filled.ArrowForwardIos
     val ChevronRight: ImageVector = Icons.Default.ChevronRight
+    val Launch: ImageVector = Icons.AutoMirrored.Filled.Launch
+    val Add: ImageVector = Icons.Rounded.Add
     val Edit: ImageVector = Icons.Default.Edit
     val Rename: ImageVector = Icons.Default.DriveFileRenameOutline
     val Copy: ImageVector = Icons.Default.ContentCopy
@@ -50,6 +56,15 @@ object AppIcons {
     val Search: ImageVector = Icons.Default.Search
     val MoreVert: ImageVector = Icons.Default.MoreVert
     val WorkspacePremium: ImageVector = Icons.Default.WorkspacePremium
+    val CheckCircle: ImageVector = Icons.Default.CheckCircle
+
+    // 设置与系统
+    val Palette: ImageVector = Icons.Default.Palette
+    val Share: ImageVector = Icons.Default.Share
+    val Download: ImageVector = Icons.Default.Download
+    val DownloadForOffline: ImageVector = Icons.Default.DownloadForOffline
+    val CleaningServices: ImageVector = Icons.Default.CleaningServices
+    val Terminal: ImageVector = Icons.Default.Terminal
 
     // 文件与目录
     val FileInfo: ImageVector = Icons.Default.Info

@@ -84,7 +84,7 @@
 
 | 文件路径 | 代码行数 | 职责与功能（做了什么） | 核心实现方式（怎么做） |
 | :--- | :---: | :--- | :--- |
-| `app/src/main/kotlin/moe/zako/viewer/ui/theme/AppIcons.kt` | 54 | 全局统一图标 Design Token 门面 | 语义化聚合多选、收藏、播放、删除、详情及文件操作图标，权威对齐 Checklist 多选图标 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/theme/AppIcons.kt` | 75 | 全局统一图标 Design Token 门面 | 语义化聚合多选、收藏、播放、删除、详情、文件及设置系统操作图标，权威对齐 Checklist 多选图标 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/Color.kt` | 413 | 全局色彩拓扑、调色板预设与莫奈动态取色方案 | 定义多种内置主题色盘（经典紫、自然绿、暖阳黄等）及暗色/亮色 ColorScheme 语义 token |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/MenuTokens.kt` | 37 | 上下文菜单与底部操作栏样式 Design Token | 集中规范菜单容器与项圆角、标高、内边距、图标规格、文字样式及动态危险色 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/Theme.kt` | 45 | Material 3 主题容器组合项与 LocalComposition 注入 | 提供 `ZakoViewerTheme`，将动态色彩方案、字体排版及封面模糊状态注入 Compose 环境树 |
@@ -144,8 +144,13 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/downloads/DownloadsViewModel.kt` | 239 | 离线下载业务状态中枢，负责任务流监听、暂停/继续/重下与跨目录迁移 | 监听 `DownloadManager` 进度流，处理路径迁移文件检查及调用 `FavoriteRepository` 添加收藏 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/history/HistoryScreen.kt` | 298 | 观看历史视窗，按天隔离分组呈现历史记录，支持批量管理与长按菜单 | 统一多选图标（`AppIcons.MultiSelect`），基于 `VideoActionMenu` 支持一键加入收藏/稍后再看 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/history/HistoryViewModel.kt` | 168 | 观看历史业务状态中枢，处理历史检索、批量删除及收藏夹转存 | 调度 `HistoryRepository`，流式过滤历史记录列表并管理单项/多选添加收藏状态 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/SettingsScreen.kt` | 1460 | 全局设置视窗，聚合外观主题、播放引擎、CDN 偏好、下载及存储安全配置 | 结构化提供莫奈动态色、自定义调色盘、桌面图标别名、硬件解码开关与下载目录配置项 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/SettingsViewModel.kt` | 318 | 全局配置业务状态机控制器 | 调度 `SettingsRepository`，响应式更新 DataStore 偏好并触发图标别名同步 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/SettingsScreen.kt` | 150 | 全局设置主入口视窗，负责顶栏导航、分组卡片拼装与缓存清理弹窗宿主 | 仅保留页面脚手架、分类导航条目拼装及清理应用缓存确认弹窗 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/SettingsComponents.kt` | 381 | 设置同包共享基础组件与弹窗容器 | 提供 `SettingsCategoryItem`、`SettingsCard`、`SettingsSwitchItem`、`ExternalAppCard` 以及权限/迁移弹窗组件 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/AppearanceSettingsSection.kt` | 340 | 外观与主题设置视窗，支持莫奈动态色、自定义调色盘与图标主题跟随 | 整合莫奈取色开关、主题色预设选择列表、自定义 HEX 调色板及图标主题联动确认 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/PlaybackSettingsSection.kt` | 198 | 播放核心引擎、长按倍速与外部播放器配置视窗 | 配置长按倍速值、播放内核选择（系统/MPV/自动）、MPV 硬解模式及自定义外部播放器选择宿主 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/DataSourceSettingsSection.kt` | 115 | 数据源与在线流媒体 CDN 线路选优调度配置区块 | 提供自动测速优选节点开关及默认固定 CDN 线路（线路 1~5）筛选单选芯片组 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/StorageAndSecuritySettingsSection.kt` | 398 | 存储路径、文件权限、离线迁移、封面脱敏及长按分享配置视窗 | 整合隐私封面模糊开关、安全分享解锁开关、全盘文件权限卡片、内置目录选择与多文件迁移流程 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/SettingsViewModel.kt` | 354 | 全局配置业务状态机控制器 | 调度 `SettingsRepository`，响应式更新 DataStore 偏好并触发图标别名同步 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/watchlater/WatchLaterScreen.kt` | 295 | 稍后再看视窗，展现待看列表并支持多选模式、批量管理与长按上下文菜单 | 统一多选图标（`AppIcons.MultiSelect`），基于 `VideoActionMenu` 支持一键加入收藏/多选联动，提供批量转存与移除操作 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/watchlater/WatchLaterViewModel.kt` | 174 | 稍后再看业务控制器与多选状态中枢 | 监听待看流，统筹多选模式切换、全选/反选、批量移出待看及联动 `FavoriteRepository` 批量加入收藏夹 |
 

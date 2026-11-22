@@ -12,11 +12,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,7 +32,11 @@ import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.ui.components.FolderBrowserDialog
+import moe.zako.viewer.ui.components.FolderTreeDialog
+import moe.zako.viewer.ui.components.VideoActionBottomSheet
+import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.components.ZakoToast
+import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 import java.io.File
 import java.text.SimpleDateFormat
@@ -98,7 +97,7 @@ fun DownloadsScreen(
                     title = { Text("已选 ${state.selectedIds.size} 项", style = MaterialTheme.typography.titleMedium) },
                     navigationIcon = {
                         IconButton(onClick = { viewModel.exitMultiSelect() }) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "取消多选")
+                            Icon(imageVector = AppIcons.Close, contentDescription = "取消多选")
                         }
                     },
                     actions = {
@@ -118,7 +117,7 @@ fun DownloadsScreen(
                             enabled = state.selectedIds.isNotEmpty()
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
+                                imageVector = AppIcons.Delete,
                                 contentDescription = "批量删除",
                                 tint = if (state.selectedIds.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                             )
@@ -130,18 +129,18 @@ fun DownloadsScreen(
                     title = { Text("离线下载") },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                            Icon(imageVector = AppIcons.ArrowBack, contentDescription = "返回")
                         }
                     },
                     actions = {
                         val currentList = if (state.selectedTab == 0) state.completedList else state.activeList
                         if (currentList.isNotEmpty()) {
                             IconButton(onClick = { viewModel.enterMultiSelect() }) {
-                                Icon(imageVector = Icons.Default.Checklist, contentDescription = "多选")
+                                Icon(imageVector = AppIcons.MultiSelect, contentDescription = "多选")
                             }
                         }
                         IconButton(onClick = { requestChangeFolder() }) {
-                            Icon(imageVector = Icons.Default.FolderOpen, contentDescription = "存储路径")
+                            Icon(imageVector = AppIcons.FolderOpen, contentDescription = "存储路径")
                         }
                     }
                 )
@@ -163,7 +162,7 @@ fun DownloadsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SdCard,
+                        imageVector = AppIcons.SdCard,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.primary
@@ -267,61 +266,63 @@ fun DownloadsScreen(
         }
     }
 
-    // 1. 长按功能菜单 (ModalBottomSheet)
+    // 1. 长按功能菜单 (全局复用 VideoActionBottomSheet)
     if (showMenuBottomSheet && menuTargetItem != null) {
         val target = menuTargetItem!!
-        ModalBottomSheet(
+        val actions = listOf(
+            VideoMenuAction(
+                id = "multi_select",
+                title = "多选",
+                icon = AppIcons.MultiSelect,
+                onClick = {
+                    viewModel.enterMultiSelect(target.videoId)
+                }
+            ),
+            VideoMenuAction(
+                id = "add_to_favorites",
+                title = "添加到收藏夹",
+                icon = AppIcons.AddToFavorites,
+                supportingText = "将视频添加到自定义收藏夹",
+                onClick = {
+                    viewModel.showAddToFavorites(target)
+                }
+            ),
+            VideoMenuAction(
+                id = "detail",
+                title = "详情页",
+                icon = AppIcons.VideoDetail,
+                supportingText = "查看本视频应用内详情页",
+                onClick = {
+                    onNavigateToDetail(target.videoId)
+                }
+            ),
+            VideoMenuAction(
+                id = "file_info",
+                title = "文件信息",
+                icon = AppIcons.FileInfo,
+                supportingText = "查看文件名、本地存储路径、下载状态与修改时间",
+                onClick = {
+                    fileInfoTargetItem = target
+                    showFileInfoDialog = true
+                }
+            )
+        )
+
+        VideoActionBottomSheet(
+            title = target.title,
+            actions = actions,
             onDismissRequest = { showMenuBottomSheet = false }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
-            ) {
-                Text(
-                    text = target.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+        )
+    }
 
-                // 选项 1: 多选
-                ListItem(
-                    headlineContent = { Text("多选") },
-                    leadingContent = { Icon(Icons.Default.Checklist, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        showMenuBottomSheet = false
-                        viewModel.enterMultiSelect(target.videoId)
-                    }
-                )
-
-                // 选项 2: 详情页
-                ListItem(
-                    headlineContent = { Text("详情页") },
-                    supportingContent = { Text("查看本视频应用内详情页", fontSize = 12.sp) },
-                    leadingContent = { Icon(Icons.AutoMirrored.Filled.Article, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        showMenuBottomSheet = false
-                        onNavigateToDetail(target.videoId)
-                    }
-                )
-
-                // 选项 3: 文件信息
-                ListItem(
-                    headlineContent = { Text("文件信息") },
-                    supportingContent = { Text("查看文件名、本地存储路径、下载状态与修改时间", fontSize = 12.sp) },
-                    leadingContent = { Icon(Icons.Default.Info, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        showMenuBottomSheet = false
-                        fileInfoTargetItem = target
-                        showFileInfoDialog = true
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
+    // 收藏夹层级树选择弹窗
+    if (state.showFolderSelector) {
+        FolderTreeDialog(
+            folders = state.allFolders,
+            onDismiss = { viewModel.dismissFolderSelector() },
+            onFolderSelected = { folderId -> viewModel.addToFavoriteFolder(folderId) },
+            onCreateFolder = { name, parentId -> viewModel.createFolder(name, parentId) }
+        )
     }
 
     // 2. 查看文件信息弹窗
@@ -364,7 +365,7 @@ fun DownloadsScreen(
 
         AlertDialog(
             onDismissRequest = { showFileInfoDialog = false },
-            icon = { Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            icon = { Icon(AppIcons.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             title = { Text("文件信息") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -389,7 +390,7 @@ fun DownloadsScreen(
                         ZakoToast.show("已复制路径到剪贴板")
                     }
                 ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(AppIcons.Copy, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("复制路径")
                 }
@@ -407,7 +408,7 @@ fun DownloadsScreen(
         val target = missingFileTargetItem!!
         AlertDialog(
             onDismissRequest = { showMissingFileDialog = false },
-            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            icon = { Icon(AppIcons.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text("本地文件不存在") },
             text = {
                 Text(
@@ -450,7 +451,7 @@ fun DownloadsScreen(
     if (showBatchDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showBatchDeleteConfirmDialog = false },
-            icon = { Icon(Icons.Default.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            icon = { Icon(AppIcons.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text("确认批量删除") },
             text = {
                 Text("确定要删除所选的 ${state.selectedIds.size} 个任务及其对应的本地视频文件吗？此操作不可恢复。")
@@ -490,7 +491,7 @@ fun DownloadsScreen(
     if (showPermissionGuideDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionGuideDialog = false },
-            icon = { Icon(Icons.Default.Security, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            icon = { Icon(AppIcons.Security, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text("需要「所有文件访问权限」") },
             text = {
                 Text(
@@ -684,14 +685,14 @@ fun CompletedDownloadItem(
             if (!isMultiSelectMode) {
                 IconButton(onClick = onPlay) {
                     Icon(
-                        imageVector = if (!fileExists) Icons.Default.WarningAmber else Icons.Default.PlayCircle,
+                        imageVector = if (!fileExists) AppIcons.WarningAmber else AppIcons.PlayCircle,
                         contentDescription = if (!fileExists) "已删除" else "播放",
                         tint = if (!fileExists) MaterialTheme.colorScheme.error.copy(alpha = 0.65f) else MaterialTheme.colorScheme.primary
                     )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
-                        imageVector = Icons.Default.DeleteOutline,
+                        imageVector = AppIcons.DeleteOutline,
                         contentDescription = "删除",
                         tint = if (!fileExists) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -803,12 +804,12 @@ fun ActiveDownloadItem(
                         if (isPausedOrFailed) onResume() else onPause()
                     }) {
                         Icon(
-                            imageVector = if (isPausedOrFailed) Icons.Default.PlayArrow else Icons.Default.Pause,
+                            imageVector = if (isPausedOrFailed) AppIcons.Play else AppIcons.Pause,
                             contentDescription = if (isPausedOrFailed) "继续下载" else "暂停下载"
                         )
                     }
                     IconButton(onClick = onDelete) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "取消")
+                        Icon(imageVector = AppIcons.Close, contentDescription = "取消")
                     }
                 }
             }

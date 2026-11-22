@@ -301,7 +301,8 @@ fun ZakoNavHost(
                         val viewModel: DownloadsViewModel = viewModel {
                             DownloadsViewModel(
                                 downloadManager = app.downloadManager,
-                                settingsRepository = app.settingsRepository
+                                settingsRepository = app.settingsRepository,
+                                favoriteRepository = app.favoriteRepository
                             )
                         }
                         DownloadsScreen(
@@ -337,7 +338,10 @@ fun ZakoNavHost(
             // 8. 稍后再看
             composable(Screen.WatchLater.route) {
                 val viewModel: WatchLaterViewModel = viewModel {
-                    WatchLaterViewModel(historyRepository = app.historyRepository)
+                    WatchLaterViewModel(
+                        historyRepository = app.historyRepository,
+                        favoriteRepository = app.favoriteRepository
+                    )
                 }
                 WatchLaterScreen(
                     viewModel = viewModel,

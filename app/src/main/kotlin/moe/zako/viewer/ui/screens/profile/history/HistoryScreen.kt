@@ -1,12 +1,11 @@
 ﻿package moe.zako.viewer.ui.screens.profile.history
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,9 +21,12 @@ import coil.compose.AsyncImage
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
 import moe.zako.viewer.ui.components.FolderTreeDialog
+import moe.zako.viewer.ui.components.VideoActionBottomSheet
+import moe.zako.viewer.ui.components.VideoMenuAction
+import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HistoryScreen(
     viewModel: HistoryViewModel,
@@ -32,6 +34,9 @@ fun HistoryScreen(
     onNavigateToDetail: (videoId: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // 长按上下文操作菜单状态
+    var menuTargetItem by remember { mutableStateOf<WatchHistoryEntity?>(null) }
 
     // Group history items by calendar day
     val groupedHistory = remember(state.historyList) {
@@ -48,21 +53,21 @@ fun HistoryScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "返回")
+                        Icon(imageVector = AppIcons.ArrowBack, contentDescription = "返回")
                     }
                 },
                 actions = {
                     if (state.isSelectionMode) {
                         TextButton(onClick = { viewModel.selectAll() }) { Text("全选") }
                         IconButton(onClick = { viewModel.toggleSelectionMode() }) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "退出多选")
+                            Icon(imageVector = AppIcons.Close, contentDescription = "退出多选")
                         }
                     } else {
                         IconButton(onClick = { viewModel.toggleSelectionMode() }) {
-                            Icon(imageVector = Icons.Default.CheckCircleOutline, contentDescription = "多选管理")
+                            Icon(imageVector = AppIcons.MultiSelect, contentDescription = "多选")
                         }
                         IconButton(onClick = { viewModel.clearAllHistory() }) {
-                            Icon(imageVector = Icons.Default.DeleteSweep, contentDescription = "清空记录")
+                            Icon(imageVector = AppIcons.DeleteSweep, contentDescription = "清空记录")
                         }
                     }
                 }
@@ -77,12 +82,12 @@ fun HistoryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = { viewModel.showAddToFavoritesDialog() }) {
-                            Icon(imageVector = Icons.Default.Favorite, contentDescription = null)
+                            Icon(imageVector = AppIcons.AddToFavorites, contentDescription = null)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("加入收藏夹")
                         }
                         TextButton(onClick = { viewModel.deleteSelected() }) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Icon(imageVector = AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("删除", color = MaterialTheme.colorScheme.error)
                         }
@@ -96,11 +101,11 @@ fun HistoryScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Search Bar (占位文本已按需求彻底移除)
+            // Search Bar
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.onSearchQueryChange(it) },
-                leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(imageVector = AppIcons.Search, contentDescription = null) },
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -148,9 +153,16 @@ fun HistoryScreen(
                                     } else {
                                         onNavigateToDetail(historyItem.videoId)
                                     }
+                                },
+                                onLongClick = {
+                                    if (state.isSelectionMode) {
+                                        viewModel.toggleSelection(historyItem.videoId)
+                                    } else {
+                                        menuTargetItem = historyItem
+                                    }
                                 }
                             )
-                            Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         }
                     }
                 }
@@ -158,28 +170,91 @@ fun HistoryScreen(
         }
     }
 
+    // 全局长按上下文操作菜单
+    if (menuTargetItem != null) {
+        val target = menuTargetItem!!
+        val actions = listOf(
+            VideoMenuAction(
+                id = "multi_select",
+                title = "多选",
+                icon = AppIcons.MultiSelect,
+                onClick = {
+                    viewModel.enterSelectionWithItem(target.videoId)
+                }
+            ),
+            VideoMenuAction(
+                id = "add_to_favorites",
+                title = "添加到收藏夹",
+                icon = AppIcons.AddToFavorites,
+                supportingText = "将视频添加到自定义收藏夹",
+                onClick = {
+                    viewModel.showAddToFavoritesForSingleItem(target)
+                }
+            ),
+            VideoMenuAction(
+                id = "detail",
+                title = "详情页",
+                icon = AppIcons.VideoDetail,
+                supportingText = "查看本视频应用内详情页",
+                onClick = {
+                    onNavigateToDetail(target.videoId)
+                }
+            ),
+            VideoMenuAction(
+                id = "watch_later",
+                title = "稍后再看",
+                icon = AppIcons.WatchLater,
+                supportingText = "添加至稍后再看列表",
+                onClick = {
+                    viewModel.addToWatchLater(target)
+                }
+            ),
+            VideoMenuAction(
+                id = "delete",
+                title = "删除记录",
+                icon = AppIcons.Delete,
+                supportingText = "从观看历史中移除此条目",
+                isDangerous = true,
+                onClick = {
+                    viewModel.deleteHistory(target.videoId)
+                }
+            )
+        )
+
+        VideoActionBottomSheet(
+            title = target.title,
+            actions = actions,
+            onDismissRequest = { menuTargetItem = null }
+        )
+    }
+
     if (state.showFolderSelector) {
         FolderTreeDialog(
             folders = state.allFolders,
             onDismiss = { viewModel.dismissFolderDialog() },
-            onFolderSelected = { targetId -> viewModel.batchAddToFavorites(targetId) },
-            onCreateFolder = { _, _ -> }
+            onFolderSelected = { targetId -> viewModel.onFolderSelected(targetId) },
+            onCreateFolder = { name, parentId -> viewModel.createFolder(name, parentId) }
         )
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HistoryRowItem(
     item: WatchHistoryEntity,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     onSelectToggle: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

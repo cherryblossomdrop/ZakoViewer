@@ -29,6 +29,9 @@ import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.ui.components.FolderTreeDialog
+import moe.zako.viewer.ui.components.VideoActionBottomSheet
+import moe.zako.viewer.ui.components.VideoMenuAction
+import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
 import moe.zako.viewer.ui.theme.OverlayBlack
 import moe.zako.viewer.ui.theme.VipGold
@@ -78,14 +81,14 @@ fun FavoritesScreen(
                             Text("全选")
                         }
                         IconButton(onClick = { viewModel.toggleSelectionMode() }) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "退出多选")
+                            Icon(imageVector = AppIcons.Close, contentDescription = "退出多选")
                         }
                     } else {
                         IconButton(onClick = { viewModel.toggleSelectionMode() }) {
-                            Icon(imageVector = Icons.Default.CheckCircleOutline, contentDescription = "多选管理")
+                            Icon(imageVector = AppIcons.MultiSelect, contentDescription = "多选管理")
                         }
                         IconButton(onClick = { showCreateFolderDialog = true }) {
-                            Icon(imageVector = Icons.Default.CreateNewFolder, contentDescription = "新建子收藏夹")
+                            Icon(imageVector = AppIcons.CreateFolder, contentDescription = "新建子收藏夹")
                         }
                         // 重命名当前收藏夹（包含根收藏夹与子收藏夹）
                         state.currentFolder?.let { cur ->
@@ -93,7 +96,7 @@ fun FavoritesScreen(
                                 renameFolderNameInput = cur.name
                                 folderToRename = cur
                             }) {
-                                Icon(imageVector = Icons.Default.DriveFileRenameOutline, contentDescription = "重命名当前收藏夹")
+                                Icon(imageVector = AppIcons.Rename, contentDescription = "重命名当前收藏夹")
                             }
                         }
                     }
@@ -112,7 +115,7 @@ fun FavoritesScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = { viewModel.showMoveDialogForSelection() }) {
-                            Icon(imageVector = Icons.Default.DriveFileMove, contentDescription = null)
+                            Icon(imageVector = AppIcons.Move, contentDescription = null)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("移动 (${state.totalSelectedCount})")
                         }
@@ -121,14 +124,14 @@ fun FavoritesScreen(
                             onClick = { viewModel.showCopyDialogForSelection() },
                             enabled = state.selectedItemIds.isNotEmpty()
                         ) {
-                            Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null)
+                            Icon(imageVector = AppIcons.Copy, contentDescription = null)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("复制 (${state.selectedItemIds.size})")
                         }
 
                         TextButton(onClick = { viewModel.batchDeleteSelected() }) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
+                                imageVector = AppIcons.Delete,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error
                             )
@@ -163,7 +166,7 @@ fun FavoritesScreen(
                                 onClick = { viewModel.navigateToBreadcrumb(folder) },
                                 label = { Text(folder.name, fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal) },
                                 leadingIcon = if (folder.parentId == null) {
-                                    { Icon(imageVector = Icons.Default.FolderSpecial, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                    { Icon(imageVector = AppIcons.FolderSpecial, contentDescription = null, modifier = Modifier.size(16.dp)) }
                                 } else null,
                                 colors = if (isLast) {
                                     AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
@@ -171,7 +174,7 @@ fun FavoritesScreen(
                             )
                             if (!isLast) {
                                 Icon(
-                                    imageVector = Icons.Default.ChevronRight,
+                                    imageVector = AppIcons.ChevronRight,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(16.dp)
@@ -187,11 +190,11 @@ fun FavoritesScreen(
                 OutlinedTextField(
                     value = state.searchQuery,
                     onValueChange = { viewModel.onSearchQueryChange(it) },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
+                    leadingIcon = { Icon(imageVector = AppIcons.Search, contentDescription = null) },
                     trailingIcon = {
                         if (state.searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                Icon(imageVector = Icons.Default.Clear, contentDescription = "清空")
+                                Icon(imageVector = AppIcons.Clear, contentDescription = "清空")
                             }
                         }
                     },
@@ -260,7 +263,7 @@ fun FavoritesScreen(
                             }
 
                             Icon(
-                                imageVector = Icons.Default.Folder,
+                                imageVector = AppIcons.Folder,
                                 contentDescription = null,
                                 tint = if (isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(28.dp)
@@ -280,7 +283,7 @@ fun FavoritesScreen(
                             if (!state.isSelectionMode) {
                                 IconButton(onClick = { folderMenuTarget = folder }) {
                                     Icon(
-                                        imageVector = Icons.Default.MoreVert,
+                                        imageVector = AppIcons.MoreVert,
                                         contentDescription = "菜单",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -391,7 +394,7 @@ fun FavoritesScreen(
                                         modifier = Modifier.align(Alignment.TopStart)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.WorkspacePremium,
+                                            imageVector = AppIcons.WorkspacePremium,
                                             contentDescription = "VIP",
                                             tint = Color(0xFF2E1C00),
                                             modifier = Modifier
@@ -460,7 +463,7 @@ fun FavoritesScreen(
                             if (!state.isSelectionMode) {
                                 IconButton(onClick = { itemMenuTarget = item }) {
                                     Icon(
-                                        imageVector = Icons.Default.MoreVert,
+                                        imageVector = AppIcons.MoreVert,
                                         contentDescription = "选项",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -494,7 +497,7 @@ fun FavoritesScreen(
 
                 ListItem(
                     headlineContent = { Text("多选") },
-                    leadingContent = { Icon(Icons.Default.Checklist, contentDescription = null) },
+                    leadingContent = { Icon(AppIcons.MultiSelect, contentDescription = null) },
                     modifier = Modifier.combinedClickable(onClick = {
                         val fid = folder.id
                         folderMenuTarget = null
@@ -504,7 +507,7 @@ fun FavoritesScreen(
 
                 ListItem(
                     headlineContent = { Text("重命名") },
-                    leadingContent = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    leadingContent = { Icon(AppIcons.Edit, contentDescription = null) },
                     modifier = Modifier.combinedClickable(onClick = {
                         val f = folder
                         folderMenuTarget = null
@@ -515,7 +518,7 @@ fun FavoritesScreen(
 
                 ListItem(
                     headlineContent = { Text("移动到") },
-                    leadingContent = { Icon(Icons.Default.DriveFileMove, contentDescription = null) },
+                    leadingContent = { Icon(AppIcons.Move, contentDescription = null) },
                     modifier = Modifier.combinedClickable(onClick = {
                         val fid = folder.id
                         folderMenuTarget = null
@@ -525,7 +528,7 @@ fun FavoritesScreen(
 
                 ListItem(
                     headlineContent = { Text("删除", color = MaterialTheme.colorScheme.error) },
-                    leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                    leadingContent = { Icon(AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                     modifier = Modifier.combinedClickable(onClick = {
                         val fid = folder.id
                         folderMenuTarget = null
@@ -537,101 +540,87 @@ fun FavoritesScreen(
     }
 
     // ==========================================
-    // 2. 长按视频项目弹出菜单 (多选、重命名、删除、移动、复制、查看详情)
+    // 2. 长按视频项目弹出菜单 (全局复用 VideoActionBottomSheet)
     // ==========================================
     itemMenuTarget?.let { item ->
-        ModalBottomSheet(onDismissRequest = { itemMenuTarget = null }) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                // 1. 多选
-                ListItem(
-                    headlineContent = { Text("多选") },
-                    leadingContent = { Icon(Icons.Default.Checklist, contentDescription = null) },
-                    modifier = Modifier.combinedClickable(onClick = {
-                        val iid = item.id
-                        itemMenuTarget = null
-                        viewModel.startSelectionWithItem(iid)
-                    })
-                )
-
-                // 2. 重命名
-                ListItem(
-                    headlineContent = { Text("重命名") },
-                    leadingContent = { Icon(Icons.Default.Edit, contentDescription = null) },
-                    modifier = Modifier.combinedClickable(onClick = {
-                        val itm = item
-                        itemMenuTarget = null
-                        renameItemTitleInput = itm.title
-                        itemToRename = itm
-                    })
-                )
-
-                // 3. 移动
-                ListItem(
-                    headlineContent = { Text("移动到") },
-                    leadingContent = { Icon(Icons.Default.DriveFileMove, contentDescription = null) },
-                    modifier = Modifier.combinedClickable(onClick = {
-                        val iid = item.id
-                        itemMenuTarget = null
-                        viewModel.showMoveDialogForSingleItem(iid)
-                    })
-                )
-
-                // 4. 复制
-                ListItem(
-                    headlineContent = { Text("复制到") },
-                    leadingContent = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
-                    modifier = Modifier.combinedClickable(onClick = {
-                        val itm = item
-                        itemMenuTarget = null
-                        viewModel.showCopyDialogForSingleItem(itm)
-                    })
-                )
-
-                // 5. 查看详情 (本地视频弹窗显示文件信息；在线视频跳转视频详情页)
-                ListItem(
-                    headlineContent = { Text("查看详情") },
-                    leadingContent = { Icon(Icons.Default.Info, contentDescription = null) },
-                    modifier = Modifier.combinedClickable(onClick = {
-                        val itm = item
-                        itemMenuTarget = null
-                        scope.launch {
-                            val localInfo = viewModel.checkLocalVideoInfo(itm)
-                            if (localInfo != null) {
-                                localVideoInfoToShow = localInfo
-                            } else {
-                                onNavigateToDetail(itm.videoId)
-                            }
+        val actions = listOf(
+            VideoMenuAction(
+                id = "multi_select",
+                title = "多选",
+                icon = AppIcons.MultiSelect,
+                onClick = {
+                    val iid = item.id
+                    itemMenuTarget = null
+                    viewModel.startSelectionWithItem(iid)
+                }
+            ),
+            VideoMenuAction(
+                id = "rename",
+                title = "重命名",
+                icon = AppIcons.Edit,
+                onClick = {
+                    val itm = item
+                    itemMenuTarget = null
+                    renameItemTitleInput = itm.title
+                    itemToRename = itm
+                }
+            ),
+            VideoMenuAction(
+                id = "move",
+                title = "移动到",
+                icon = AppIcons.Move,
+                onClick = {
+                    val iid = item.id
+                    itemMenuTarget = null
+                    viewModel.showMoveDialogForSingleItem(iid)
+                }
+            ),
+            VideoMenuAction(
+                id = "copy",
+                title = "复制到",
+                icon = AppIcons.Copy,
+                onClick = {
+                    val itm = item
+                    itemMenuTarget = null
+                    viewModel.showCopyDialogForSingleItem(itm)
+                }
+            ),
+            VideoMenuAction(
+                id = "detail",
+                title = "查看详情",
+                icon = AppIcons.FileInfo,
+                supportingText = "本地视频显示文件信息，在线视频查看详情页",
+                onClick = {
+                    val itm = item
+                    itemMenuTarget = null
+                    scope.launch {
+                        val localInfo = viewModel.checkLocalVideoInfo(itm)
+                        if (localInfo != null) {
+                            localVideoInfoToShow = localInfo
+                        } else {
+                            onNavigateToDetail(itm.videoId)
                         }
-                    })
-                )
+                    }
+                }
+            ),
+            VideoMenuAction(
+                id = "delete",
+                title = "从收藏夹删除",
+                icon = AppIcons.Delete,
+                isDangerous = true,
+                onClick = {
+                    val iid = item.id
+                    itemMenuTarget = null
+                    viewModel.deleteItem(iid)
+                }
+            )
+        )
 
-                // 6. 删除
-                ListItem(
-                    headlineContent = { Text("从收藏夹删除", color = MaterialTheme.colorScheme.error) },
-                    leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-                    modifier = Modifier.combinedClickable(onClick = {
-                        val iid = item.id
-                        itemMenuTarget = null
-                        viewModel.deleteItem(iid)
-                    })
-                )
-            }
-        }
+        VideoActionBottomSheet(
+            title = item.title,
+            actions = actions,
+            onDismissRequest = { itemMenuTarget = null }
+        )
     }
 
     // ==========================================
@@ -642,7 +631,7 @@ fun FavoritesScreen(
             onDismissRequest = { localVideoInfoToShow = null },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.VideoFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(imageVector = AppIcons.VideoFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("本地视频文件信息")
                 }

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.data.local.entities.DownloadEntity
+import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
+import moe.zako.viewer.data.repository.FavoriteRepository
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.ui.components.ZakoToast
 import kotlinx.coroutines.Dispatchers
@@ -22,12 +24,16 @@ data class DownloadsUiState(
     val isMigrating: Boolean = false,
     val pendingNewDownloadPath: String = "",
     val filesToMigrateCount: Int = 0,
-    val migrationProgressText: String = ""
+    val migrationProgressText: String = "",
+    val showFolderSelector: Boolean = false,
+    val allFolders: List<FavoriteFolderEntity> = emptyList(),
+    val pendingFavoriteItem: DownloadEntity? = null
 )
 
 class DownloadsViewModel(
     private val downloadManager: DownloadManager,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val favoriteRepository: FavoriteRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DownloadsUiState())
@@ -211,6 +217,48 @@ class DownloadsViewModel(
         if (idsToDelete.isNotEmpty()) {
             downloadManager.deleteDownloads(idsToDelete)
             exitMultiSelect()
+        }
+    }
+
+    // --- 收藏夹互操作 ---
+    fun showAddToFavorites(item: DownloadEntity) {
+        viewModelScope.launch {
+            val folders = favoriteRepository.getAllFolders()
+            _uiState.update {
+                it.copy(
+                    showFolderSelector = true,
+                    allFolders = folders,
+                    pendingFavoriteItem = item
+                )
+            }
+        }
+    }
+
+    fun dismissFolderSelector() {
+        _uiState.update { it.copy(showFolderSelector = false, pendingFavoriteItem = null) }
+    }
+
+    fun addToFavoriteFolder(folderId: Long) {
+        val item = _uiState.value.pendingFavoriteItem ?: return
+        viewModelScope.launch {
+            favoriteRepository.addToFavorites(
+                folderId = folderId,
+                videoId = item.videoId,
+                title = item.title,
+                coverUrl = item.coverUrl,
+                duration = "",
+                isVip = false
+            )
+            _uiState.update { it.copy(showFolderSelector = false, pendingFavoriteItem = null) }
+            ZakoToast.show("已成功加入收藏夹")
+        }
+    }
+
+    fun createFolder(name: String, parentId: Long?) {
+        viewModelScope.launch {
+            favoriteRepository.createFolder(name, parentId)
+            val folders = favoriteRepository.getAllFolders()
+            _uiState.update { it.copy(allFolders = folders) }
         }
     }
 }

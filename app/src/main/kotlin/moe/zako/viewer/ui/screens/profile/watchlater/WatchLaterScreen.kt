@@ -22,6 +22,7 @@ import coil.compose.AsyncImage
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.WatchLaterEntity
 import moe.zako.viewer.ui.components.FolderTreeDialog
+import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.VideoActionBottomSheet
 import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.theme.AppIcons
@@ -38,32 +39,15 @@ fun WatchLaterScreen(
     var menuTargetItem by remember { mutableStateOf<WatchLaterEntity?>(null) }
     var showBatchDeleteDialog by remember { mutableStateOf(false) }
 
-    // 拦截返回键：多选模式下优先退出多选
-    BackHandler(enabled = state.isSelectionMode) {
-        viewModel.exitSelectionMode()
-    }
-
     Scaffold(
         topBar = {
             if (state.isSelectionMode) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "已选 ${state.selectedVideoIds.size} 项",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { viewModel.exitSelectionMode() }) {
-                            Icon(imageVector = AppIcons.Close, contentDescription = "退出多选")
-                        }
-                    },
-                    actions = {
-                        val allSelected = state.list.isNotEmpty() && state.selectedVideoIds.size == state.list.size
-                        TextButton(onClick = { viewModel.toggleSelectAll() }) {
-                            Text(if (allSelected) "取消全选" else "全选")
-                        }
-                    }
+                val allSelected = state.list.isNotEmpty() && state.selectedVideoIds.size == state.list.size
+                MultiSelectTopBar(
+                    selectedCount = state.selectedVideoIds.size,
+                    onExitSelection = { viewModel.exitSelectionMode() },
+                    allSelected = allSelected,
+                    onToggleSelectAll = { viewModel.toggleSelectAll() }
                 )
             } else {
                 TopAppBar(

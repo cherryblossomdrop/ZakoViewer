@@ -1,43 +1,26 @@
 ﻿package moe.zako.viewer.ui.screens.favorites
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.ui.components.FolderTreeDialog
-import moe.zako.viewer.ui.components.VideoActionBottomSheet
-import moe.zako.viewer.ui.components.VideoMenuAction
+import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.theme.AppIcons
-import moe.zako.viewer.ui.theme.LocalCoverBlurEnabled
-import moe.zako.viewer.ui.theme.OverlayBlack
-import moe.zako.viewer.ui.theme.VipGold
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+/**
+ * 收藏夹树状目录管理视窗
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
     viewModel: FavoritesViewModel,
@@ -46,44 +29,39 @@ fun FavoritesScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
-    val coverBlurEnabled = LocalCoverBlurEnabled.current
 
     // Dialog & Menu States
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var folderToRename by remember { mutableStateOf<FavoriteFolderEntity?>(null) }
-    var renameFolderNameInput by remember { mutableStateOf("") }
-
     var itemToRename by remember { mutableStateOf<FavoriteItemEntity?>(null) }
-    var renameItemTitleInput by remember { mutableStateOf("") }
-
     var folderMenuTarget by remember { mutableStateOf<FavoriteFolderEntity?>(null) }
     var itemMenuTarget by remember { mutableStateOf<FavoriteItemEntity?>(null) }
-
     var localVideoInfoToShow by remember { mutableStateOf<LocalVideoInfo?>(null) }
+
+    val selectableFolderCount = state.subFolders.count { it.parentId != null }
+    val isAllSelected = (selectableFolderCount + state.items.size) > 0 &&
+            state.selectedFolderIds.size == selectableFolderCount &&
+            state.selectedItemIds.size == state.items.size
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = if (state.isSelectionMode) {
-                            "已选择 ${state.totalSelectedCount} 项"
-                        } else {
-                            state.currentFolder?.name ?: "收藏夹"
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                actions = {
-                    if (state.isSelectionMode) {
-                        TextButton(onClick = { viewModel.selectAll() }) {
-                            Text("全选")
-                        }
-                        IconButton(onClick = { viewModel.toggleSelectionMode() }) {
-                            Icon(imageVector = AppIcons.Close, contentDescription = "退出多选")
-                        }
-                    } else {
+            if (state.isSelectionMode) {
+                MultiSelectTopBar(
+                    selectedCount = state.totalSelectedCount,
+                    onExitSelection = { viewModel.toggleSelectionMode() },
+                    allSelected = isAllSelected,
+                    onToggleSelectAll = { viewModel.selectAll() }
+                )
+            } else {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = state.currentFolder?.name ?: "收藏夹",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    },
+                    actions = {
                         IconButton(onClick = { viewModel.toggleSelectionMode() }) {
                             Icon(imageVector = AppIcons.MultiSelect, contentDescription = "多选管理")
                         }
@@ -92,16 +70,13 @@ fun FavoritesScreen(
                         }
                         // 重命名当前收藏夹（包含根收藏夹与子收藏夹）
                         state.currentFolder?.let { cur ->
-                            IconButton(onClick = {
-                                renameFolderNameInput = cur.name
-                                folderToRename = cur
-                            }) {
+                            IconButton(onClick = { folderToRename = cur }) {
                                 Icon(imageVector = AppIcons.Rename, contentDescription = "重命名当前收藏夹")
                             }
                         }
                     }
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             // Batch Action Bottom Bar
@@ -151,41 +126,14 @@ fun FavoritesScreen(
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             // 1. Breadcrumbs Bar
-            if (state.breadcrumbs.size > 1) {
-                item {
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(state.breadcrumbs) { folder ->
-                            val isLast = folder.id == state.breadcrumbs.lastOrNull()?.id
-                            AssistChip(
-                                onClick = { viewModel.navigateToBreadcrumb(folder) },
-                                label = { Text(folder.name, fontWeight = if (isLast) FontWeight.Bold else FontWeight.Normal) },
-                                leadingIcon = if (folder.parentId == null) {
-                                    { Icon(imageVector = AppIcons.FolderSpecial, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                } else null,
-                                colors = if (isLast) {
-                                    AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                                } else AssistChipDefaults.assistChipColors()
-                            )
-                            if (!isLast) {
-                                Icon(
-                                    imageVector = AppIcons.ChevronRight,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-                }
+            item {
+                BreadcrumbBar(
+                    breadcrumbs = state.breadcrumbs,
+                    onFolderClick = { folder -> viewModel.navigateToBreadcrumb(folder) }
+                )
             }
 
-            // 2. In-folder Search Bar (占位文本已按需求彻底移除)
+            // 2. In-folder Search Bar
             item {
                 OutlinedTextField(
                     value = state.searchQuery,
@@ -206,7 +154,7 @@ fun FavoritesScreen(
                 )
             }
 
-            // 3. Subfolders Section (列表形式显示，递归搜索时隐藏以展示搜索结果)
+            // 3. Subfolders Section
             if (state.searchQuery.isEmpty() && state.subFolders.isNotEmpty()) {
                 item {
                     Text(
@@ -218,79 +166,14 @@ fun FavoritesScreen(
                 }
 
                 items(state.subFolders, key = { "folder_${it.id}" }) { folder ->
-                    val isFolderSelected = state.selectedFolderIds.contains(folder.id)
-                    val isRootFolder = folder.parentId == null
-
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isFolderSelected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            }
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 2.dp)
-                            .combinedClickable(
-                                onClick = {
-                                    if (state.isSelectionMode) {
-                                        if (!isRootFolder) viewModel.toggleFolderSelection(folder.id)
-                                    } else {
-                                        viewModel.openFolder(folder)
-                                    }
-                                },
-                                onLongClick = {
-                                    if (!isRootFolder) {
-                                        folderMenuTarget = folder
-                                    }
-                                }
-                            )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (state.isSelectionMode && !isRootFolder) {
-                                Checkbox(
-                                    checked = isFolderSelected,
-                                    onCheckedChange = { viewModel.toggleFolderSelection(folder.id) },
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                            }
-
-                            Icon(
-                                imageVector = AppIcons.Folder,
-                                contentDescription = null,
-                                tint = if (isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(28.dp)
-                            )
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Text(
-                                text = folder.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            if (!state.isSelectionMode) {
-                                IconButton(onClick = { folderMenuTarget = folder }) {
-                                    Icon(
-                                        imageVector = AppIcons.MoreVert,
-                                        contentDescription = "菜单",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    FavoriteFolderItem(
+                        folder = folder,
+                        isSelectionMode = state.isSelectionMode,
+                        isSelected = state.selectedFolderIds.contains(folder.id),
+                        onFolderClick = { viewModel.openFolder(folder) },
+                        onSelectToggle = { viewModel.toggleFolderSelection(folder.id) },
+                        onMenuClick = { folderMenuTarget = folder }
+                    )
                 }
             }
 
@@ -301,7 +184,7 @@ fun FavoritesScreen(
                 }
             }
 
-            // 4. Video Items Section (列表形式显示，点击直接播放视频)
+            // 4. Video Items Section
             if (state.items.isEmpty() && state.subFolders.isEmpty()) {
                 item {
                     Box(
@@ -328,445 +211,132 @@ fun FavoritesScreen(
                 }
 
                 items(state.items, key = { "item_${it.id}" }) { item ->
-                    val isSelected = state.selectedItemIds.contains(item.id)
+                    val parentFolder = if (state.searchQuery.isNotEmpty() && item.folderId != state.currentFolder?.id) {
+                        state.allFolders.firstOrNull { it.id == item.folderId }?.name
+                    } else null
 
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                            }
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 3.dp)
-                            .combinedClickable(
-                                onClick = {
-                                    if (state.isSelectionMode) {
-                                        viewModel.toggleItemSelection(item.id)
-                                    } else {
-                                        // 从收藏夹点击视频应该直接开始播放视频，而非进入视频详情页
-                                        onNavigateToPlayer(item.videoId)
-                                    }
-                                },
-                                onLongClick = {
-                                    itemMenuTarget = item
-                                }
-                            )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (state.isSelectionMode) {
-                                Checkbox(
-                                    checked = isSelected,
-                                    onCheckedChange = { viewModel.toggleItemSelection(item.id) },
-                                    modifier = Modifier.padding(end = 4.dp)
-                                )
-                            }
-
-                            // 视频封面卡片
-                            Box(
-                                modifier = Modifier
-                                    .width(110.dp)
-                                    .height(68.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .clipToBounds()
-                            ) {
-                                AsyncImage(
-                                    model = CoverCacheManager.getCoverModel(LocalContext.current, item.videoId, item.coverUrl, autoFetch = true),
-                                    contentDescription = item.title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .then(if (coverBlurEnabled) Modifier.blur(18.dp) else Modifier)
-                                )
-
-                                if (item.isVip) {
-                                    Surface(
-                                        color = VipGold,
-                                        shape = RoundedCornerShape(bottomEnd = 4.dp),
-                                        modifier = Modifier.align(Alignment.TopStart)
-                                    ) {
-                                        Icon(
-                                            imageVector = AppIcons.WorkspacePremium,
-                                            contentDescription = "VIP",
-                                            tint = Color(0xFF2E1C00),
-                                            modifier = Modifier
-                                                .size(16.dp)
-                                                .padding(2.dp)
-                                        )
-                                    }
-                                }
-
-                                if (item.duration.isNotBlank()) {
-                                    Surface(
-                                        color = OverlayBlack,
-                                        shape = RoundedCornerShape(3.dp),
-                                        modifier = Modifier
-                                            .align(Alignment.BottomEnd)
-                                            .padding(3.dp)
-                                     ) {
-                                        Text(
-                                            text = item.duration,
-                                            color = Color.White,
-                                            fontSize = 9.sp,
-                                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            // 标题与信息
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = item.title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "视频编号: ${item.videoId}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 11.sp
-                                    )
-                                    if (state.searchQuery.isNotEmpty() && item.folderId != state.currentFolder?.id) {
-                                        val parentFolder = state.allFolders.firstOrNull { it.id == item.folderId }
-                                        if (parentFolder != null) {
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = "来自: ${parentFolder.name}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                fontSize = 11.sp
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // 菜单触发器
-                            if (!state.isSelectionMode) {
-                                IconButton(onClick = { itemMenuTarget = item }) {
-                                    Icon(
-                                        imageVector = AppIcons.MoreVert,
-                                        contentDescription = "选项",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    FavoriteVideoItem(
+                        item = item,
+                        isSelectionMode = state.isSelectionMode,
+                        isSelected = state.selectedItemIds.contains(item.id),
+                        isSearchMode = state.searchQuery.isNotEmpty(),
+                        parentFolderName = parentFolder,
+                        onPlayClick = { onNavigateToPlayer(item.videoId) },
+                        onSelectToggle = { viewModel.toggleItemSelection(item.id) },
+                        onMenuClick = { itemMenuTarget = item }
+                    )
                 }
             }
         }
     }
 
-    // ==========================================
-    // 1. 长按子收藏夹弹出菜单 (多选、重命名、删除、移动)
-    // ==========================================
+    // 1. 长按子收藏夹弹出菜单
     folderMenuTarget?.let { folder ->
-        ModalBottomSheet(onDismissRequest = { folderMenuTarget = null }) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = folder.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                ListItem(
-                    headlineContent = { Text("多选") },
-                    leadingContent = { Icon(AppIcons.MultiSelect, contentDescription = null) },
-                    modifier = Modifier.combinedClickable(onClick = {
-                        val fid = folder.id
-                        folderMenuTarget = null
-                        viewModel.startSelectionWithFolder(fid)
-                    })
-                )
-
-                ListItem(
-                    headlineContent = { Text("重命名") },
-                    leadingContent = { Icon(AppIcons.Edit, contentDescription = null) },
-                    modifier = Modifier.combinedClickable(onClick = {
-                        val f = folder
-                        folderMenuTarget = null
-                        renameFolderNameInput = f.name
-                        folderToRename = f
-                    })
-                )
-
-                ListItem(
-                    headlineContent = { Text("移动到") },
-                    leadingContent = { Icon(AppIcons.Move, contentDescription = null) },
-                    modifier = Modifier.combinedClickable(onClick = {
-                        val fid = folder.id
-                        folderMenuTarget = null
-                        viewModel.showMoveDialogForSingleFolder(fid)
-                    })
-                )
-
-                ListItem(
-                    headlineContent = { Text("删除", color = MaterialTheme.colorScheme.error) },
-                    leadingContent = { Icon(AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-                    modifier = Modifier.combinedClickable(onClick = {
-                        val fid = folder.id
-                        folderMenuTarget = null
-                        viewModel.deleteFolder(fid)
-                    })
-                )
-            }
-        }
+        FolderActionBottomSheet(
+            folder = folder,
+            onStartSelection = { fid ->
+                folderMenuTarget = null
+                viewModel.startSelectionWithFolder(fid)
+            },
+            onRename = { f ->
+                folderMenuTarget = null
+                folderToRename = f
+            },
+            onMove = { fid ->
+                folderMenuTarget = null
+                viewModel.showMoveDialogForSingleFolder(fid)
+            },
+            onDelete = { fid ->
+                folderMenuTarget = null
+                viewModel.deleteFolder(fid)
+            },
+            onDismissRequest = { folderMenuTarget = null }
+        )
     }
 
-    // ==========================================
-    // 2. 长按视频项目弹出菜单 (全局复用 VideoActionBottomSheet)
-    // ==========================================
+    // 2. 长按视频项目弹出菜单
     itemMenuTarget?.let { item ->
-        val actions = listOf(
-            VideoMenuAction(
-                id = "multi_select",
-                title = "多选",
-                icon = AppIcons.MultiSelect,
-                onClick = {
-                    val iid = item.id
-                    itemMenuTarget = null
-                    viewModel.startSelectionWithItem(iid)
-                }
-            ),
-            VideoMenuAction(
-                id = "rename",
-                title = "重命名",
-                icon = AppIcons.Edit,
-                onClick = {
-                    val itm = item
-                    itemMenuTarget = null
-                    renameItemTitleInput = itm.title
-                    itemToRename = itm
-                }
-            ),
-            VideoMenuAction(
-                id = "move",
-                title = "移动到",
-                icon = AppIcons.Move,
-                onClick = {
-                    val iid = item.id
-                    itemMenuTarget = null
-                    viewModel.showMoveDialogForSingleItem(iid)
-                }
-            ),
-            VideoMenuAction(
-                id = "copy",
-                title = "复制到",
-                icon = AppIcons.Copy,
-                onClick = {
-                    val itm = item
-                    itemMenuTarget = null
-                    viewModel.showCopyDialogForSingleItem(itm)
-                }
-            ),
-            VideoMenuAction(
-                id = "detail",
-                title = "查看详情",
-                icon = AppIcons.FileInfo,
-                supportingText = "本地视频显示文件信息，在线视频查看详情页",
-                onClick = {
-                    val itm = item
-                    itemMenuTarget = null
-                    scope.launch {
-                        val localInfo = viewModel.checkLocalVideoInfo(itm)
-                        if (localInfo != null) {
-                            localVideoInfoToShow = localInfo
-                        } else {
-                            onNavigateToDetail(itm.videoId)
-                        }
+        FavoriteItemActionBottomSheet(
+            item = item,
+            onStartSelection = { iid ->
+                itemMenuTarget = null
+                viewModel.startSelectionWithItem(iid)
+            },
+            onRename = { itm ->
+                itemMenuTarget = null
+                itemToRename = itm
+            },
+            onMove = { iid ->
+                itemMenuTarget = null
+                viewModel.showMoveDialogForSingleItem(iid)
+            },
+            onCopy = { itm ->
+                itemMenuTarget = null
+                viewModel.showCopyDialogForSingleItem(itm)
+            },
+            onDetail = { itm ->
+                itemMenuTarget = null
+                scope.launch {
+                    val localInfo = viewModel.checkLocalVideoInfo(itm)
+                    if (localInfo != null) {
+                        localVideoInfoToShow = localInfo
+                    } else {
+                        onNavigateToDetail(itm.videoId)
                     }
                 }
-            ),
-            VideoMenuAction(
-                id = "delete",
-                title = "从收藏夹删除",
-                icon = AppIcons.Delete,
-                isDangerous = true,
-                onClick = {
-                    val iid = item.id
-                    itemMenuTarget = null
-                    viewModel.deleteItem(iid)
-                }
-            )
-        )
-
-        VideoActionBottomSheet(
-            title = item.title,
-            actions = actions,
+            },
+            onDelete = { iid ->
+                itemMenuTarget = null
+                viewModel.deleteItem(iid)
+            },
             onDismissRequest = { itemMenuTarget = null }
         )
     }
 
-    // ==========================================
     // 3. 本地视频文件信息弹窗
-    // ==========================================
     localVideoInfoToShow?.let { info ->
-        AlertDialog(
-            onDismissRequest = { localVideoInfoToShow = null },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = AppIcons.VideoFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("本地视频文件信息")
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "视频名称: ${info.title}",
-                        fontWeight = FontWeight.SemiBold,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(text = "文件大小: ${info.fileSizeFormatted}", style = MaterialTheme.typography.bodySmall)
-                    Text(text = "下载/创建时间: ${info.createdAtFormatted}", style = MaterialTheme.typography.bodySmall)
-                    Text(text = "时长: ${info.duration}", style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        text = "存储路径:\n${info.filePath}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                Button(onClick = { localVideoInfoToShow = null }) {
-                    Text("确定")
-                }
-            }
+        LocalVideoInfoDialog(
+            info = info,
+            onDismiss = { localVideoInfoToShow = null }
         )
     }
 
-    // ==========================================
-    // 4. 新建子收藏夹弹窗 (用户不能创建根收藏夹)
-    // ==========================================
+    // 4. 新建子收藏夹弹窗
     if (showCreateFolderDialog) {
-        var folderNameInput by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showCreateFolderDialog = false },
-            title = { Text("新建子收藏夹") },
-            text = {
-                OutlinedTextField(
-                    value = folderNameInput,
-                    onValueChange = { folderNameInput = it },
-                    label = { Text("收藏夹名称") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        CreateFolderDialog(
+            onConfirm = { name ->
+                viewModel.createFolder(name, state.currentFolder?.id)
+                showCreateFolderDialog = false
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (folderNameInput.isNotBlank()) {
-                            viewModel.createFolder(folderNameInput.trim(), state.currentFolder?.id)
-                            showCreateFolderDialog = false
-                        }
-                    }
-                ) {
-                    Text("创建")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCreateFolderDialog = false }) { Text("取消") }
-            }
+            onDismiss = { showCreateFolderDialog = false }
         )
     }
 
-    // ==========================================
     // 5. 重命名收藏夹弹窗
-    // ==========================================
     folderToRename?.let { folder ->
-        AlertDialog(
-            onDismissRequest = { folderToRename = null },
-            title = { Text("重命名收藏夹") },
-            text = {
-                OutlinedTextField(
-                    value = renameFolderNameInput,
-                    onValueChange = { renameFolderNameInput = it },
-                    label = { Text("新名称") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        RenameFolderDialog(
+            initialName = folder.name,
+            onConfirm = { newName ->
+                viewModel.renameFolder(folder.id, newName)
+                folderToRename = null
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (renameFolderNameInput.isNotBlank()) {
-                            viewModel.renameFolder(folder.id, renameFolderNameInput.trim())
-                            folderToRename = null
-                        }
-                    }
-                ) {
-                    Text("保存")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { folderToRename = null }) { Text("取消") }
-            }
+            onDismiss = { folderToRename = null }
         )
     }
 
-    // ==========================================
     // 6. 重命名视频标题弹窗
-    // ==========================================
     itemToRename?.let { item ->
-        AlertDialog(
-            onDismissRequest = { itemToRename = null },
-            title = { Text("修改收藏视频名称") },
-            text = {
-                OutlinedTextField(
-                    value = renameItemTitleInput,
-                    onValueChange = { renameItemTitleInput = it },
-                    label = { Text("视频标题") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        RenameItemDialog(
+            initialTitle = item.title,
+            onConfirm = { newTitle ->
+                viewModel.renameItem(item.id, newTitle)
+                itemToRename = null
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (renameItemTitleInput.isNotBlank()) {
-                            viewModel.renameItem(item.id, renameItemTitleInput.trim())
-                            itemToRename = null
-                        }
-                    }
-                ) {
-                    Text("保存")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { itemToRename = null }) { Text("取消") }
-            }
+            onDismiss = { itemToRename = null }
         )
     }
 
-    // ==========================================
-    // 7. 移动目标选择弹窗 (支持批量移动 / 单项移动)
-    // ==========================================
+    // 7. 移动目标选择弹窗
     if (state.showFolderSelectorForMove) {
         FolderTreeDialog(
             folders = state.allFolders,
@@ -776,9 +346,7 @@ fun FavoritesScreen(
         )
     }
 
-    // ==========================================
-    // 8. 复制目标选择弹窗 (支持批量复制 / 单项复制)
-    // ==========================================
+    // 8. 复制目标选择弹窗
     if (state.showFolderSelectorForCopy) {
         FolderTreeDialog(
             folders = state.allFolders,

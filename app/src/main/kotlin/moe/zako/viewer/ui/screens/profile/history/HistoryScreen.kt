@@ -21,6 +21,7 @@ import coil.compose.AsyncImage
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
 import moe.zako.viewer.ui.components.FolderTreeDialog
+import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.VideoActionBottomSheet
 import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.theme.AppIcons
@@ -45,24 +46,29 @@ fun HistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = if (state.isSelectionMode) "已选择 ${state.selectedVideoIds.size} 项" else "观看记录"
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = AppIcons.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    if (state.isSelectionMode) {
-                        TextButton(onClick = { viewModel.selectAll() }) { Text("全选") }
-                        IconButton(onClick = { viewModel.toggleSelectionMode() }) {
-                            Icon(imageVector = AppIcons.Close, contentDescription = "退出多选")
+            if (state.isSelectionMode) {
+                val allSelected = state.historyList.isNotEmpty() && state.selectedVideoIds.size == state.historyList.size
+                MultiSelectTopBar(
+                    selectedCount = state.selectedVideoIds.size,
+                    onExitSelection = { viewModel.toggleSelectionMode() },
+                    allSelected = allSelected,
+                    onToggleSelectAll = {
+                        if (allSelected) {
+                            state.selectedVideoIds.toList().forEach { viewModel.toggleSelection(it) }
+                        } else {
+                            viewModel.selectAll()
                         }
-                    } else {
+                    }
+                )
+            } else {
+                TopAppBar(
+                    title = { Text("观看记录") },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(imageVector = AppIcons.ArrowBack, contentDescription = "返回")
+                        }
+                    },
+                    actions = {
                         IconButton(onClick = { viewModel.toggleSelectionMode() }) {
                             Icon(imageVector = AppIcons.MultiSelect, contentDescription = "多选")
                         }
@@ -70,8 +76,8 @@ fun HistoryScreen(
                             Icon(imageVector = AppIcons.DeleteSweep, contentDescription = "清空记录")
                         }
                     }
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             if (state.isSelectionMode && state.selectedVideoIds.isNotEmpty()) {

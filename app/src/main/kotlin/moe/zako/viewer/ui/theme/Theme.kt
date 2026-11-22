@@ -8,7 +8,10 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalTextToolbar
+import moe.zako.viewer.ui.components.ZakoTextToolbar
 
 /**
  * 全局隐私模糊保护开关 CompositionLocal，默认值必须为 true
@@ -32,12 +35,19 @@ fun ZakoViewerTheme(
         else -> getColorSchemeForTheme(themeKey, darkTheme)
     }
 
-    CompositionLocalProvider(LocalCoverBlurEnabled provides coverBlurEnabled) {
+    val textToolbar = remember { ZakoTextToolbar() }
+
+    CompositionLocalProvider(
+        LocalCoverBlurEnabled provides coverBlurEnabled,
+        LocalTextToolbar provides textToolbar
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = ZakoTypography,
-            content = content
-        )
+            typography = ZakoTypography
+        ) {
+            content()
+            textToolbar.Content()
+        }
     }
 }
 

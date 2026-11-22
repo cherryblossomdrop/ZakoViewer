@@ -1,6 +1,6 @@
 ﻿# ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（ 1.2.53），全项目核心工程源码共计 **121** 个文件，累计 **26,154** 行代码。  
+> **版本定位**：截至最新构建（v1.2.54），全项目核心工程源码共计 **122** 个文件，累计 **26,403** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -99,7 +99,7 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/MenuTokens.kt` | 38 | 上下文菜单与底部操作栏样式 Design Token | 集中规范长按菜单容器与项圆角、标高、内边距、图标规格、文字样式及动态危险色，底层对齐 Dimens 基础令牌 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/MotionTokens.kt` | 73 | 全局微动效时长、缓动曲线与过渡规格设计令牌 | 严格对齐 Material 3 Expressive 规范按压、淡入淡出、旋转回弹时长与缓动曲线 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/SearchBarTokens.kt` | 34 | 全局搜索框 Design Token | 集中规范搜索框胶囊圆角、图标规格、中性色约束与触感微动效参数，底层对齐 Dimens 与 MotionTokens |
-| `app/src/main/kotlin/moe/zako/viewer/ui/theme/Theme.kt` | 47 | Material 3 主题容器组合项与 LocalComposition 注入 | 提供 `ZakoViewerTheme`，将动态色彩方案、ZakoTypography 排版及封面模糊状态注入 Compose 环境树 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/theme/Theme.kt` | 62 | Material 3 主题容器组合项与 LocalComposition 注入 | 提供 `ZakoViewerTheme`，将动态色彩方案、ZakoTypography 排版、封面模糊状态及 ZakoTextToolbar 全局注入 Compose 环境树 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/Typography.kt` | 158 | 全局排版文字与业务专用样式设计令牌 | 统筹 Material 3 全层级文字排版规格、视频时长角标及日志等宽样式 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/ZakoIcons.kt` | 246 | 自定义矢量图形资产绘制中枢 | 基于 Compose `ImageVector.Builder` 纯代码构建全屏、退出全屏、稍后再看及画幅比例图标 |
 
@@ -125,6 +125,7 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/WavyProgressSlider.kt` | 215 | Material 3 Expressive 动态可动波浪阻尼滑块 | 结合动画过渡与正弦波振幅，rememberUpdatedState 解决闭包过期并精准下发落点比例 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/ZakoBottomBar.kt` | 48 | 应用底部导航栏组件 | 封装 NavigationBar，提供首页、收藏（五角星 Token）、我的三大核心标签切换 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/ZakoSearchBar.kt` | 244 | 全应用统一胶囊搜索框与自动失焦公共修饰符 | 规范胶囊圆角与中性色，集成软键盘展开收起监听跳变判定、搜索提交自动失焦、可复用滑动（clearFocusOnScroll）与点击外部失焦（clearFocusOnTap）修饰符 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/components/ZakoTextToolbar.kt` | 215 | 全局自定义文本工具栏组件，接管 Compose 默认 TextToolbar，以动态主题色浮窗呈现操作项 | 基于纯 Compose Popup(focusable = false) 与 Surface 渲染，集成智能翻转定位与 Design Tokens 全局自适应 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/ZakoToast.kt` | 213 | 全局防抖悬浮轻量提示组件 (Toast) | 协程通道防抖排队调度，提供带动画淡入淡出的自定义界面悬浮提示条 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/player/CdnNodeSelectorDialog.kt` | 107 | CDN 节点实时测速与线路切换抽屉 | 消费 `MenuTokens` 与 `AppIcons`，跨全屏与详情页内嵌播放器复用测速/手动选线 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/components/player/GestureOverlays.kt` | 234 | 播放器手势调节（音量/亮度/快进）视觉反馈浮层 | 在播放视口中央弹出带图标与百分比进度的半透明胶囊/卡片 HUD 反馈 |
@@ -197,5 +198,5 @@
 | :--- | :---: | :--- | :--- |
 | `build.gradle.kts` | 5 | 根工程 Gradle 构建拓扑脚本 | 配置根级构建脚本与基础插件别名声明 |
 | `settings.gradle.kts` | 17 | 模块依赖树与 Maven 插件仓库编排 | 定义工程名 `NeoViewer`，编排 Google、MavenCentral 及本地插件存储库 |
-| `app/build.gradle.kts` | 128 | 核心应用模块构建参数、依赖声明与发版配置 | 配置 Android SDK 34、CMake 原生链接、R8 混淆、签名配置及动态版本号递增字段（v1.2.52 / versionCode 56） |
+| `app/build.gradle.kts` | 147 | 核心应用模块构建参数、依赖声明与发版配置 | 配置 Android SDK 34、CMake 原生链接、R8 混淆、签名配置及动态版本号递增字段（v1.2.54 / versionCode 58） |
 | `.github/workflows/release.yml` | 112 | GitHub Actions 自动化发版流水线工作流 | 监听版本 Tag（`v*`），自动化构建环境，生成更新日志并自动归档发布纯源码压缩包 |

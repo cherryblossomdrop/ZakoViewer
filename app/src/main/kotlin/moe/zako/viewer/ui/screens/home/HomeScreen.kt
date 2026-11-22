@@ -192,10 +192,8 @@ fun HomeScreen(
         }
     }
 
-    val hasActiveFilter = state.selectedTag.isNotEmpty() ||
-            state.selectedTimeRange != TimeRange.ALL ||
-            state.selectedCategory !in listOf("推荐", "全部") ||
-            !state.includeVip
+    val hasActiveFilter = (state.selectedTag.isNotEmpty() && state.selectedTag != state.selectedCategory) ||
+            state.selectedTimeRange != TimeRange.ALL
 
     Scaffold(
         topBar = {

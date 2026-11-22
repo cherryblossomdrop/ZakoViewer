@@ -156,12 +156,11 @@ fun HomeFilterBar(
             }
         }
 
-        // 3. 布局模式切换按钮 (瀑布流 / 分页排布，非默认态激活高亮)
+        // 3. 布局模式切换按钮 (瀑布流 / 分页排布，保持与排序图标一致的默认 Tonal 着色)
         FilterBarCircleButton(
             onClick = onToggleLayoutMode,
             icon = if (layoutMode == LayoutMode.WATERFALL) AppIcons.GridView else AppIcons.ViewAgenda,
-            contentDescription = if (layoutMode == LayoutMode.WATERFALL) "切换为分页排布" else "切换为瀑布流",
-            isActive = layoutMode != LayoutMode.WATERFALL
+            contentDescription = if (layoutMode == LayoutMode.WATERFALL) "切换为分页排布" else "切换为瀑布流"
         )
 
         // 4. 快速分类与热门标签

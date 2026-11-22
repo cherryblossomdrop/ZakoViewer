@@ -8,11 +8,18 @@ import moe.zako.viewer.core.network.NetworkClientProvider
 import moe.zako.viewer.core.network.isHttpUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import java.io.IOException
 import java.net.URLEncoder
 import java.util.UUID
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class CosApiClient(
     private val client: OkHttpClient = NetworkClientProvider.apiClient,
@@ -79,13 +86,42 @@ class CosApiClient(
         DEFAULT_API_URL
     }
 
+    private fun parseAndDecryptPayload(rawBody: String): String {
+        val apiResponse = try {
+            gson.fromJson(rawBody, CosApiResponse::class.java)
+        } catch (_: Exception) {
+            null
+        }
+        if (apiResponse != null) {
+            val isErrorCode = (apiResponse.code != 0 && apiResponse.code != 200) ||
+                    (apiResponse.status != null && apiResponse.status != 0 && apiResponse.status != 200)
+            val errorMsg = apiResponse.msg?.ifBlank { null }
+                ?: apiResponse.message?.ifBlank { null }
+
+            if (isErrorCode || (apiResponse.data.isNullOrEmpty() && errorMsg != null)) {
+                val finalMsg = errorMsg ?: if (apiResponse.code == 429) "搜索请求过于频繁，请稍候再试" else "服务业务异常 (code=${apiResponse.code})"
+                ZakoLog.w(TAG, "Server returned business error: code=${apiResponse.code}, msg=$finalMsg")
+                throw CosApiException(apiResponse.code, finalMsg)
+            }
+
+            val encryptedData = apiResponse.data ?: return rawBody
+            val decryptedData = CosCrypto.decrypt(encryptedData)
+            if (decryptedData.isEmpty()) {
+                ZakoLog.w(TAG, "Decrypted data was empty, fallback to raw")
+                return rawBody
+            }
+            return decryptedData
+        }
+        return rawBody
+    }
+
     /**
      * Sends GET request to cosav API, decrypts payload, and returns parsed JSON string
      */
-    private suspend fun executeGet(pathWithQuery: String): String = withContext(Dispatchers.IO) {
+    private suspend fun executeGet(pathWithQuery: String): String {
         val baseUrl = getBaseUrl()
         val fullUrl = if (pathWithQuery.startsWith("http")) pathWithQuery else "$baseUrl$pathWithQuery"
-        
+
         ZakoLog.d(TAG, "GET: $fullUrl")
         val request = Request.Builder()
             .url(fullUrl)
@@ -97,46 +133,57 @@ class CosApiClient(
             .build()
 
         val call = client.newCall(request)
-        val response = try {
-            call.execute()
-        } catch (e: Exception) {
-            if (e is CancellationException) {
-                call.cancel()
-                throw e
+        return suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation {
+                try {
+                    call.cancel()
+                } catch (_: Throwable) {}
             }
-            throw e
-        }
-        ZakoLog.d(TAG, "Response code: ${response.code} for $fullUrl")
-        if (!response.isSuccessful) {
-            throw IllegalStateException("API error: HTTP ${response.code}")
-        }
+            call.enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    if (continuation.isActive) {
+                        continuation.resumeWithException(e)
+                    }
+                }
 
-        val rawBody = response.body?.string() ?: throw IllegalStateException("Empty body")
-        val apiResponse = gson.fromJson(rawBody, CosApiResponse::class.java)
-        
-        val encryptedData = apiResponse.data ?: return@withContext rawBody
-        val decryptedData = CosCrypto.decrypt(encryptedData)
-        if (decryptedData.isEmpty()) {
-            ZakoLog.w(TAG, "Decrypted data was empty, fallback to raw")
-            return@withContext rawBody
+                override fun onResponse(call: Call, response: Response) {
+                    response.use { resp ->
+                        try {
+                            if (!resp.isSuccessful) {
+                                val code = resp.code
+                                val msg = if (code == 429) "搜索请求过于频繁 (HTTP 429)" else "API error: HTTP $code"
+                                continuation.resumeWithException(CosApiException(code, msg))
+                                return
+                            }
+                            val rawBody = resp.body?.string() ?: throw IllegalStateException("Empty body")
+                            val payload = parseAndDecryptPayload(rawBody)
+                            continuation.resume(payload)
+                        } catch (e: Throwable) {
+                            if (continuation.isActive) {
+                                continuation.resumeWithException(e)
+                            }
+                        }
+                    }
+                }
+            })
         }
-        decryptedData
     }
 
     /**
      * Get video lists with pagination, sorting, keyword, or tag (mirroring original cosav Go(query, page, limit))
-     * @param page 0-indexed page number (0 for first page, matching cosav API)
+     * @param page 1-indexed page number (1 for first page, matching cosav API)
      * @param order "mv" (most views / 热门), "mr" (most recent / 最新), or empty
      * @param keyword search keyword (kw=)
      * @param tags video tag filter (tags=)
      */
     suspend fun getVideoLists(
-        page: Int = 0,
+        page: Int = 1,
         order: String = "",
         keyword: String = "",
         tags: String = "",
         limit: Int = 20
     ): CosVideoListResponse = withContext(Dispatchers.IO) {
+        val safePage = page.coerceAtLeast(1)
         val params = mutableListOf<String>()
         if (keyword.isNotEmpty()) {
             params.add("kw=" + URLEncoder.encode(keyword, "UTF-8"))
@@ -147,12 +194,19 @@ class CosApiClient(
         if (order.isNotEmpty()) {
             params.add("order=$order")
         }
-        params.add("page=$page")
+        params.add("page=$safePage")
         params.add("limit=$limit")
 
         val queryString = "/video/lists?" + params.joinToString("&")
         val json = executeGet(queryString)
         val parsed = gson.fromJson(json, CosVideoListResponse::class.java) ?: CosVideoListResponse()
+        if (parsed.code != null && parsed.code != 0 && parsed.code != 200) {
+            val errMsg = parsed.msg?.ifBlank { null }
+                ?: parsed.message?.ifBlank { null }
+                ?: "服务端返回异常 (code=${parsed.code})"
+            ZakoLog.w(TAG, "getVideoLists ($queryString) failed with code=${parsed.code}: $errMsg")
+            throw CosApiException(parsed.code, errMsg)
+        }
         ZakoLog.i(TAG, "getVideoLists ($queryString) returned ${parsed.items.size} items (total: ${parsed.totalCount})")
         parsed
     }

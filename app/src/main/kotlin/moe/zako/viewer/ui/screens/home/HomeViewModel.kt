@@ -8,6 +8,7 @@ import moe.zako.viewer.data.repository.LayoutMode
 import moe.zako.viewer.data.repository.SearchHistoryRepository
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.data.source.cosav.CosApiClient
+import moe.zako.viewer.data.source.cosav.CosApiException
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -49,7 +50,7 @@ data class HomeUiState(
     val isRefreshing: Boolean = false,
     val searchQuery: String = "",
     val includeVip: Boolean = true, // 包含VIP抢先看视频 (默认包含)
-    val page: Int = 0,
+    val page: Int = 1,
     val hasMore: Boolean = true,
     val totalPages: Int? = null,
     val errorMessage: String? = null,
@@ -82,6 +83,20 @@ class HomeViewModel(
     private var loadJob: Job? = null
     private var lastLoadMoreTimestamp: Long = 0L
 
+    private data class LoadRequestKey(
+        val query: String,
+        val category: String,
+        val tag: String,
+        val timeRange: TimeRange,
+        val sortDimension: SortDimension,
+        val sortDirection: SortDirection,
+        val page: Int,
+        val layoutMode: LayoutMode
+    )
+
+    private var lastRequestKey: LoadRequestKey? = null
+    private var lastRequestTimestamp: Long = 0L
+
     init {
         viewModelScope.launch {
             settingsRepository.includeVipFlow.collect { include ->
@@ -93,7 +108,7 @@ class HomeViewModel(
                 val prevMode = _uiState.value.layoutMode
                 _uiState.update { it.copy(layoutMode = mode) }
                 if (prevMode != mode && _uiState.value.videos.isNotEmpty()) {
-                    loadVideos(refresh = true, targetPage = 0)
+                    loadVideos(refresh = true, targetPage = 1)
                 }
             }
         }
@@ -212,7 +227,7 @@ class HomeViewModel(
     }
 
     fun previousPage() {
-        if (_uiState.value.page > 0 && !_uiState.value.isLoading) {
+        if (_uiState.value.page > 1 && !_uiState.value.isLoading) {
             loadVideos(refresh = false, targetPage = _uiState.value.page - 1)
         }
     }
@@ -223,12 +238,12 @@ class HomeViewModel(
      * @param page 目标页码（1-based 正整数）
      */
     fun jumpToPage(page: Int) {
-        val targetZeroBased = (page - 1).coerceAtLeast(0)
-        if (targetZeroBased == _uiState.value.page && _uiState.value.videos.isNotEmpty()) {
+        val targetPage = page.coerceAtLeast(1)
+        if (targetPage == _uiState.value.page && _uiState.value.videos.isNotEmpty()) {
             return
         }
         if (!_uiState.value.isLoading) {
-            loadVideos(refresh = false, targetPage = targetZeroBased)
+            loadVideos(refresh = false, targetPage = targetPage)
         }
     }
 
@@ -304,13 +319,30 @@ class HomeViewModel(
     }
 
     private fun loadVideos(refresh: Boolean, targetPage: Int? = null, isPullRefresh: Boolean = false) {
+        val isPaginated = _uiState.value.layoutMode == LayoutMode.PAGINATED
+        val currentPage = targetPage?.coerceAtLeast(1) ?: if (refresh) 1 else (_uiState.value.page + 1)
+
+        val requestKey = LoadRequestKey(
+            query = _uiState.value.searchQuery.trim(),
+            category = _uiState.value.selectedCategory,
+            tag = _uiState.value.selectedTag,
+            timeRange = _uiState.value.selectedTimeRange,
+            sortDimension = _uiState.value.sortDimension,
+            sortDirection = _uiState.value.sortDirection,
+            page = currentPage,
+            layoutMode = _uiState.value.layoutMode
+        )
+        val now = System.currentTimeMillis()
         if (!refresh && _uiState.value.isLoading) return
+        if (!isPullRefresh && requestKey == lastRequestKey && now - lastRequestTimestamp < 400L) {
+            ZakoLog.d(TAG, "Skipping duplicate rapid load request within 400ms: $requestKey")
+            return
+        }
+        lastRequestKey = requestKey
+        lastRequestTimestamp = now
 
         // 切换标签/提交新搜索/初始加载时，立即取消上一次尚未完成的请求，避免并发竞态
         loadJob?.cancel()
-
-        val isPaginated = _uiState.value.layoutMode == LayoutMode.PAGINATED
-        val currentPage = targetPage ?: if (refresh) 0 else _uiState.value.page + 1
 
         _uiState.update { current ->
             current.copy(
@@ -319,7 +351,7 @@ class HomeViewModel(
                 isLoading = !isPullRefresh,
                 isRefreshing = isPullRefresh,
                 errorMessage = null,
-                page = if (refresh) 0 else current.page,
+                page = if (refresh) 1 else current.page,
                 totalPages = if (refresh) null else current.totalPages
             )
         }
@@ -360,7 +392,7 @@ class HomeViewModel(
                             current.copy(
                                 videos = filtered,
                                 page = currentPage,
-                                hasMore = response.items.isNotEmpty() && (currentPage + 1) * 20 < response.totalCount,
+                                hasMore = response.items.isNotEmpty() && currentPage * 20 < response.totalCount,
                                 totalPages = if (response.totalCount > 0) ((response.totalCount + 19) / 20).coerceAtLeast(1) else null,
                                 isLoading = false,
                                 isRefreshing = false
@@ -371,7 +403,7 @@ class HomeViewModel(
                         if (refresh && isCompound) {
                             val collected = mutableListOf<CosVideoItem>()
                             var totalCount = 0
-                            for (p in 0..2) {
+                            for (p in 1..3) {
                                 if (!isActive) return@launch
                                 val resp = apiClient.getVideoLists(
                                     page = p,
@@ -389,8 +421,9 @@ class HomeViewModel(
                             _uiState.update { current ->
                                 current.copy(
                                     videos = filtered,
-                                    page = 2,
+                                    page = 3,
                                     hasMore = collected.size < totalCount,
+                                    totalPages = if (totalCount > 0) ((totalCount + 19) / 20).coerceAtLeast(1) else null,
                                     isLoading = false,
                                     isRefreshing = false
                                 )
@@ -425,8 +458,8 @@ class HomeViewModel(
 
                     if (cat == "推荐" && tag.isEmpty() && timeRange == TimeRange.ALL) {
                         if (isPaginated) {
-                            val response = if (currentPage == 0) null else apiClient.getVideoLists(page = currentPage, order = "mv", limit = 20)
-                            val items = if (currentPage == 0) {
+                            val response = if (currentPage <= 1) null else apiClient.getVideoLists(page = currentPage, order = "mv", limit = 20)
+                            val items = if (currentPage <= 1) {
                                 apiClient.getVideoRecommend()
                             } else {
                                 response?.items ?: emptyList()
@@ -444,13 +477,13 @@ class HomeViewModel(
                             }
                         } else {
                             // Fixed / continuous recommendation flow for Waterfall
-                            if (refresh || currentPage == 0) {
+                            if (refresh || currentPage <= 1) {
                                 val recommendItems = apiClient.getVideoRecommend()
                                 if (!isActive) return@launch
                                 _uiState.update { current ->
                                     current.copy(
                                         videos = recommendItems,
-                                        page = 0,
+                                        page = 1,
                                         hasMore = true,
                                         isLoading = false,
                                         isRefreshing = false
@@ -501,7 +534,7 @@ class HomeViewModel(
                             current.copy(
                                 videos = combined,
                                 page = currentPage,
-                                hasMore = newItems.isNotEmpty() && (if (isPaginated) (currentPage + 1) * 20 < response.totalCount else combined.size < response.totalCount),
+                                hasMore = newItems.isNotEmpty() && (if (isPaginated) currentPage * 20 < response.totalCount else combined.size < response.totalCount),
                                 totalPages = if (response.totalCount > 0) ((response.totalCount + 19) / 20).coerceAtLeast(1) else null,
                                 isLoading = false,
                                 isRefreshing = false
@@ -513,12 +546,23 @@ class HomeViewModel(
                 if (e is CancellationException) {
                     return@launch
                 }
-                ZakoLog.e(TAG, "Failed to load videos", e)
+                val errorMsg = if (e is CosApiException) {
+                    val msg = e.message ?: ""
+                    ZakoLog.w(TAG, "Load videos rejected by server business error (code=${e.code}): $msg")
+                    if (e.code == 429 || msg.contains("频繁") || msg.contains("稍后") || msg.contains("429")) {
+                        "搜索过于频繁，请稍候再试"
+                    } else {
+                        "服务响应异常: ${msg.ifBlank { "code=${e.code}" }}"
+                    }
+                } else {
+                    ZakoLog.e(TAG, "Failed to load videos", e)
+                    "网络连接失败: ${e.message ?: "未知错误"}"
+                }
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        errorMessage = "网络连接失败: ${e.message}"
+                        errorMessage = errorMsg
                     )
                 }
             }

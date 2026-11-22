@@ -370,7 +370,7 @@ fun HomeScreen(
                         ) {
                             OutlinedButton(
                                 onClick = { viewModel.previousPage() },
-                                enabled = state.page > 0 && !state.isLoading
+                                enabled = state.page > 1 && !state.isLoading
                             ) {
                                 Icon(
                                     imageVector = AppIcons.ArrowBack,
@@ -390,7 +390,7 @@ fun HomeScreen(
                                 modifier = Modifier.padding(horizontal = Spacing.Sm)
                             ) {
                                 Text(
-                                    text = "第 ${state.page + 1} 页",
+                                    text = "第 ${state.page} 页",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -448,7 +448,7 @@ fun HomeScreen(
     // 分页跳转指定页弹窗
     if (showJumpDialog) {
         HomeJumpPageDialog(
-            currentPage = state.page + 1,
+            currentPage = state.page,
             totalPages = state.totalPages,
             onConfirm = { targetPage ->
                 viewModel.jumpToPage(targetPage)

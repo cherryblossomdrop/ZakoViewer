@@ -26,8 +26,8 @@ android {
         applicationId = "moe.zako.viewer"
         minSdk = 26
         targetSdk = 34
-        versionCode = 61
-        versionName = "1.2.57"
+        versionCode = 62
+        versionName = "1.2.58"
 
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
 

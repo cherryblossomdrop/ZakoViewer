@@ -58,14 +58,24 @@ class LenientStringListDeserializer : JsonDeserializer<List<String>> {
     }
 }
 
+class CosApiException(
+    val code: Int,
+    val rawMessage: String
+) : java.io.IOException("[$code] $rawMessage")
+
 data class CosApiResponse(
     @SerializedName("code") val code: Int = 0,
+    @SerializedName("status") val status: Int? = null,
     @SerializedName("data") val data: String? = null,
     @SerializedName("msg") val msg: String? = null,
     @SerializedName("message") val message: String? = null
 )
 
 data class CosVideoListResponse(
+    @SerializedName("code") val code: Int? = null,
+    @SerializedName("status") val status: Int? = null,
+    @SerializedName("msg") val msg: String? = null,
+    @SerializedName("message") val message: String? = null,
     @SerializedName("list") val list: List<CosVideoItem>? = null,
     @SerializedName("lists") val lists: List<CosVideoItem>? = null,
     @SerializedName("totalCnt") val totalCnt: Any? = null,

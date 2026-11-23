@@ -357,7 +357,7 @@ fun PlayerScreen(
             onDismiss = { viewModel.dismissFolderSelector() },
             onFolderSelected = { targetId ->
                 viewModel.addToFavorites(targetId)
-                ZakoToast.show("已成功加入收藏夹索引")
+                ZakoToast.show("已加入收藏夹")
             },
             onCreateFolder = { name, parentId ->
                 viewModel.createFolder(name, parentId)

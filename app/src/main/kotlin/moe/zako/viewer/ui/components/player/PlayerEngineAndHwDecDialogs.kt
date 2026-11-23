@@ -36,7 +36,7 @@ fun PlayerEngineDialog(
         text = {
             Column {
                 Text(
-                    text = "系统内核基于 Android 原生 MediaPlayer，能耗低、稳定性高；MPV 内核支持流媒体激进缓冲、NextPlayer 调优参数及硬件解码切换：",
+                    text = "系统内核省电稳定；MPV 内核支持硬解切换与流媒体预载：",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -83,11 +83,11 @@ fun PlayerHwDecDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("硬件解码设置 (NextPlayer 规范)") },
+        title = { Text("硬件解码设置") },
         text = {
             Column {
                 Text(
-                    text = "选择视频硬件解码模式，建议开启以降低发热与提高播放流畅度：",
+                    text = "建议开启硬件解码以降低发热、提升流畅度：",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

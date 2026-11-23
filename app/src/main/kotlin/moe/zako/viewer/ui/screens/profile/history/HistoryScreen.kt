@@ -230,7 +230,6 @@ fun HistoryScreen(
                     id = "add_to_favorites",
                     title = "添加到收藏夹",
                     icon = AppIcons.AddToFavorites,
-                    supportingText = "将视频添加到自定义收藏夹",
                     onClick = {
                         viewModel.showAddToFavoritesForSingleItem(target)
                     }
@@ -241,7 +240,6 @@ fun HistoryScreen(
                     id = "detail",
                     title = "视频详情",
                     icon = AppIcons.VideoDetail,
-                    supportingText = "查看本视频应用内详情页",
                     onClick = {
                         onNavigateToDetail(target.videoId)
                     }
@@ -253,7 +251,7 @@ fun HistoryScreen(
                         id = "file_info",
                         title = "文件信息",
                         icon = AppIcons.FileInfo,
-                        supportingText = "查看文件名、本地存储路径与大小",
+                        supportingText = "查看路径、大小与本地状态",
                         onClick = {
                             showFileInfoDialog = true
                         }
@@ -265,7 +263,6 @@ fun HistoryScreen(
                     id = "watch_later",
                     title = "稍后再看",
                     icon = AppIcons.WatchLater,
-                    supportingText = "添加至稍后再看列表",
                     onClick = {
                         viewModel.addToWatchLater(target)
                     }
@@ -276,7 +273,6 @@ fun HistoryScreen(
                     id = "delete",
                     title = "删除记录",
                     icon = AppIcons.Delete,
-                    supportingText = "从历史记录中移除此条目",
                     isDangerous = true,
                     onClick = {
                         viewModel.deleteHistory(target.videoId)

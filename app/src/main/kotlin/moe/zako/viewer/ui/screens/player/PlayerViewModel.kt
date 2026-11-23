@@ -649,7 +649,7 @@ class PlayerViewModel(
                     if (_uiState.value.isLocalPlayback || activeUrl != fastest.url) {
                         val currentPos = player.state.value.currentPositionMs
                         switchPlayToCdnNode(fastest, resumePos = currentPos)
-                        ZakoToast.show("测速完成，已自动选优切至: ${fastest.name}")
+                        ZakoToast.show("已切至最快线路：${fastest.name}")
                     }
                 }
             )

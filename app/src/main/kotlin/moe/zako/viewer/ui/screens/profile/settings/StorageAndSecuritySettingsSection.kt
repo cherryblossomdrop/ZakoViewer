@@ -92,7 +92,7 @@ fun SettingsPrivacyScreen(
                     SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
                         SettingsSwitchItem(
                             title = "视频封面模糊",
-                            subtitle = "对全应用所有视频卡片与列表项（推荐页、搜索结果、历史记录、收藏夹、稍后再看、相关推荐等）的封面施加明显的隐私模糊效果，防止敏感画面社死（默认开启）。",
+                            subtitle = "模糊全应用视频封面，保护浏览隐私",
                             checked = state.coverBlurEnabled,
                             onCheckedChange = { viewModel.setCoverBlur(it) }
                         )
@@ -147,7 +147,7 @@ fun SettingsShareScreen(
                         SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
                             SettingsSwitchItem(
                                 title = "开启长按分享复制完整链接",
-                                subtitle = "在视频详情页长按分享图标时，将直接复制视频的完整原始播放/详情链接到剪贴板",
+                                subtitle = "详情页长按分享时复制原始链接",
                                 checked = state.isLongPressShareEnabled,
                                 onCheckedChange = { viewModel.setLongPressShareEnabled(it) }
                             )
@@ -271,9 +271,9 @@ fun SettingsDownloadScreen(
                             Spacer(modifier = Modifier.height(Spacing.Sm))
                             Text(
                                 text = if (hasStoragePermission) {
-                                    "应用已拥有全盘文件读写权限，可自由指定手机存储中的任意文件夹作为视频下载目录。"
+                                    "已授权，可自由选择任意下载目录"
                                 } else {
-                                    "Android 11+ 系统需授予「所有文件访问权限」才能正常在设备存储或 SD 卡中创建和选择下载目录。"
+                                    "授权后方可自定义外部存储下载目录"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -339,7 +339,7 @@ fun SettingsDownloadScreen(
                             }
 
                             Text(
-                                text = "离线缓存与视频切片保存的主目录。点击下方路径或右侧图标可打开内置文件夹选择器浏览、新建目录。",
+                                text = "点击下方路径可浏览或新建下载目录",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -404,7 +404,7 @@ fun SettingsDownloadScreen(
                     ExternalAppCard(
                         title = "自定义外部下载器",
                         actionIcon = AppIcons.Download,
-                        description = "详情页长按下载按钮可唤起所选外部下载器（如 1DM, ADM, 迅雷等）",
+                        description = "详情页长按下载时唤起指定下载器",
                         selectedPackage = state.externalDownloaderPkg,
                         selectedApp = selectedDownloaderApp,
                         defaultFallbackIcon = AppIcons.DownloadForOffline,

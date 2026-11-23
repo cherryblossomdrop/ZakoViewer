@@ -61,7 +61,7 @@ fun DataSourceSettingsCard(
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "配置在线播放时的节点测速与调度策略（本地视频将始终优先直接播放）",
+                text = "配置在线选线策略（本地视频始终优先）",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -83,9 +83,9 @@ fun DataSourceSettingsCard(
                     )
                     Text(
                         text = if (autoSelectCdn) {
-                            "播放在线视频时并发测速并自动选取最快线路起播"
+                            "起播时自动测速并选择最快线路"
                         } else {
-                            "已关闭自动测速，每次固定使用下方设定的默认线路"
+                            "固定使用下方默认线路"
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -183,7 +183,7 @@ fun SettingsDataSourceScreen(
                         SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
                             SettingsSwitchItem(
                                 title = "CosAV 数据源",
-                                subtitle = "启用后提供在线推荐视频流、全站搜索与详细信息解析",
+                                subtitle = "提供在线推荐、搜索与视频详情",
                                 checked = state.enabledDataSourceIds.contains(CosAvDataSource.ID),
                                 onCheckedChange = { viewModel.toggleDataSourceEnabled(CosAvDataSource.ID) }
                             )

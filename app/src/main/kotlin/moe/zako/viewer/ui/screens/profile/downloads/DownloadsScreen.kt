@@ -320,7 +320,7 @@ fun DownloadsScreen(
                 showMissingFileDialog = false
                 viewModel.redownload(target.videoId)
                 viewModel.selectTab(1)
-                ZakoToast.show("已开始重新下载视频")
+                ZakoToast.show("已重新下载")
             },
             onPlayOnline = {
                 val target = missingFileTargetItem!!
@@ -338,7 +338,7 @@ fun DownloadsScreen(
             onConfirm = {
                 showBatchDeleteConfirmDialog = false
                 viewModel.deleteSelected()
-                ZakoToast.show("已批量删除所选任务")
+                ZakoToast.show("已删除所选任务")
             },
             onDismiss = { showBatchDeleteConfirmDialog = false }
         )

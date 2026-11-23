@@ -147,7 +147,7 @@ fun DetailEmbeddedPlayer(
                     .background(PlayerOverlayTokens.Background)
                     .clickable {
                         if (video.allVideoLines.isEmpty() && video.allMp4Lines.isEmpty()) {
-                            val tip = video.canPlayMsg?.takeIf { it.isNotBlank() } ?: "VIP抢先看视频，暂无有效播放源"
+                            val tip = video.canPlayMsg?.takeIf { it.isNotBlank() } ?: "VIP 视频，暂无可用源"
                             ZakoToast.show(tip)
                         } else {
                             viewModel.startInlinePlayback()
@@ -308,7 +308,7 @@ fun DetailEmbeddedPlayer(
                         DropdownMenuItem(
                             text = { Text(if (state.isCdnTesting) "正在测速" else "节点测速") },
                             leadingIcon = { Icon(AppIcons.NetworkCheck, contentDescription = null) },
-                            onClick = { viewModel.triggerCdnSpeedTest(); ZakoToast.show("正在并发测试全部 CDN 节点速率与延迟") }
+                            onClick = { viewModel.triggerCdnSpeedTest(); ZakoToast.show("正在测速选线...") }
                         )
                         DropdownMenuItem(
                             text = { Text("节点选择") },

@@ -109,7 +109,7 @@ fun LogViewerScreen(
                             .fillMaxWidth()
                             .clickable {
                                 clipboardManager.setText(AnnotatedString(result.displayPath))
-                                ZakoToast.show("已复制文件路径到剪贴板")
+                                ZakoToast.show("已复制路径")
                             }
                     ) {
                         Row(
@@ -158,7 +158,7 @@ fun LogViewerScreen(
                     TextButton(
                         onClick = {
                             clipboardManager.setText(AnnotatedString(result.displayPath))
-                            ZakoToast.show("已复制文件路径到剪贴板")
+                            ZakoToast.show("已复制路径")
                         }
                     ) {
                         Text("复制路径")
@@ -249,7 +249,7 @@ fun LogViewerScreen(
                     .padding(horizontal = Spacing.Sm, vertical = Spacing.Xs)
                     .clickable {
                         clipboardManager.setText(AnnotatedString(PublicStorageHelper.LOGS_DISPLAY_DIR))
-                        ZakoToast.show("已复制日志目录到剪贴板")
+                        ZakoToast.show("已复制目录")
                     }
             ) {
                 Row(

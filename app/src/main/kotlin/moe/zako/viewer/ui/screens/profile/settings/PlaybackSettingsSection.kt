@@ -94,7 +94,7 @@ fun SettingsPlayerScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "播放视频时长按屏幕触发的倍速播放比率（当前: ${state.longPressSpeed}x）",
+                                text = "长按屏幕时的倍速（当前: ${state.longPressSpeed}x）",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -141,7 +141,7 @@ fun SettingsPlayerScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "系统内核兼容性强低发热；MPV 内核支持 NextPlayer 调优参数与激进流媒体预载",
+                                text = "系统内核省电稳定；MPV 兼容性与缓冲更强",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -232,7 +232,7 @@ fun SettingsPlayerScreen(
                     ExternalAppCard(
                         title = "自定义外部播放器",
                         actionIcon = AppIcons.Launch,
-                        description = "通过应用选择器直接从本机已安装播放器（如 VLC, MX Player, MPV 等）中选择，支持透传 HTTP Headers",
+                        description = "指定本机第三方播放器（如 VLC、MX Player 等）",
                         selectedPackage = state.externalPlayerPkg,
                         selectedApp = selectedPlayerApp,
                         defaultFallbackIcon = AppIcons.PlayCircle,

@@ -301,7 +301,7 @@ fun VideoDetailScreen(
             onDismiss = { viewModel.dismissFolderPicker() },
             onFolderSelected = { folderId ->
                 viewModel.addToFavoriteFolder(folderId)
-                ZakoToast.show("已成功加入收藏夹索引")
+                ZakoToast.show("已加入收藏夹")
             },
             onCreateFolder = { name, parentId ->
                 viewModel.createFolder(name, parentId)
@@ -315,7 +315,7 @@ fun VideoDetailScreen(
             onDismissRequest = { viewModel.dismissDownloadChoice() },
             onStartInternalDownload = {
                 viewModel.startInternalDownload()
-                ZakoToast.show("已启动内置多节点下载")
+                ZakoToast.show("已开始下载")
             },
             onStartExternalDownload = {
                 viewModel.startExternalDownload(context)

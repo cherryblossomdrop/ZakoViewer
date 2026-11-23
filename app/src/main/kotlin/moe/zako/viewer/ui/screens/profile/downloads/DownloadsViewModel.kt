@@ -256,7 +256,7 @@ class DownloadsViewModel(
                 isVip = false
             )
             _uiState.update { it.copy(showFolderSelector = false, pendingFavoriteItem = null) }
-            ZakoToast.show("已成功加入收藏夹")
+            ZakoToast.show("已加入收藏夹")
         }
     }
 

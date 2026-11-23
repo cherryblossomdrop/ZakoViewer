@@ -186,7 +186,7 @@ fun AboutScreen(
                                     }
                                     context.startActivity(intent)
                                 } catch (_: Exception) {
-                                    ZakoToast.show("未找到可用的网页浏览器")
+                                    ZakoToast.show("未找到可用浏览器")
                                 }
                             },
                         shape = RoundedCornerShape(
@@ -256,7 +256,7 @@ fun AboutScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(text = "导出日志", style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    text = "实时查看客户端运行日志，一键导出为文本文件排错",
+                                    text = "查看运行日志并一键导出排错",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

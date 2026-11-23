@@ -169,11 +169,11 @@ fun DetailActionButtons(
                             "DOWNLOADING" -> ZakoToast.show("视频正在下载中")
                             else -> {
                                 if (video.allVideoLines.isEmpty() && video.allMp4Lines.isEmpty()) {
-                                    val tip = video.canPlayMsg?.takeIf { it.isNotBlank() } ?: "VIP抢先看视频，暂无有效下载源"
+                                    val tip = video.canPlayMsg?.takeIf { it.isNotBlank() } ?: "VIP 视频，暂无可用源"
                                     ZakoToast.show(tip)
                                 } else {
                                     viewModel.onDownloadClick()
-                                    ZakoToast.show("已加入内置多节点多线程下载队列")
+                                    ZakoToast.show("已加入下载队列")
                                 }
                             }
                         }
@@ -220,7 +220,7 @@ fun DetailActionButtons(
                 .clip(RoundedCornerShape(CornerRadius.Md))
                 .clickable {
                     viewModel.toggleWatchLater()
-                    val msg = if (!state.isWatchLater) "已加入稍后再看" else "已从稍后再看移除"
+                    val msg = if (!state.isWatchLater) "已加入稍后再看" else "已移出稍后再看"
                     ZakoToast.show(msg)
                 }
         ) {

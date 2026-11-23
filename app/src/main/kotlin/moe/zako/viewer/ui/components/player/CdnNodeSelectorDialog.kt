@@ -61,7 +61,7 @@ fun CdnNodeSelectorDialog(
         text = {
             Column {
                 Text(
-                    text = if (isTesting) "正在并发对所有线路测速，完成后将自动切至最优节点..." else "已测速完成并按质量排序，点击任意节点可手动切换：",
+                    text = if (isTesting) "正在测速，完成后将自动切至最快线路..." else "已按测速排序，点击可手动切换：",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

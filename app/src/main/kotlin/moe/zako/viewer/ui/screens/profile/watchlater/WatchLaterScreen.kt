@@ -194,7 +194,6 @@ fun WatchLaterScreen(
                     id = "add_to_favorites",
                     title = "添加到收藏夹",
                     icon = AppIcons.AddToFavorites,
-                    supportingText = "将视频添加到自定义收藏夹",
                     onClick = {
                         viewModel.showAddToFavorites(target)
                     }
@@ -205,7 +204,6 @@ fun WatchLaterScreen(
                     id = "detail",
                     title = "视频详情",
                     icon = AppIcons.VideoDetail,
-                    supportingText = "查看本视频应用内详情页",
                     onClick = {
                         onNavigateToDetail(target.videoId)
                     }
@@ -217,7 +215,7 @@ fun WatchLaterScreen(
                         id = "file_info",
                         title = "文件信息",
                         icon = AppIcons.FileInfo,
-                        supportingText = "查看文件名、本地存储路径与大小",
+                        supportingText = "查看路径、大小与本地状态",
                         onClick = {
                             showFileInfoDialog = true
                         }
@@ -229,7 +227,6 @@ fun WatchLaterScreen(
                     id = "remove_watch_later",
                     title = "移出稍后再看",
                     icon = AppIcons.Delete,
-                    supportingText = "从稍后再看列表中移除",
                     isDangerous = true,
                     onClick = {
                         viewModel.remove(target.videoId)

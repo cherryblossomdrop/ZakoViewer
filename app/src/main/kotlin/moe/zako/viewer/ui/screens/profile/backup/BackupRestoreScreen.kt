@@ -220,7 +220,7 @@ fun BackupRestoreScreen(
                             )
                             Spacer(modifier = Modifier.height(Spacing.Xs))
                             Text(
-                                text = "包含全部历史记录、完整无限层级收藏夹树结构及元数据索引",
+                                text = "包含历史记录、稍后再看与全部收藏夹",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -235,7 +235,7 @@ fun BackupRestoreScreen(
                                     .fillMaxWidth()
                                     .clickable {
                                         clipboardManager.setText(AnnotatedString(PublicStorageHelper.BACKUPS_DISPLAY_DIR))
-                                        ZakoToast.show("已复制备份目录到剪贴板")
+                                        ZakoToast.show("已复制目录")
                                     }
                             ) {
                                 Row(
@@ -284,7 +284,7 @@ fun BackupRestoreScreen(
                                         fontWeight = FontWeight.Medium
                                     )
                                     Text(
-                                        text = "若开启，会将离线缓存的视频文件一同打包，文件体积较大",
+                                        text = "同时打包离线视频，体积较大",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -335,7 +335,7 @@ fun BackupRestoreScreen(
                             )
                             Spacer(modifier = Modifier.height(Spacing.Xs))
                             Text(
-                                text = "支持从之前导出的 .json 元数据文件或包含视频的 .zip 归档文件无缝还原",
+                                text = "支持从 .json 或 .zip 备份文件还原",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

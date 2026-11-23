@@ -123,7 +123,6 @@ fun FavoriteItemActionBottomSheet(
                 id = "detail",
                 title = "视频详情",
                 icon = AppIcons.VideoDetail,
-                supportingText = "查看本视频应用内详情页",
                 onClick = { onDetail(item) }
             )
         )
@@ -133,7 +132,7 @@ fun FavoriteItemActionBottomSheet(
                     id = "file_info",
                     title = "文件信息",
                     icon = AppIcons.FileInfo,
-                    supportingText = "查看文件名、本地存储路径与大小",
+                    supportingText = "查看路径、大小与本地状态",
                     onClick = onShowFileInfo
                 )
             )

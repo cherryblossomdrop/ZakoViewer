@@ -144,7 +144,7 @@ fun LocalFileInfoDialog(
                 onClick = {
                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     cm.setPrimaryClip(ClipData.newPlainText("FilePath", info.filePath))
-                    ZakoToast.show("已复制路径到剪贴板")
+                    ZakoToast.show("已复制路径")
                 }
             ) {
                 Icon(AppIcons.Copy, contentDescription = null, modifier = Modifier.size(IconSize.Sm))

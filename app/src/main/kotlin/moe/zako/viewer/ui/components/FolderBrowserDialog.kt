@@ -352,8 +352,8 @@ fun FolderBrowserDialog(
                                 refreshTrigger++
                                 showCreateDialog = false
                             } else {
-                                createError = "创建失败，请检查存储读写权限"
-                                ZakoToast.show("创建失败，请检查存储读写权限")
+                                createError = "创建失败，请检查存储权限"
+                                ZakoToast.show("创建失败，请检查存储权限")
                             }
                         }
                     }

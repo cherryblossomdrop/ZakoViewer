@@ -66,7 +66,7 @@ fun SettingsAppearanceScreen(
     var themeToDelete by remember { mutableStateOf<String?>(null) }
 
     val showRestartToast = {
-        ZakoToast.show("图标设置已保存，重启应用后生效")
+        ZakoToast.show("已保存，重启应用后生效")
     }
 
     Scaffold(
@@ -101,7 +101,7 @@ fun SettingsAppearanceScreen(
                     SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
                         SettingsSwitchItem(
                             title = "图标颜色跟随应用主题色",
-                            subtitle = "应用桌面图标变体将自适应跟随莫奈动态取色或自定义主题色切换（重启应用后生效）",
+                            subtitle = "桌面图标跟随主题色变化，重启生效",
                             checked = state.appIconFollowTheme,
                             onCheckedChange = {
                                 viewModel.setAppIconFollowTheme(it)
@@ -132,7 +132,7 @@ fun SettingsAppearanceScreen(
                     ) {
                         SettingsSwitchItem(
                             title = "莫奈动态取色",
-                            subtitle = "跟随 Android 12+ 系统壁纸色彩动态生成协调的 Material 3 配色方案",
+                            subtitle = "跟随系统壁纸动态取色（Android 12+）",
                             checked = state.dynamicColor,
                             onCheckedChange = {
                                 viewModel.setDynamicColor(it)
@@ -336,7 +336,7 @@ fun SettingsAppearanceScreen(
                                                     fontWeight = FontWeight.Medium
                                                 )
                                                 Text(
-                                                    text = "HEX 输入或可视化调色板选色",
+                                                    text = "支持调色板与 HEX 选色",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )

@@ -187,7 +187,7 @@ fun SettingsScreen(
                     SettingsCategoryItem(
                         icon = AppIcons.CleaningServices,
                         title = "清理应用缓存",
-                        subtitle = "图片加载、流媒体及网络临时文件",
+                        subtitle = "图片与网络临时缓存",
                         trailingText = state.cacheSizeFormatted,
                         shape = RoundedCornerShape(
                             topStart = CornerRadius.Lg,
@@ -200,7 +200,7 @@ fun SettingsScreen(
                     SettingsCategoryItem(
                         icon = AppIcons.Terminal,
                         title = "运行日志与导出",
-                        subtitle = "日志保存目录：${PublicStorageHelper.LOGS_DISPLAY_DIR}",
+                        subtitle = "查看或导出运行日志",
                         shape = RoundedCornerShape(
                             topStart = CornerRadius.Xs,
                             topEnd = CornerRadius.Xs,

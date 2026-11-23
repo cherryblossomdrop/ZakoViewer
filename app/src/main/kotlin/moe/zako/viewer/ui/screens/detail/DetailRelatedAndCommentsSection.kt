@@ -257,8 +257,8 @@ fun DetailDownloadChoiceDialog(
                 Spacer(modifier = Modifier.height(Spacing.Md))
 
                 ListItem(
-                    headlineContent = { Text("内置多节点多线程下载器") },
-                    supportingContent = { Text("并发向每一个 CDN 节点拉取分片，支持断点续传") },
+                    headlineContent = { Text("内置下载器") },
+                    supportingContent = { Text("多节点并发下载，支持断点续传") },
                     leadingContent = { Icon(imageVector = AppIcons.Speed, contentDescription = null) },
                     modifier = Modifier.clickable {
                         onStartInternalDownload()
@@ -266,8 +266,8 @@ fun DetailDownloadChoiceDialog(
                 )
 
                 ListItem(
-                    headlineContent = { Text("外部下载器 (1DM / ADM)") },
-                    supportingContent = { Text("透传视频直链与 HTTP 请求头唤起外部下载器") },
+                    headlineContent = { Text("外部下载器") },
+                    supportingContent = { Text("唤起 1DM、ADM 等第三方下载器") },
                     leadingContent = { Icon(imageVector = AppIcons.OpenInNew, contentDescription = null) },
                     modifier = Modifier.clickable {
                         onStartExternalDownload()

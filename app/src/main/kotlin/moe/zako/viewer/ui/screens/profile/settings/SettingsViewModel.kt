@@ -375,7 +375,7 @@ class SettingsViewModel(
                 _uiState.update { it.copy(cacheSizeFormatted = "0.00 B") }
 
                 launch(Dispatchers.Main) {
-                    ZakoToast.show("应用缓存已彻底清理")
+                    ZakoToast.show("缓存已清理")
                 }
             } catch (e: Exception) {
                 ZakoLog.e("SettingsViewModel", "Failed to clear app cache", e)

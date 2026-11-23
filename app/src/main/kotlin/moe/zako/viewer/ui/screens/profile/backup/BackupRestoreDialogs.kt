@@ -316,7 +316,7 @@ fun BackupExportResultDialog(
                         .fillMaxWidth()
                         .clickable {
                             clipboardManager.setText(AnnotatedString(result.displayPath))
-                            ZakoToast.show("已复制文件路径到剪贴板")
+                            ZakoToast.show("已复制路径")
                         }
                 ) {
                     Row(
@@ -364,7 +364,7 @@ fun BackupExportResultDialog(
                 TextButton(
                     onClick = {
                         clipboardManager.setText(AnnotatedString(result.displayPath))
-                        ZakoToast.show("已复制文件路径到剪贴板")
+                        ZakoToast.show("已复制路径")
                     }
                 ) {
                     Text("复制路径")

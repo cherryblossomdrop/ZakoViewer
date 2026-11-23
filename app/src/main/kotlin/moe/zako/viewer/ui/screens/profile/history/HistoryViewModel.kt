@@ -147,7 +147,7 @@ class HistoryViewModel(
                     isVip = single.isVip
                 )
                 _uiState.update { it.copy(showFolderSelector = false, pendingSingleItem = null) }
-                ZakoToast.show("已成功加入收藏夹")
+                ZakoToast.show("已加入收藏夹")
             }
         } else {
             batchAddToFavorites(targetFolderId)
@@ -168,7 +168,7 @@ class HistoryViewModel(
                     pendingSingleItem = null
                 )
             }
-            ZakoToast.show("已成功加入收藏夹")
+            ZakoToast.show("已加入收藏夹")
         }
     }
 
@@ -189,7 +189,7 @@ class HistoryViewModel(
                 duration = item.duration,
                 isVip = item.isVip
             )
-            ZakoToast.show("已添加到稍后再看")
+            ZakoToast.show("已加入稍后再看")
         }
     }
 

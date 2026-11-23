@@ -44,21 +44,19 @@ fun DownloadActionBottomSheet(
             id = "add_to_favorites",
             title = "添加到收藏夹",
             icon = AppIcons.AddToFavorites,
-            supportingText = "将视频添加到自定义收藏夹",
             onClick = { onAddToFavorites(target) }
         ),
         VideoMenuAction(
             id = "detail",
             title = "视频详情",
             icon = AppIcons.VideoDetail,
-            supportingText = "查看本视频应用内详情页",
             onClick = { onNavigateToDetail(target.videoId) }
         ),
         VideoMenuAction(
             id = "file_info",
             title = "文件信息",
             icon = AppIcons.FileInfo,
-            supportingText = "查看文件名、本地存储路径、下载状态与修改时间",
+            supportingText = "查看路径、大小与本地状态",
             onClick = { onShowFileInfo(target) }
         )
     )

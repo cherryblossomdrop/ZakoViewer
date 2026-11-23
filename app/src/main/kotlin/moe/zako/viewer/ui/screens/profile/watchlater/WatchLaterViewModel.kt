@@ -98,7 +98,7 @@ class WatchLaterViewModel(
     fun remove(videoId: String) {
         viewModelScope.launch {
             historyRepository.removeFromWatchLater(videoId)
-            ZakoToast.show("已从稍后再看中移除")
+            ZakoToast.show("已移出稍后再看")
         }
     }
 
@@ -157,7 +157,7 @@ class WatchLaterViewModel(
                     isVip = single.isVip
                 )
                 _uiState.update { it.copy(showFolderSelector = false, pendingVideo = null) }
-                ZakoToast.show("已成功加入收藏夹")
+                ZakoToast.show("已加入收藏夹")
             }
         } else {
             batchAddToFavorites(folderId)

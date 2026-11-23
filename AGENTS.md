@@ -32,7 +32,10 @@
 ## 五、构建、文档与发版流程
 ### 1. 版本号递增规则（代码改动强制更新）
 - **触发条件与强制性**：**每次改动应用源代码**（`app/src/` 下的代码、C++、JNI、资源、清单，或影响二进制产物的 Gradle 构建依赖配置），**必须更新版本号**；纯文档（如 `README.md`）、开发规范文件（如 `AGENTS.md`）或非源码调整**严禁修改版本号**。
-- **递增方式**：读取 `app/build.gradle.kts` 中的 `defaultConfig`，将 `versionCode` 自动加 `1`，`versionName` 顺延递增（如 `1.2.40` 递增至 `1.2.41`）。
+- **递增方式**：读取 `app/build.gradle.kts` 中的 `defaultConfig`，`versionCode` 始终自动加 `1`；`versionName` 严格遵循语义化版本（`Major.Minor.Patch`）分级递增：
+  - **常规改动（递增 Patch，如 `1.2.59 -> 1.2.60`）**：常规 Bug 修复（`fix`）、局部 UI/交互微调或小幅代码优化。
+  - **大幅改动（递增 Minor 且 Patch 归零，如 `1.2.59 -> 1.3.0`）**：大幅功能新增、核心架构重构或改变核心代码逻辑时，必须递增次版本号。
+  - **跨代大改（递增 Major，如 `1.x.x -> 2.0.0`）**：仅限破坏性底层架构重写，且须经用户明确确认后执行。
 
 ### 2. 双版本编译与止损验收
 - **双版本编译**：当且仅当改动源码且递增版本号后，必须执行以下命令验证 Debug 与 Release 双版本编译通过，确认 `:app:assembleDebug` 与 `:app:assembleRelease` 均 `BUILD SUCCESSFUL`（**严禁**添加 `--stacktrace` 参数）：

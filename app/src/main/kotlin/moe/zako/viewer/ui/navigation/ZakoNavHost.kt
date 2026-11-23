@@ -228,6 +228,7 @@ fun ZakoNavHost(
                             onNavigateToPrivacy = { navController.navigate(Screen.SettingsPrivacy.route) },
                             onNavigateToShare = { navController.navigate(Screen.SettingsShare.route) },
                             onNavigateToSettingsDownload = { navController.navigate(Screen.SettingsDownload.route) },
+                            onNavigateToDataSource = { navController.navigate(Screen.SettingsDataSource.route) },
                             onNavigateToBackupRestore = { navController.navigate(Screen.BackupRestore.route) },
                             onNavigateToAbout = { navController.navigate(Screen.About.route) },
                             settingsViewModel = settingsViewModel

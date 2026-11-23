@@ -12,6 +12,7 @@ import moe.zako.viewer.data.source.cosav.CosApiException
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import moe.zako.viewer.ui.components.ZakoToast
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -135,11 +136,11 @@ class HomeViewModel(
         val q = _uiState.value.searchQuery.trim()
         if (q.isNotEmpty()) {
             if (SearchQueryParser.isDataSourceUnlockCipher(q)) {
-                viewModelScope.launch {
+                viewModelScope.launch(Dispatchers.IO) {
                     settingsRepository.setDataSourceSectionUnlocked(true)
                 }
                 _uiState.update { it.copy(searchQuery = "") }
-                ZakoToast.show("数据源设置已解锁")
+                ZakoToast.show("源站设置已解锁")
                 return
             }
             viewModelScope.launch {

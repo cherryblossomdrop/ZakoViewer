@@ -143,7 +143,8 @@ fun SettingsScreen(
                     if (state.hasVisibleDataSourceSettings) {
                         SettingsCategoryItem(
                             icon = AppIcons.AltRoute,
-                            title = "数据源设置",
+                            title = "源站设置",
+                            subtitle = "数据源插件与在线 CDN 选线",
                             shape = RoundedCornerShape(
                                 topStart = CornerRadius.Xs,
                                 topEnd = CornerRadius.Xs,

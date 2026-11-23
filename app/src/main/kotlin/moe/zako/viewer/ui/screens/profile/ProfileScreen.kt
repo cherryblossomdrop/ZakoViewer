@@ -57,6 +57,7 @@ fun ProfileScreen(
     onNavigateToPrivacy: () -> Unit,
     onNavigateToShare: () -> Unit,
     onNavigateToSettingsDownload: () -> Unit,
+    onNavigateToDataSource: () -> Unit = {},
     onNavigateToBackupRestore: () -> Unit,
     onNavigateToAbout: () -> Unit,
     settingsViewModel: SettingsViewModel
@@ -293,6 +294,15 @@ fun ProfileScreen(
                         shape = RoundedCornerShape(CornerRadius.Xs),
                         onClick = onNavigateToSettingsDownload
                     )
+
+                    if (settingsState.hasVisibleDataSourceSettings) {
+                        ProfileItemCard(
+                            icon = AppIcons.AltRoute,
+                            title = "源站设置",
+                            shape = RoundedCornerShape(CornerRadius.Xs),
+                            onClick = onNavigateToDataSource
+                        )
+                    }
 
                     ProfileItemCard(
                         icon = AppIcons.CleaningServices,

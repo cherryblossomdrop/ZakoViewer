@@ -109,10 +109,14 @@ object SearchQueryParser {
     fun isDataSourceUnlockCipher(raw: String): Boolean {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return false
-        val expectedCipher = android.util.Base64.encodeToString(
-            moe.zako.viewer.BuildConfig.VERSION_NAME.toByteArray(Charsets.UTF_8),
-            android.util.Base64.NO_WRAP
-        ).trim()
-        return trimmed == expectedCipher
+        val v = moe.zako.viewer.BuildConfig.VERSION_NAME.trim()
+        val candidates = setOf(v, "v$v", v.removePrefix("v"))
+        val expectedCiphers = candidates.map { candidate ->
+            android.util.Base64.encodeToString(
+                candidate.toByteArray(Charsets.UTF_8),
+                android.util.Base64.NO_WRAP
+            ).trim()
+        }
+        return expectedCiphers.contains(trimmed)
     }
 }

@@ -56,7 +56,7 @@ fun DataSourceSettingsCard(
     ) {
         Column(modifier = Modifier.padding(Spacing.Lg)) {
             Text(
-                text = "数据源与 CDN 选线",
+                text = "线路选优",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -77,7 +77,7 @@ fun DataSourceSettingsCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "自动选择最优节点",
+                        text = "自动测速",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
@@ -103,7 +103,7 @@ fun DataSourceSettingsCard(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     Spacer(modifier = Modifier.height(Spacing.Intermediate))
                     Text(
-                        text = "默认 CDN 线路",
+                        text = "默认线路",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -153,7 +153,7 @@ fun SettingsDataSourceScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("数据源设置", fontWeight = FontWeight.Bold) },
+                title = { Text("源站设置", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(imageVector = AppIcons.ArrowBack, contentDescription = "返回")
@@ -174,7 +174,7 @@ fun SettingsDataSourceScreen(
                 item {
                     SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
                         SettingsSwitchItem(
-                            title = "CosAV 内置数据源插件",
+                            title = "CosAV 插件",
                             subtitle = "启用后提供在线推荐视频流、全站搜索与详细信息解析",
                             checked = state.enabledDataSourceIds.contains(CosAvDataSource.ID),
                             onCheckedChange = { viewModel.toggleDataSourceEnabled(CosAvDataSource.ID) }

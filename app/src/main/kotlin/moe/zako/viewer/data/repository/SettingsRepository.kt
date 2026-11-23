@@ -88,12 +88,11 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { prefs ->
             if (!prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
                 val isLegacy = checkIsLegacyUpgrade(context, prefs)
-                if (isLegacy) {
-                    prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] = true
-                    prefs[KEY_ENABLED_DATA_SOURCES] = setOf(CosAvDataSource.ID)
-                } else {
-                    prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] = false
-                    prefs[KEY_ENABLED_DATA_SOURCES] = emptySet()
+                if (!prefs.contains(KEY_DATA_SOURCE_SECTION_UNLOCKED)) {
+                    prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] = isLegacy
+                }
+                if (!prefs.contains(KEY_ENABLED_DATA_SOURCES)) {
+                    prefs[KEY_ENABLED_DATA_SOURCES] = if (isLegacy) setOf(CosAvDataSource.ID) else emptySet()
                 }
                 prefs[KEY_INITIALIZED_DATA_SOURCE_PREFS] = true
             }
@@ -101,7 +100,9 @@ class SettingsRepository(private val context: Context) {
     }
 
     val isDataSourceSectionUnlocked: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
+        if (prefs.contains(KEY_DATA_SOURCE_SECTION_UNLOCKED)) {
+            prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] ?: false
+        } else if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
             prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] ?: false
         } else {
             checkIsLegacyUpgrade(context, prefs)
@@ -109,7 +110,9 @@ class SettingsRepository(private val context: Context) {
     }
 
     val enabledDataSourceIds: Flow<Set<String>> = context.dataStore.data.map { prefs ->
-        if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
+        if (prefs.contains(KEY_ENABLED_DATA_SOURCES)) {
+            prefs[KEY_ENABLED_DATA_SOURCES] ?: emptySet()
+        } else if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
             prefs[KEY_ENABLED_DATA_SOURCES] ?: emptySet()
         } else {
             if (checkIsLegacyUpgrade(context, prefs)) setOf(CosAvDataSource.ID) else emptySet()
@@ -319,7 +322,10 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun setDataSourceSectionUnlocked(unlocked: Boolean) {
-        context.dataStore.edit { it[KEY_DATA_SOURCE_SECTION_UNLOCKED] = unlocked }
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] = unlocked
+            prefs[KEY_INITIALIZED_DATA_SOURCE_PREFS] = true
+        }
     }
 
     suspend fun setDataSourceEnabled(sourceId: String, enabled: Boolean) {
@@ -327,12 +333,15 @@ class SettingsRepository(private val context: Context) {
             val current = prefs[KEY_ENABLED_DATA_SOURCES] ?: emptySet()
             val updated = if (enabled) current + sourceId else current - sourceId
             prefs[KEY_ENABLED_DATA_SOURCES] = updated
+            prefs[KEY_INITIALIZED_DATA_SOURCE_PREFS] = true
         }
     }
 
     suspend fun isDataSourceSectionUnlockedSnapshot(): Boolean {
         val prefs = context.dataStore.data.first()
-        return if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
+        return if (prefs.contains(KEY_DATA_SOURCE_SECTION_UNLOCKED)) {
+            prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] ?: false
+        } else if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
             prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] ?: false
         } else {
             checkIsLegacyUpgrade(context, prefs)
@@ -341,7 +350,9 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun getEnabledDataSourceIdsSnapshot(): Set<String> {
         val prefs = context.dataStore.data.first()
-        return if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
+        return if (prefs.contains(KEY_ENABLED_DATA_SOURCES)) {
+            prefs[KEY_ENABLED_DATA_SOURCES] ?: emptySet()
+        } else if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
             prefs[KEY_ENABLED_DATA_SOURCES] ?: emptySet()
         } else {
             if (checkIsLegacyUpgrade(context, prefs)) setOf(CosAvDataSource.ID) else emptySet()

@@ -161,80 +161,89 @@ fun AboutScreen(
                 }
             }
 
-            // Submenu: 开源仓库 (放置在开源组件许可声明下方)
+            // Submenu: 开源仓库与导出日志操作卡片分组 (MD3 Expressive 同级窄间距)
             item {
-                val repoUrl = "https://github.com/cherryblossomdrop/ZakoViewer"
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl)).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.MicroItem)) {
+                    val repoUrl = "https://github.com/cherryblossomdrop/ZakoViewer"
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl)).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    ZakoToast.show("未找到可用的网页浏览器")
                                 }
-                                context.startActivity(intent)
-                            } catch (_: Exception) {
-                                ZakoToast.show("未找到可用的网页浏览器")
+                            },
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Md,
+                            topEnd = CornerRadius.Md,
+                            bottomStart = CornerRadius.Xs,
+                            bottomEnd = CornerRadius.Xs
+                        ),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(Spacing.Lg),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = AppIcons.Code,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.Lg))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = "开源仓库", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    text = "前往 GitHub 查看项目源码与版本更新",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                        },
-                    shape = RoundedCornerShape(CornerRadius.Md),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(Spacing.Lg),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = AppIcons.Code,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.Lg))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "开源仓库", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                text = "前往 GitHub 查看项目源码与版本更新",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Icon(imageVector = AppIcons.ChevronRight, contentDescription = null)
                         }
-                        Icon(imageVector = AppIcons.ChevronRight, contentDescription = null)
                     }
-                }
-            }
 
-            // Submenu: 导出日志 (放置在开源仓库下方)
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onNavigateToLogs() },
-                    shape = RoundedCornerShape(CornerRadius.Md),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Row(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(Spacing.Lg),
-                        verticalAlignment = Alignment.CenterVertically
+                            .clickable { onNavigateToLogs() },
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.Xs,
+                            topEnd = CornerRadius.Xs,
+                            bottomStart = CornerRadius.Md,
+                            bottomEnd = CornerRadius.Md
+                        ),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
-                        Icon(
-                            imageVector = AppIcons.Terminal,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.Lg))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "导出日志", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                text = "实时查看客户端运行日志，一键导出为文本文件排错",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(Spacing.Lg),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = AppIcons.Terminal,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
                             )
+                            Spacer(modifier = Modifier.width(Spacing.Lg))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = "导出日志", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    text = "实时查看客户端运行日志，一键导出为文本文件排错",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(imageVector = AppIcons.ChevronRight, contentDescription = null)
                         }
-                        Icon(imageVector = AppIcons.ChevronRight, contentDescription = null)
                     }
                 }
             }

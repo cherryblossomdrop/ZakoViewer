@@ -1,6 +1,6 @@
 ﻿# ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（v1.3.2），全项目核心工程源码共计 **126** 个文件，累计 **29,795** 行代码。  
+> **版本定位**：截至最新构建（v1.3.3），全项目核心工程源码共计 **126** 个文件，累计 **29,804** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -173,7 +173,7 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerScreen.kt` | 401 | 独立全屏播放视窗，集成控制层覆盖物、CDN 测速面板与画幅调整 | 装载 `MPVView` 纯原生渲染视口，全面复用 `PlayerTopBar`、`PlayerBottomControls` 及共享弹窗组件 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerViewModel.kt` | 755 | 播放器状态机中枢，统筹起播选线、实时测速热切、进度保存与外部播放 | 驱动 `ZakoPlayer` 与 `PlaybackSourceCoordinator`，统筹本地/在线起播选线，起播与退出保存进度完整透传时长与 VIP |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/ProfileScreen.kt` | 425 | 个人中心主入口视窗 | 提供离线下载、稍后再看、源站设置（解锁可见）、数据备份与全局设置等子模块聚合导航列表，对齐 4 字标题规范 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/AboutScreen.kt` | 257 | 关于视窗，展示应用版本信息、开源协议与开发者鸣谢 | 包含版本信息、源码仓库跳转及彩蛋连击解锁机制，图标与尺寸全量收敛至 Design Tokens |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/AboutScreen.kt` | 266 | 关于视窗，展示应用版本信息、开源协议与开发者鸣谢 | 包含版本信息、源码仓库与导出日志 MD3E 同级窄间距分组卡片，及彩蛋连击解锁机制，全量收敛至 Design Tokens |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/LogViewerScreen.kt` | 339 | 实时应用日志查看器视窗 | 提供日志实时流刷新、级别筛选、关键词搜索、清空及外部导出分享功能，级别颜色收敛至 LogLevelColors 并自适应深浅色，字体收敛至 ExtraTextStyles |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/backup/BackupRestoreScreen.kt` | 351 | 数据备份与恢复视窗 | 统一历史记录备份文案，提供生成全量 ZIP 备份文件、导入恢复、备份列表管理及操作进度反馈，保持 Design Tokens 规范 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/backup/BackupRestoreDialogs.kt` | 373 | 数据备份与恢复相关模态弹窗集 | 承接新建备份确认、恢复提示、密码输入及完成反馈对话框，进度条与描边全量收敛至 Design Tokens |
@@ -202,5 +202,5 @@
 | :--- | :---: | :--- | :--- |
 | `build.gradle.kts` | 5 | 根工程 Gradle 构建拓扑脚本 | 配置根级构建脚本与基础插件别名声明 |
 | `settings.gradle.kts` | 18 | 模块依赖树与 Maven 插件仓库编排 | 定义工程名 `NeoViewer`，编排 Google、MavenCentral 及本地插件存储库 |
-| `app/build.gradle.kts` | 147 | 核心应用模块构建参数、依赖声明与发版配置 | 配置 Android SDK 34、CMake 原生链接、R8 混淆、签名配置及动态版本号递增字段（v1.3.2 / versionCode 66） |
+| `app/build.gradle.kts` | 147 | 核心应用模块构建参数、依赖声明与发版配置 | 配置 Android SDK 34、CMake 原生链接、R8 混淆、签名配置及动态版本号递增字段（v1.3.3 / versionCode 67） |
 | `.github/workflows/release.yml` | 130 | GitHub Actions 自动化发版流水线工作流 | 监听版本 Tag（`v*`），自动化构建环境，生成更新日志并自动归档发布纯源码压缩包 |

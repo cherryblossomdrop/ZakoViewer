@@ -698,6 +698,8 @@ class VideoDetailViewModel(
                         videoId = videoId,
                         title = title,
                         coverUrl = cover,
+                        duration = vid?.duration ?: "",
+                        isVip = vid?.isVipEarlyAccess ?: false,
                         positionMs = pos,
                         totalDurationMs = dur
                     )

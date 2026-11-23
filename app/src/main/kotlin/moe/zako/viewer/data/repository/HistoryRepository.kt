@@ -10,6 +10,7 @@ import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.data.local.entities.SearchHistoryEntity
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
 import moe.zako.viewer.data.local.entities.WatchLaterEntity
+import moe.zako.viewer.ui.components.DurationFormatter
 
 /**
  * 观看历史与稍后再看业务仓储 (HistoryRepository)
@@ -36,20 +37,32 @@ class HistoryRepository(
         positionMs: Long = 0L,
         totalDurationMs: Long = 0L
     ) {
+        val existing = watchHistoryDao.getHistoryByVideoId(videoId)
+        val finalDuration = when {
+            duration.isNotBlank() -> duration
+            existing?.duration?.isNotBlank() == true -> existing.duration
+            totalDurationMs > 0L -> DurationFormatter.formatMs(totalDurationMs)
+            else -> ""
+        }
+        val finalTitle = title.ifBlank { existing?.title ?: "" }
+        val finalCoverUrl = coverUrl.ifBlank { existing?.coverUrl ?: "" }
+        val finalIsVip = isVip || (existing?.isVip == true)
+        val finalTotalDurationMs = if (totalDurationMs > 0L) totalDurationMs else (existing?.totalDurationMs ?: 0L)
+
         watchHistoryDao.insertOrUpdate(
             WatchHistoryEntity(
                 videoId = videoId,
-                title = title,
-                coverUrl = coverUrl,
-                duration = duration,
-                isVip = isVip,
+                title = finalTitle,
+                coverUrl = finalCoverUrl,
+                duration = finalDuration,
+                isVip = finalIsVip,
                 watchedAt = System.currentTimeMillis(),
                 playbackPositionMs = positionMs,
-                totalDurationMs = totalDurationMs
+                totalDurationMs = finalTotalDurationMs
             )
         )
         try {
-            CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, coverUrl)
+            CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, finalCoverUrl)
         } catch (_: Exception) {}
     }
 
@@ -87,17 +100,27 @@ class HistoryRepository(
         duration: String = "",
         isVip: Boolean = false
     ) {
+        val existing = watchLaterDao.getByVideoId(videoId)
+        val finalDuration = when {
+            duration.isNotBlank() -> duration
+            existing?.duration?.isNotBlank() == true -> existing.duration
+            else -> ""
+        }
+        val finalTitle = title.ifBlank { existing?.title ?: "" }
+        val finalCoverUrl = coverUrl.ifBlank { existing?.coverUrl ?: "" }
+        val finalIsVip = isVip || (existing?.isVip == true)
+
         watchLaterDao.insert(
             WatchLaterEntity(
                 videoId = videoId,
-                title = title,
-                coverUrl = coverUrl,
-                duration = duration,
-                isVip = isVip
+                title = finalTitle,
+                coverUrl = finalCoverUrl,
+                duration = finalDuration,
+                isVip = finalIsVip
             )
         )
         try {
-            CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, coverUrl)
+            CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, finalCoverUrl)
         } catch (_: Exception) {}
     }
 

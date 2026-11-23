@@ -277,7 +277,77 @@ fun HomeScreen(
                         )
                     }
                 }
+            } else if (state.layoutMode == LayoutMode.PAGINATED) {
+                // 分页排布模式：规整卡片网格展示当前页数据（或超界/无结果空状态）+ 底部翻页控制栏（绝不消失）
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = VideoCoverTokens.GridAdaptiveMinSize),
+                    state = gridState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(Spacing.Md),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.Intermediate),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.Intermediate)
+                ) {
+                    if (displayedVideos.isEmpty() && !state.isLoading && !state.isRefreshing) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = Spacing.Massive),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(Spacing.Md)
+                                ) {
+                                    Text(
+                                        text = state.errorMessage ?: if (state.searchQuery.isNotEmpty()) "未找到相关视频" else "暂无符合筛选条件的视频",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    if (state.errorMessage != null) {
+                                        Button(onClick = { viewModel.refresh() }) {
+                                            Text("重试")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        items(displayedVideos, key = { it.id }) { video ->
+                            VideoCard(
+                                video = video,
+                                showVipBadge = video.isVipEarlyAccess,
+                                onClick = { onNavigateToDetail(video.id) }
+                            )
+                        }
+
+                        if (state.isLoading) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(Spacing.Lg),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(IconSize.Lg))
+                                }
+                            }
+                        }
+                    }
+
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        HomePaginationBar(
+                            currentPage = state.page,
+                            isLoading = state.isLoading,
+                            hasMore = state.hasMore,
+                            onPreviousPage = { viewModel.previousPage() },
+                            onNextPage = { viewModel.nextPage() },
+                            onOpenJumpDialog = { showJumpDialog = true }
+                        )
+                    }
+                }
             } else if (displayedVideos.isEmpty() && !state.isLoading && !state.isRefreshing) {
+                // 瀑布流模式下的空状态展示
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -329,92 +399,6 @@ fun HomeScreen(
                         }
                     }
                 }
-            } else {
-                // 分页排布模式：规整卡片网格展示当前页数据 + 底部翻页控制栏
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = VideoCoverTokens.GridAdaptiveMinSize),
-                    state = gridState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(Spacing.Md),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.Intermediate),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.Intermediate)
-                ) {
-                    items(displayedVideos, key = { it.id }) { video ->
-                        VideoCard(
-                            video = video,
-                            showVipBadge = video.isVipEarlyAccess,
-                            onClick = { onNavigateToDetail(video.id) }
-                        )
-                    }
-
-                    if (state.isLoading) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(Spacing.Lg),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.size(IconSize.Lg))
-                            }
-                        }
-                    }
-
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = Spacing.Lg),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedButton(
-                                onClick = { viewModel.previousPage() },
-                                enabled = state.page > 1 && !state.isLoading
-                            ) {
-                                Icon(
-                                    imageVector = AppIcons.ArrowBack,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(IconSize.Sm)
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.Xs))
-                                Text("上一页")
-                            }
-
-                            Spacer(modifier = Modifier.width(Spacing.Lg))
-
-                            Surface(
-                                onClick = { showJumpDialog = true },
-                                shape = RoundedCornerShape(CornerRadius.Sm),
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                modifier = Modifier.padding(horizontal = Spacing.Sm)
-                            ) {
-                                Text(
-                                    text = "第 ${state.page} 页",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.padding(horizontal = Spacing.Md, vertical = Spacing.Compact)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(Spacing.Lg))
-
-                            Button(
-                                onClick = { viewModel.nextPage() },
-                                enabled = state.hasMore && !state.isLoading
-                            ) {
-                                Text("下一页")
-                                Spacer(modifier = Modifier.width(Spacing.Xs))
-                                Icon(
-                                    imageVector = AppIcons.ArrowForward,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(IconSize.Sm)
-                                )
-                            }
-                        }
-                    }
-                }
             }
 
             if (pullToRefreshState.verticalOffset > 0f || pullToRefreshState.isRefreshing) {
@@ -455,5 +439,72 @@ fun HomeScreen(
             },
             onDismiss = { showJumpDialog = false }
         )
+    }
+}
+
+/**
+ * 首页分页排布模式统一底部分页控制栏组件
+ */
+@Composable
+private fun HomePaginationBar(
+    currentPage: Int,
+    isLoading: Boolean,
+    hasMore: Boolean,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
+    onOpenJumpDialog: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = Spacing.Lg),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedButton(
+            onClick = onPreviousPage,
+            enabled = currentPage > 1 && !isLoading
+        ) {
+            Icon(
+                imageVector = AppIcons.ArrowBack,
+                contentDescription = null,
+                modifier = Modifier.size(IconSize.Sm)
+            )
+            Spacer(modifier = Modifier.width(Spacing.Xs))
+            Text("上一页")
+        }
+
+        Spacer(modifier = Modifier.width(Spacing.Lg))
+
+        Surface(
+            onClick = onOpenJumpDialog,
+            shape = RoundedCornerShape(CornerRadius.Sm),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.padding(horizontal = Spacing.Sm)
+        ) {
+            Text(
+                text = "第 $currentPage 页",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.padding(horizontal = Spacing.Md, vertical = Spacing.Compact)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(Spacing.Lg))
+
+        Button(
+            onClick = onNextPage,
+            enabled = hasMore && !isLoading
+        ) {
+            Text("下一页")
+            Spacer(modifier = Modifier.width(Spacing.Xs))
+            Icon(
+                imageVector = AppIcons.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(IconSize.Sm)
+            )
+        }
     }
 }

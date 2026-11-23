@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -12,11 +13,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.ui.components.VideoListItemCard
@@ -148,10 +151,10 @@ fun ActiveDownloadItem(
         },
         onLongClick = onLongClick,
         containerColor = cardColor,
+        duration = item.duration,
         subtitle = {
-            val speedMb = item.speedBps / (1024 * 1024.0)
             val statusText = when (item.status) {
-                DownloadEntity.STATUS_DOWNLOADING -> "并发拉取中 (${String.format(Locale.getDefault(), "%.1f MB/s", speedMb)})"
+                DownloadEntity.STATUS_DOWNLOADING -> if (item.activeNodesCount > 0) "并发拉取中 (${item.activeNodesCount} 线路)" else "并发拉取中"
                 DownloadEntity.STATUS_PAUSED -> "已暂停 (点击继续)"
                 DownloadEntity.STATUS_FAILED -> if (!item.errorMessage.isNullOrEmpty()) "中断: ${item.errorMessage}" else "拉取中断 (点击重试)"
                 else -> "准备中..."
@@ -165,7 +168,8 @@ fun ActiveDownloadItem(
                 text = statusText,
                 style = MaterialTheme.typography.bodySmall,
                 color = statusColor,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         },
         actions = {
@@ -190,14 +194,44 @@ fun ActiveDownloadItem(
             Spacer(modifier = Modifier.height(Spacing.Xs))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 val formatMb = { bytes: Long -> String.format(Locale.getDefault(), "%.1f MB", bytes / (1024 * 1024.0)) }
-                Text(
-                    text = "${formatMb(item.downloadedBytes)} / ${formatMb(item.totalBytes)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                val sizeText = "${formatMb(item.downloadedBytes)} / ${formatMb(item.totalBytes)}"
+                val speedText = if (item.status == DownloadEntity.STATUS_DOWNLOADING && item.speedBps > 0) {
+                    if (item.speedBps >= 1024 * 1024) {
+                        String.format(Locale.getDefault(), "%.1f MB/s", item.speedBps / (1024 * 1024.0))
+                    } else {
+                        String.format(Locale.getDefault(), "%.1f KB/s", item.speedBps / 1024.0)
+                    }
+                } else null
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.Xs),
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    Text(
+                        text = sizeText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (speedText != null) {
+                        Text(
+                            text = "·",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = speedText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(Spacing.Sm))
                 Text(
                     text = "${(item.progress * 100).toInt()}%",
                     style = MaterialTheme.typography.bodySmall,

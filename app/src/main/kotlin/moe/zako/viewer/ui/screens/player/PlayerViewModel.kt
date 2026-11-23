@@ -217,8 +217,8 @@ class PlayerViewModel(
                         videoId = videoId,
                         title = title,
                         coverUrl = preservedCover,
-                        duration = "",
-                        isVip = false,
+                        duration = existingHistory?.duration ?: "",
+                        isVip = existingHistory?.isVip ?: false,
                         positionMs = resumePos,
                         totalDurationMs = existingHistory?.totalDurationMs ?: 0L
                     )
@@ -287,6 +287,8 @@ class PlayerViewModel(
                             videoId = vid.id,
                             title = vid.title,
                             coverUrl = coverToSave,
+                            duration = vid.duration ?: (existingHistory?.duration ?: ""),
+                            isVip = vid.isVipEarlyAccess,
                             positionMs = resumePos,
                             totalDurationMs = existingHistory?.totalDurationMs ?: 0L
                         )
@@ -686,6 +688,8 @@ class PlayerViewModel(
                         videoId = videoId,
                         title = title,
                         coverUrl = cover,
+                        duration = vid?.duration ?: "",
+                        isVip = vid?.isVipEarlyAccess ?: false,
                         positionMs = pos,
                         totalDurationMs = dur
                     )

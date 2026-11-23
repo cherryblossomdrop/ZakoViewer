@@ -12,6 +12,7 @@ import moe.zako.viewer.data.source.cosav.CosApiException
 import moe.zako.viewer.data.source.cosav.CosVideoItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -458,19 +459,24 @@ class HomeViewModel(
 
                     if (cat == "推荐" && tag.isEmpty() && timeRange == TimeRange.ALL) {
                         if (isPaginated) {
-                            val response = if (currentPage <= 1) null else apiClient.getVideoLists(page = currentPage, order = "mv", limit = 20)
-                            val items = if (currentPage <= 1) {
-                                apiClient.getVideoRecommend()
+                            val (items, totalCount) = if (currentPage <= 1) {
+                                val recDeferred = async { apiClient.getVideoRecommend() }
+                                val listDeferred = async { apiClient.getVideoLists(page = 1, order = "mv", limit = 20) }
+                                val recItems = recDeferred.await()
+                                val listResp = listDeferred.await()
+                                Pair(recItems, listResp.totalCount)
                             } else {
-                                response?.items ?: emptyList()
+                                val resp = apiClient.getVideoLists(page = currentPage, order = "mv", limit = 20)
+                                Pair(resp.items, resp.totalCount)
                             }
                             if (!isActive) return@launch
+                            val calculatedTotalPages = if (totalCount > 0) ((totalCount + 19) / 20).coerceAtLeast(1) else null
                             _uiState.update { current ->
                                 current.copy(
                                     videos = items,
                                     page = currentPage,
-                                    hasMore = items.isNotEmpty(),
-                                    totalPages = response?.let { if (it.totalCount > 0) ((it.totalCount + 19) / 20).coerceAtLeast(1) else null },
+                                    hasMore = items.isNotEmpty() && (totalCount <= 0 || currentPage * 20 < totalCount),
+                                    totalPages = calculatedTotalPages ?: current.totalPages,
                                     isLoading = false,
                                     isRefreshing = false
                                 )

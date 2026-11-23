@@ -138,7 +138,7 @@ fun AboutScreen(
                 }
             }
 
-            // 区块 1: 开源与许可 (包含开源组件许可声明与开源仓库，MD3 Expressive 分组与同级窄间距)
+            // 区块 1: 开源与许可 (包含许可声明与开源仓库，MD3 Expressive 分组与同级窄间距)
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
                     Text(
@@ -171,7 +171,7 @@ fun AboutScreen(
                                 )
                                 Spacer(modifier = Modifier.width(Spacing.Lg))
                                 Text(
-                                    text = "开源组件许可声明",
+                                    text = "许可声明",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold
                                 )

@@ -36,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
-import moe.zako.viewer.core.storage.PublicStorageHelper
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.theme.AppIcons
@@ -139,40 +138,6 @@ fun AboutScreen(
                 }
             }
 
-            // Submenu: 导出日志 (放置在版本卡片与开源组件许可声明之间)
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onNavigateToLogs() },
-                    shape = RoundedCornerShape(CornerRadius.Md),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(Spacing.Lg),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = AppIcons.Terminal,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.Lg))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "导出日志", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                text = "实时查看客户端运行日志，一键导出为文本文件排错\n日志保存目录：${PublicStorageHelper.LOGS_DISPLAY_DIR}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Icon(imageVector = AppIcons.ChevronRight, contentDescription = null)
-                    }
-                }
-            }
-
             // Open-source Licenses Declarations
             item {
                 Card(
@@ -230,7 +195,41 @@ fun AboutScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = "开源仓库", style = MaterialTheme.typography.titleMedium)
                             Text(
-                                text = "欢迎在 GitHub 提交反馈、问题 Issue 或参与贡献\n$repoUrl",
+                                text = "前往 GitHub 查看项目源码与版本更新",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(imageVector = AppIcons.ChevronRight, contentDescription = null)
+                    }
+                }
+            }
+
+            // Submenu: 导出日志 (放置在开源仓库下方)
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToLogs() },
+                    shape = RoundedCornerShape(CornerRadius.Md),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(Spacing.Lg),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Terminal,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.Lg))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = "导出日志", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = "实时查看客户端运行日志，一键导出为文本文件排错",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

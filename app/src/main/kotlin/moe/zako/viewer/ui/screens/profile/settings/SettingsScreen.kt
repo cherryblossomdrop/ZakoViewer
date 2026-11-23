@@ -72,11 +72,19 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = Spacing.Lg, vertical = Spacing.Sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.Md)
+            verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)
         ) {
             // 分组 1: 个性化与隐私
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.MicroItem)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "个性化与隐私",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                    )
+
                     SettingsCategoryItem(
                         icon = AppIcons.Palette,
                         title = "外观设置",
@@ -117,7 +125,15 @@ fun SettingsScreen(
 
             // 分组 2: 核心播放与离线功能
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.MicroItem)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "播放与下载",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                    )
+
                     SettingsCategoryItem(
                         icon = AppIcons.PlayCircle,
                         title = "播放设置",
@@ -144,7 +160,7 @@ fun SettingsScreen(
                         SettingsCategoryItem(
                             icon = AppIcons.AltRoute,
                             title = "源站设置",
-                            subtitle = "数据源插件与在线 CDN 选线",
+                            subtitle = "CosAV 数据源与在线 CDN 选线",
                             shape = RoundedCornerShape(
                                 topStart = CornerRadius.Xs,
                                 topEnd = CornerRadius.Xs,
@@ -159,7 +175,15 @@ fun SettingsScreen(
 
             // 分组 3: 存储与日志管理
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.MicroItem)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "存储与日志",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                    )
+
                     SettingsCategoryItem(
                         icon = AppIcons.CleaningServices,
                         title = "清理应用缓存",

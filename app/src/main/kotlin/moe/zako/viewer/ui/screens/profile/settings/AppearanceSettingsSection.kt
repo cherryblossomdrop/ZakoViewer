@@ -86,85 +86,227 @@ fun SettingsAppearanceScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(Spacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
+            verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)
         ) {
-            // 图标颜色跟随应用主题色开关 (默认状态为关闭 false)
+            // 区块 1: 应用图标
             item {
-                SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
-                    SettingsSwitchItem(
-                        title = "图标颜色跟随应用主题色",
-                        subtitle = "应用桌面图标变体将自适应跟随莫奈动态取色或自定义主题色切换（重启应用后生效）",
-                        checked = state.appIconFollowTheme,
-                        onCheckedChange = {
-                            viewModel.setAppIconFollowTheme(it)
-                            showRestartToast()
-                        }
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "应用图标",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
                     )
-                }
-            }
-
-            // 莫奈取色开关
-            item {
-                SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
-                    SettingsSwitchItem(
-                        title = "莫奈动态取色",
-                        subtitle = "跟随 Android 12+ 系统壁纸色彩动态生成协调的 Material 3 配色方案",
-                        checked = state.dynamicColor,
-                        onCheckedChange = {
-                            viewModel.setDynamicColor(it)
-                            if (state.appIconFollowTheme) {
+                    SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
+                        SettingsSwitchItem(
+                            title = "图标颜色跟随应用主题色",
+                            subtitle = "应用桌面图标变体将自适应跟随莫奈动态取色或自定义主题色切换（重启应用后生效）",
+                            checked = state.appIconFollowTheme,
+                            onCheckedChange = {
+                                viewModel.setAppIconFollowTheme(it)
                                 showRestartToast()
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
 
-            // 主题色选择器 (当莫奈取色关闭后展示)
+            // 区块 2: 主题与配色 (莫奈取色与自定义主题色分组，MD3 Expressive 同级窄间距)
             item {
-                AnimatedVisibility(visible = !state.dynamicColor) {
-                    Card(
-                        shape = RoundedCornerShape(CornerRadius.CardGroup),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "主题与配色",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                    )
+                    SettingsCard(
+                        shape = RoundedCornerShape(
+                            topStart = CornerRadius.CardGroup,
+                            topEnd = CornerRadius.CardGroup,
+                            bottomStart = if (!state.dynamicColor) CornerRadius.Xs else CornerRadius.CardGroup,
+                            bottomEnd = if (!state.dynamicColor) CornerRadius.Xs else CornerRadius.CardGroup
                         )
                     ) {
-                        Column(modifier = Modifier.padding(Spacing.Lg)) {
-                            Text(
-                                text = "应用主题色",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.Xs))
-                            Text(
-                                text = "选择预置主题色或添加自定义颜色，即时生效并持久化保存：",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.Expanded))
+                        SettingsSwitchItem(
+                            title = "莫奈动态取色",
+                            subtitle = "跟随 Android 12+ 系统壁纸色彩动态生成协调的 Material 3 配色方案",
+                            checked = state.dynamicColor,
+                            onCheckedChange = {
+                                viewModel.setDynamicColor(it)
+                                if (state.appIconFollowTheme) {
+                                    showRestartToast()
+                                }
+                            }
+                        )
+                    }
 
-                            val presets = ThemePreset.values()
+                    // 主题色选择器 (当莫奈取色关闭后展示)
+                    AnimatedVisibility(visible = !state.dynamicColor) {
+                        Card(
+                            shape = RoundedCornerShape(
+                                topStart = CornerRadius.Xs,
+                                topEnd = CornerRadius.Xs,
+                                bottomStart = CornerRadius.CardGroup,
+                                bottomEnd = CornerRadius.CardGroup
+                            ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(Spacing.Lg)) {
+                                Text(
+                                    text = "应用主题色",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(Spacing.Xs))
+                                Text(
+                                    text = "选择预置主题色或添加自定义颜色，即时生效并持久化保存：",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(Spacing.Expanded))
 
-                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
-                                // 1. 系统预置 7 款颜色（严格二字命名，不可删除）
-                                presets.forEach { theme ->
-                                    val isSelected = state.customTheme.equals(theme.hexColor, ignoreCase = true) ||
-                                            state.customTheme.equals(theme.key, ignoreCase = true)
-                                    Surface(
-                                        shape = RoundedCornerShape(CornerRadius.Intermediate),
-                                        color = if (isSelected) {
-                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-                                        } else {
-                                            MaterialTheme.colorScheme.surface
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                viewModel.setCustomTheme(theme.hexColor)
-                                                if (state.appIconFollowTheme) {
-                                                    showRestartToast()
+                                val presets = ThemePreset.values()
+
+                                Column(verticalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
+                                    // 1. 系统预置 7 款颜色（严格二字命名，不可删除）
+                                    presets.forEach { theme ->
+                                        val isSelected = state.customTheme.equals(theme.hexColor, ignoreCase = true) ||
+                                                state.customTheme.equals(theme.key, ignoreCase = true)
+                                        Surface(
+                                            shape = RoundedCornerShape(CornerRadius.Intermediate),
+                                            color = if (isSelected) {
+                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                                            } else {
+                                                MaterialTheme.colorScheme.surface
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    viewModel.setCustomTheme(theme.hexColor)
+                                                    if (state.appIconFollowTheme) {
+                                                        showRestartToast()
+                                                    }
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = Spacing.Expanded, vertical = Spacing.Md),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(IconSize.ColorCircle)
+                                                        .clip(CircleShape)
+                                                        .background(theme.primaryColor)
+                                                        .border(BorderWidth.Thick, Color.White.copy(alpha = 0.5f), CircleShape)
+                                                )
+                                                Spacer(modifier = Modifier.width(Spacing.Expanded))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = theme.displayName,
+                                                        style = MaterialTheme.typography.bodyLarge,
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                    )
+                                                    Text(
+                                                        text = "${theme.hexColor} (内置预置)",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                if (isSelected) {
+                                                    Icon(
+                                                        imageVector = AppIcons.CheckCircle,
+                                                        contentDescription = "已选择",
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
                                                 }
                                             }
+                                        }
+                                    }
+
+                                    // 2. 用户保存的自定义颜色（支持删除）
+                                    val customList = state.savedCustomThemes.filter { !ThemePreset.isBuiltinPreset(it) }
+                                    customList.forEach { customHex ->
+                                        val isSelected = state.customTheme.equals(customHex, ignoreCase = true)
+                                        val color = parseHexColor(customHex) ?: MaterialTheme.colorScheme.primary
+                                        Surface(
+                                            shape = RoundedCornerShape(CornerRadius.Intermediate),
+                                            color = if (isSelected) {
+                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                                            } else {
+                                                MaterialTheme.colorScheme.surface
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    viewModel.setCustomTheme(customHex)
+                                                    if (state.appIconFollowTheme) {
+                                                        showRestartToast()
+                                                    }
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = Spacing.Expanded, vertical = Spacing.Sm),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(IconSize.ColorCircle)
+                                                        .clip(CircleShape)
+                                                        .background(color)
+                                                        .border(BorderWidth.Thick, Color.White.copy(alpha = 0.5f), CircleShape)
+                                                )
+                                                Spacer(modifier = Modifier.width(Spacing.Expanded))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = "自定义颜色",
+                                                        style = MaterialTheme.typography.bodyLarge,
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                    )
+                                                    Text(
+                                                        text = customHex,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                if (isSelected) {
+                                                    Icon(
+                                                        imageVector = AppIcons.CheckCircle,
+                                                        contentDescription = "已选择",
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                    Spacer(modifier = Modifier.width(Spacing.Sm))
+                                                }
+                                                IconButton(
+                                                    onClick = { themeToDelete = customHex },
+                                                    modifier = Modifier.size(TouchTarget.Dense)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = AppIcons.DeleteOutline,
+                                                        contentDescription = "删除该自定义颜色",
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // 3. “自定义颜色” (+) 按钮入口
+                                    Surface(
+                                        shape = RoundedCornerShape(CornerRadius.Intermediate),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        border = androidx.compose.foundation.BorderStroke(BorderWidth.Thin, MaterialTheme.colorScheme.outlineVariant),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { showCustomColorDialog = true }
                                     ) {
                                         Row(
                                             modifier = Modifier
@@ -176,150 +318,36 @@ fun SettingsAppearanceScreen(
                                                 modifier = Modifier
                                                     .size(IconSize.ColorCircle)
                                                     .clip(CircleShape)
-                                                    .background(theme.primaryColor)
-                                                    .border(BorderWidth.Thick, Color.White.copy(alpha = 0.5f), CircleShape)
-                                            )
-                                            Spacer(modifier = Modifier.width(Spacing.Expanded))
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = theme.displayName,
-                                                    style = MaterialTheme.typography.bodyLarge,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                                )
-                                                Text(
-                                                    text = "${theme.hexColor} (内置预置)",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                            if (isSelected) {
-                                                Icon(
-                                                    imageVector = AppIcons.CheckCircle,
-                                                    contentDescription = "已选择",
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // 2. 用户保存的自定义颜色（支持删除）
-                                val customList = state.savedCustomThemes.filter { !ThemePreset.isBuiltinPreset(it) }
-                                customList.forEach { customHex ->
-                                    val isSelected = state.customTheme.equals(customHex, ignoreCase = true)
-                                    val color = parseHexColor(customHex) ?: MaterialTheme.colorScheme.primary
-                                    Surface(
-                                        shape = RoundedCornerShape(CornerRadius.Intermediate),
-                                        color = if (isSelected) {
-                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-                                        } else {
-                                            MaterialTheme.colorScheme.surface
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                viewModel.setCustomTheme(customHex)
-                                                if (state.appIconFollowTheme) {
-                                                    showRestartToast()
-                                                }
-                                            }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = Spacing.Expanded, vertical = Spacing.Sm),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(IconSize.ColorCircle)
-                                                    .clip(CircleShape)
-                                                    .background(color)
-                                                    .border(BorderWidth.Thick, Color.White.copy(alpha = 0.5f), CircleShape)
-                                            )
-                                            Spacer(modifier = Modifier.width(Spacing.Expanded))
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = "自定义颜色",
-                                                    style = MaterialTheme.typography.bodyLarge,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                                )
-                                                Text(
-                                                    text = customHex,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                            if (isSelected) {
-                                                Icon(
-                                                    imageVector = AppIcons.CheckCircle,
-                                                    contentDescription = "已选择",
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                                Spacer(modifier = Modifier.width(Spacing.Sm))
-                                            }
-                                            IconButton(
-                                                onClick = { themeToDelete = customHex },
-                                                modifier = Modifier.size(TouchTarget.Dense)
+                                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                                contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
-                                                    imageVector = AppIcons.DeleteOutline,
-                                                    contentDescription = "删除该自定义颜色",
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    imageVector = AppIcons.Add,
+                                                    contentDescription = "添加",
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    modifier = Modifier.size(IconSize.Intermediate)
                                                 )
                                             }
-                                        }
-                                    }
-                                }
-
-                                // 3. “自定义颜色” (+) 按钮入口
-                                Surface(
-                                    shape = RoundedCornerShape(CornerRadius.Intermediate),
-                                    color = MaterialTheme.colorScheme.surface,
-                                    border = androidx.compose.foundation.BorderStroke(BorderWidth.Thin, MaterialTheme.colorScheme.outlineVariant),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { showCustomColorDialog = true }
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = Spacing.Expanded, vertical = Spacing.Md),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(IconSize.ColorCircle)
-                                                .clip(CircleShape)
-                                                .background(MaterialTheme.colorScheme.primaryContainer),
-                                            contentAlignment = Alignment.Center
-                                        ) {
+                                            Spacer(modifier = Modifier.width(Spacing.Expanded))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "自定义主题色",
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                                Text(
+                                                    text = "HEX 输入或可视化调色板选色",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                             Icon(
-                                                imageVector = AppIcons.Add,
-                                                contentDescription = "添加",
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.size(IconSize.Intermediate)
+                                                imageVector = AppIcons.ArrowForward,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                modifier = Modifier.size(IconSize.Xs)
                                             )
                                         }
-                                        Spacer(modifier = Modifier.width(Spacing.Expanded))
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = "自定义主题色",
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                            Text(
-                                                text = "HEX 输入或可视化调色板选色",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                        Icon(
-                                            imageVector = AppIcons.ArrowForward,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.size(IconSize.Xs)
-                                        )
                                     }
                                 }
                             }

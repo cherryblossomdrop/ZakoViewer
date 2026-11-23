@@ -12,6 +12,12 @@ import androidx.compose.ui.unit.dp
  * 语义化间距令牌
  */
 object Spacing {
+    /** 区块间全局标准间距 (16.dp) - 用于不同功能区块之间的分隔留白 */
+    val SectionSpacing: Dp = 16.dp
+
+    /** 同区块内同级子项间窄间距 (3.dp) - 遵循 MD3E 分组卡片与分段圆角规范 */
+    val GroupItemSpacing: Dp = 3.dp
+
     /** 细微内边距 (1.5.dp) - 用于时长角标紧凑垂直内边距 */
     val BadgeVertical: Dp = 1.5.dp
 
@@ -21,8 +27,8 @@ object Spacing {
     /** 倍速徽标水平微间距 (3.dp) */
     val SpeedBadge: Dp = 3.dp
 
-    /** 紧凑条目垂直微间距 (3.dp) - 用于设置与个人中心分组卡片项间距 */
-    val MicroItem: Dp = 3.dp
+    /** 紧凑条目垂直微间距 (3.dp) - 兼容历史命名，建议统一使用 GroupItemSpacing */
+    val MicroItem: Dp = GroupItemSpacing
 
     /** 紧凑小间距 (4.dp) - 用于同组紧密关联元素、角标内边距或标签微间距 */
     val Xs: Dp = 4.dp

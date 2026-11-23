@@ -291,34 +291,34 @@ fun DetailEmbeddedPlayer(
                             .then(if (isFullscreen) Modifier.statusBarsPadding() else Modifier)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("添加到收藏夹") },
+                            text = { Text("加入收藏") },
                             leadingIcon = { Icon(AppIcons.AddToFavorites, contentDescription = null) },
                             onClick = { viewModel.openAddToFavorites() }
                         )
                         DropdownMenuItem(
-                            text = { Text("添加到稍后再看") },
+                            text = { Text("稍后再看") },
                             leadingIcon = { Icon(AppIcons.WatchLater, contentDescription = null) },
                             onClick = { viewModel.addToWatchLater(); ZakoToast.show("已加入稍后再看") }
                         )
                         DropdownMenuItem(
-                            text = { Text("使用外部播放器打开") },
+                            text = { Text("外部播放") },
                             leadingIcon = { Icon(AppIcons.OpenInNew, contentDescription = null) },
                             onClick = { viewModel.openWithExternalPlayer(context) }
                         )
                         DropdownMenuItem(
-                            text = { Text(if (state.isCdnTesting) "测速中..." else "对 CDN 节点进行测速") },
+                            text = { Text(if (state.isCdnTesting) "正在测速" else "节点测速") },
                             leadingIcon = { Icon(AppIcons.NetworkCheck, contentDescription = null) },
                             onClick = { viewModel.triggerCdnSpeedTest(); ZakoToast.show("正在并发测试全部 CDN 节点速率与延迟") }
                         )
                         DropdownMenuItem(
-                            text = { Text("选择 CDN 节点播放") },
+                            text = { Text("节点选择") },
                             leadingIcon = { Icon(AppIcons.AltRoute, contentDescription = null) },
                             onClick = { viewModel.showSelectCdnDialog() }
                         )
                         DropdownMenuItem(
                             text = {
                                 Column {
-                                    Text("播放内核切换")
+                                    Text("播放内核")
                                     Text("当前: ${playerState.engine.label}", fontSize = FontSizes.Badge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             },
@@ -328,7 +328,7 @@ fun DetailEmbeddedPlayer(
                         DropdownMenuItem(
                             text = {
                                 Column {
-                                    Text("硬件解码设置")
+                                    Text("硬件解码")
                                     Text("当前: ${playerState.hwDecMode.label}", fontSize = FontSizes.Badge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             },

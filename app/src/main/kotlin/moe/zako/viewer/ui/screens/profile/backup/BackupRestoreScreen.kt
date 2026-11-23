@@ -148,41 +148,50 @@ fun BackupRestoreScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(Spacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
+            verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)
         ) {
             if (!hasStoragePermission) {
                 item {
-                    Card(
-                        shape = RoundedCornerShape(CornerRadius.Md),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                    ) {
-                        Column(modifier = Modifier.padding(Spacing.Lg)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = AppIcons.Info,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(IconSize.Md)
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.Sm))
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                        Text(
+                            text = "权限提示",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                        )
+                        Card(
+                            shape = RoundedCornerShape(CornerRadius.Md),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        ) {
+                            Column(modifier = Modifier.padding(Spacing.Lg)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = AppIcons.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(IconSize.Md)
+                                    )
+                                    Spacer(modifier = Modifier.width(Spacing.Sm))
+                                    Text(
+                                        text = "存储权限提示",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(Spacing.Sm))
                                 Text(
-                                    text = "存储权限提示",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    text = "未获得「所有文件访问权限」。备份与恢复已自动启用应用专属沙盒保护；若需将视频直接导出或恢复至公共 Download 目录，建议授予该权限。",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            }
-                            Spacer(modifier = Modifier.height(Spacing.Sm))
-                            Text(
-                                text = "未获得「所有文件访问权限」。备份与恢复已自动启用应用专属沙盒保护；若需将视频直接导出或恢复至公共 Download 目录，建议授予该权限。",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.Sm))
-                            OutlinedButton(
-                                onClick = { StoragePermissionHelper.requestAllFilesAccess(context) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("前往系统设置授予权限")
+                                Spacer(modifier = Modifier.height(Spacing.Sm))
+                                OutlinedButton(
+                                    onClick = { StoragePermissionHelper.requestAllFilesAccess(context) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("前往系统设置授予权限")
+                                }
                             }
                         }
                     }
@@ -191,104 +200,113 @@ fun BackupRestoreScreen(
 
             // Section 1: 导出备份
             item {
-                Card(
-                    shape = RoundedCornerShape(CornerRadius.Md),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Column(modifier = Modifier.padding(Spacing.Lg)) {
-                        Text(
-                            text = "导出数据备份",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.Xs))
-                        Text(
-                            text = "包含全部历史记录、完整无限层级收藏夹树结构及元数据索引",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(Spacing.Sm))
-
-                        // 常驻显示备份保存目录 (随时可查，点击复制)
-                        Surface(
-                            shape = RoundedCornerShape(CornerRadius.Sm),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    clipboardManager.setText(AnnotatedString(PublicStorageHelper.BACKUPS_DISPLAY_DIR))
-                                    ZakoToast.show("已复制备份目录到剪贴板")
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = Spacing.Md, vertical = Spacing.Sm),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = AppIcons.Folder,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(IconSize.Sm)
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.Sm))
-                                Text(
-                                    text = "备份保存目录：${PublicStorageHelper.BACKUPS_DISPLAY_DIR}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = FontFamily.Monospace,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Icon(
-                                    imageVector = AppIcons.Copy,
-                                    contentDescription = "复制目录路径",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(IconSize.Sm)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(Spacing.Md))
-
-                        // 复选开关：是否包含已下载视频文件
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Checkbox(
-                                checked = state.includeDownloadedVideos,
-                                onCheckedChange = { viewModel.toggleIncludeVideos(it) }
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "导出备份",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                    )
+                    Card(
+                        shape = RoundedCornerShape(CornerRadius.Md),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(Spacing.Lg)) {
+                            Text(
+                                text = "导出数据备份",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.width(Spacing.Sm))
-                            Column {
-                                Text(
-                                    text = "包含已下载视频文件 (打包为 ZIP 归档)",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = "若开启，会将离线缓存的视频文件一同打包，文件体积较大",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            Spacer(modifier = Modifier.height(Spacing.Xs))
+                            Text(
+                                text = "包含全部历史记录、完整无限层级收藏夹树结构及元数据索引",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.height(Spacing.Sm))
+
+                            // 常驻显示备份保存目录 (随时可查，点击复制)
+                            Surface(
+                                shape = RoundedCornerShape(CornerRadius.Sm),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        clipboardManager.setText(AnnotatedString(PublicStorageHelper.BACKUPS_DISPLAY_DIR))
+                                        ZakoToast.show("已复制备份目录到剪贴板")
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = Spacing.Md, vertical = Spacing.Sm),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = AppIcons.Folder,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(IconSize.Sm)
+                                    )
+                                    Spacer(modifier = Modifier.width(Spacing.Sm))
+                                    Text(
+                                        text = "备份保存目录：${PublicStorageHelper.BACKUPS_DISPLAY_DIR}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(
+                                        imageVector = AppIcons.Copy,
+                                        contentDescription = "复制目录路径",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(IconSize.Sm)
+                                    )
+                                }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(Spacing.Lg))
+                            Spacer(modifier = Modifier.height(Spacing.Md))
 
-                        Button(
-                            onClick = { viewModel.exportBackup() },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !state.isExporting && !state.isRestoring
-                        ) {
-                            if (state.isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(IconSize.Sm), color = MaterialTheme.colorScheme.onPrimary)
+                            // 复选开关：是否包含已下载视频文件
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Checkbox(
+                                    checked = state.includeDownloadedVideos,
+                                    onCheckedChange = { viewModel.toggleIncludeVideos(it) }
+                                )
                                 Spacer(modifier = Modifier.width(Spacing.Sm))
-                                Text("正在生成备份...")
-                            } else {
-                                Icon(imageVector = AppIcons.Upload, contentDescription = null)
-                                Spacer(modifier = Modifier.width(Spacing.Sm))
-                                Text("导出备份文件")
+                                Column {
+                                    Text(
+                                        text = "包含已下载视频文件 (打包为 ZIP 归档)",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "若开启，会将离线缓存的视频文件一同打包，文件体积较大",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(Spacing.Lg))
+
+                            Button(
+                                onClick = { viewModel.exportBackup() },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !state.isExporting && !state.isRestoring
+                            ) {
+                                if (state.isExporting) {
+                                    CircularProgressIndicator(modifier = Modifier.size(IconSize.Sm), color = MaterialTheme.colorScheme.onPrimary)
+                                    Spacer(modifier = Modifier.width(Spacing.Sm))
+                                    Text("正在生成备份...")
+                                } else {
+                                    Icon(imageVector = AppIcons.Upload, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(Spacing.Sm))
+                                    Text("导出备份文件")
+                                }
                             }
                         }
                     }
@@ -297,51 +315,60 @@ fun BackupRestoreScreen(
 
             // Section 2: 恢复备份
             item {
-                Card(
-                    shape = RoundedCornerShape(CornerRadius.Md),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Column(modifier = Modifier.padding(Spacing.Lg)) {
-                        Text(
-                            text = "从备份文件恢复",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.Xs))
-                        Text(
-                            text = "支持从之前导出的 .json 元数据文件或包含视频的 .zip 归档文件无缝还原",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(Spacing.Lg))
-
-                        OutlinedButton(
-                            onClick = {
-                                restoreFileLauncher.launch(arrayOf("application/json", "application/zip", "*/*"))
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !state.isExporting && !state.isRestoring
-                        ) {
-                            if (state.isRestoring) {
-                                CircularProgressIndicator(modifier = Modifier.size(IconSize.Sm))
-                                Spacer(modifier = Modifier.width(Spacing.Sm))
-                                Text("正在恢复中...")
-                            } else {
-                                Icon(imageVector = AppIcons.Download, contentDescription = null)
-                                Spacer(modifier = Modifier.width(Spacing.Sm))
-                                Text("选择备份文件恢复")
-                            }
-                        }
-
-                        state.restoreStatusMessage?.let { msg ->
-                            Spacer(modifier = Modifier.height(Spacing.Md))
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "恢复备份",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                    )
+                    Card(
+                        shape = RoundedCornerShape(CornerRadius.Md),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(Spacing.Lg)) {
                             Text(
-                                text = msg,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
+                                text = "从备份文件恢复",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
                             )
+                            Spacer(modifier = Modifier.height(Spacing.Xs))
+                            Text(
+                                text = "支持从之前导出的 .json 元数据文件或包含视频的 .zip 归档文件无缝还原",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.height(Spacing.Lg))
+
+                            OutlinedButton(
+                                onClick = {
+                                    restoreFileLauncher.launch(arrayOf("application/json", "application/zip", "*/*"))
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !state.isExporting && !state.isRestoring
+                            ) {
+                                if (state.isRestoring) {
+                                    CircularProgressIndicator(modifier = Modifier.size(IconSize.Sm))
+                                    Spacer(modifier = Modifier.width(Spacing.Sm))
+                                    Text("正在恢复中...")
+                                } else {
+                                    Icon(imageVector = AppIcons.Download, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(Spacing.Sm))
+                                    Text("选择备份文件恢复")
+                                }
+                            }
+
+                            state.restoreStatusMessage?.let { msg ->
+                                Spacer(modifier = Modifier.height(Spacing.Md))
+                                Text(
+                                    text = msg,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
                     }
                 }

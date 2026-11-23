@@ -167,30 +167,48 @@ fun SettingsDataSourceScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(Spacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
+            verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)
         ) {
-            // 内置数据源插件开关区域
+            // 区块 1: 视频数据源
             if (state.visibleDataSourceSettingItems.contains(DataSourceSettingItem.COSAV_PLUGIN)) {
                 item {
-                    SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
-                        SettingsSwitchItem(
-                            title = "CosAV 插件",
-                            subtitle = "启用后提供在线推荐视频流、全站搜索与详细信息解析",
-                            checked = state.enabledDataSourceIds.contains(CosAvDataSource.ID),
-                            onCheckedChange = { viewModel.toggleDataSourceEnabled(CosAvDataSource.ID) }
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                        Text(
+                            text = "视频数据源",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
                         )
+                        SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
+                            SettingsSwitchItem(
+                                title = "CosAV 数据源",
+                                subtitle = "启用后提供在线推荐视频流、全站搜索与详细信息解析",
+                                checked = state.enabledDataSourceIds.contains(CosAvDataSource.ID),
+                                onCheckedChange = { viewModel.toggleDataSourceEnabled(CosAvDataSource.ID) }
+                            )
+                        }
                     }
                 }
             }
 
-            // CDN 选线与测速策略设置
+            // 区块 2: 流媒体线路 (CDN 选线与测速策略设置)
             item {
-                DataSourceSettingsCard(
-                    autoSelectCdn = state.autoSelectCdn,
-                    defaultCdnIndex = state.defaultCdnIndex,
-                    onAutoSelectCdnChange = { viewModel.setAutoSelectCdn(it) },
-                    onDefaultCdnIndexChange = { viewModel.setDefaultCdnIndex(it) }
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "流媒体线路",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                    )
+                    DataSourceSettingsCard(
+                        autoSelectCdn = state.autoSelectCdn,
+                        defaultCdnIndex = state.defaultCdnIndex,
+                        onAutoSelectCdnChange = { viewModel.setAutoSelectCdn(it) },
+                        onDefaultCdnIndexChange = { viewModel.setDefaultCdnIndex(it) }
+                    )
+                }
             }
         }
     }

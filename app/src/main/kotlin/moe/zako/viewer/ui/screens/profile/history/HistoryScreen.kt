@@ -239,7 +239,7 @@ fun HistoryScreen(
             add(
                 VideoMenuAction(
                     id = "detail",
-                    title = "查看详情",
+                    title = "视频详情",
                     icon = AppIcons.VideoDetail,
                     supportingText = "查看本视频应用内详情页",
                     onClick = {

@@ -99,7 +99,7 @@ fun AboutScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(Spacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
+            verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)
         ) {
             // App Branding & Version
             item {
@@ -138,32 +138,17 @@ fun AboutScreen(
                 }
             }
 
-            // Open-source Licenses Declarations
+            // 区块 1: 开源与许可 (包含开源仓库与开源组件许可声明，MD3 Expressive 分组与同级窄间距)
             item {
-                Card(
-                    shape = RoundedCornerShape(CornerRadius.Md),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                ) {
-                    Column(modifier = Modifier.padding(Spacing.Lg)) {
-                        Text(
-                            text = "开源组件许可声明",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.Sm))
-                        LicenseItem("libmpv", "GPLv2 / LGPLv2.1", "Cross-platform video player core")
-                        LicenseItem("NextPlayerCloud / NeoPlayer", "GPLv3", "Android MPV playback architecture & JNI bindings")
-                        LicenseItem("Jetpack Compose & Material 3", "Apache-2.0", "Google Android UI Toolkit")
-                        LicenseItem("OkHttp", "Apache-2.0", "Square Inc. HTTP client")
-                        LicenseItem("Coil", "Apache-2.0", "Image loading for Android Compose")
-                        LicenseItem("Room", "Apache-2.0", "Android SQLite ORM")
-                    }
-                }
-            }
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "开源与许可",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                    )
 
-            // Submenu: 开源仓库与导出日志操作卡片分组 (MD3 Expressive 同级窄间距)
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.MicroItem)) {
                     val repoUrl = "https://github.com/cherryblossomdrop/ZakoViewer"
                     Card(
                         modifier = Modifier
@@ -211,15 +196,48 @@ fun AboutScreen(
                     }
 
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onNavigateToLogs() },
                         shape = RoundedCornerShape(
                             topStart = CornerRadius.Xs,
                             topEnd = CornerRadius.Xs,
                             bottomStart = CornerRadius.Md,
                             bottomEnd = CornerRadius.Md
                         ),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    ) {
+                        Column(modifier = Modifier.padding(Spacing.Lg)) {
+                            Text(
+                                text = "开源组件许可声明",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.Sm))
+                            LicenseItem("libmpv", "GPLv2 / LGPLv2.1", "Cross-platform video player core")
+                            LicenseItem("NextPlayerCloud / NeoPlayer", "GPLv3", "Android MPV playback architecture & JNI bindings")
+                            LicenseItem("Jetpack Compose & Material 3", "Apache-2.0", "Google Android UI Toolkit")
+                            LicenseItem("OkHttp", "Apache-2.0", "Square Inc. HTTP client")
+                            LicenseItem("Coil", "Apache-2.0", "Image loading for Android Compose")
+                            LicenseItem("Room", "Apache-2.0", "Android SQLite ORM")
+                        }
+                    }
+                }
+            }
+
+            // 区块 2: 诊断与排错 (导出日志独立区块)
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "诊断与排错",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                    )
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToLogs() },
+                        shape = RoundedCornerShape(CornerRadius.Md),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
                         Row(

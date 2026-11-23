@@ -87,7 +87,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = Spacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.Expanded),
+            verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing),
             contentPadding = PaddingValues(top = Spacing.Xs, bottom = Spacing.XxlCompact)
         ) {
             // 1. 顶部大卡片快捷区 (历史记录 + 离线下载)
@@ -202,7 +202,7 @@ fun ProfileScreen(
 
             // 2. 分组 1: 内容与偏好 (MD3 Expressive 紧凑分组)
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.Xxs)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
                     Text(
                         text = "内容与偏好",
                         style = MaterialTheme.typography.titleSmall,
@@ -267,7 +267,7 @@ fun ProfileScreen(
 
             // 3. 分组 2: 数据与应用 (MD3 Expressive 紧凑分组)
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.Xxs)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
                     Text(
                         text = "数据与应用",
                         style = MaterialTheme.typography.titleSmall,

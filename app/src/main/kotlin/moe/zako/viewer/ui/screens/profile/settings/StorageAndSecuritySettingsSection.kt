@@ -77,16 +77,26 @@ fun SettingsPrivacyScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(Spacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
+            verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)
         ) {
+            // 区块 1: 隐私防护
             item {
-                SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
-                    SettingsSwitchItem(
-                        title = "视频封面模糊",
-                        subtitle = "对全应用所有视频卡片与列表项（推荐页、搜索结果、历史记录、收藏夹、稍后再看、相关推荐等）的封面施加明显的隐私模糊效果，防止敏感画面社死（默认开启）。",
-                        checked = state.coverBlurEnabled,
-                        onCheckedChange = { viewModel.setCoverBlur(it) }
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "隐私防护",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
                     )
+                    SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
+                        SettingsSwitchItem(
+                            title = "视频封面模糊",
+                            subtitle = "对全应用所有视频卡片与列表项（推荐页、搜索结果、历史记录、收藏夹、稍后再看、相关推荐等）的封面施加明显的隐私模糊效果，防止敏感画面社死（默认开启）。",
+                            checked = state.coverBlurEnabled,
+                            onCheckedChange = { viewModel.setCoverBlur(it) }
+                        )
+                    }
                 }
             }
         }
@@ -121,18 +131,27 @@ fun SettingsShareScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(Spacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
+            verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)
         ) {
-            // 动态依据可见项集合判定渲染
+            // 区块 1: 链接分享 (动态依据可见项集合判定渲染)
             if (state.visibleShareSettingItems.contains(ShareSettingItem.LONG_PRESS_SHARE_URL)) {
                 item {
-                    SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
-                        SettingsSwitchItem(
-                            title = "开启长按分享复制完整链接",
-                            subtitle = "在视频详情页长按分享图标时，将直接复制视频的完整原始播放/详情链接到剪贴板",
-                            checked = state.isLongPressShareEnabled,
-                            onCheckedChange = { viewModel.setLongPressShareEnabled(it) }
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                        Text(
+                            text = "链接分享",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
                         )
+                        SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
+                            SettingsSwitchItem(
+                                title = "开启长按分享复制完整链接",
+                                subtitle = "在视频详情页长按分享图标时，将直接复制视频的完整原始播放/详情链接到剪贴板",
+                                checked = state.isLongPressShareEnabled,
+                                onCheckedChange = { viewModel.setLongPressShareEnabled(it) }
+                            )
+                        }
                     }
                 }
             }
@@ -193,160 +212,178 @@ fun SettingsDownloadScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(Spacing.Lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
+            verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)
         ) {
-            // 1. 所有文件访问权限卡片
+            // 区块 1: 存储权限 (所有文件访问权限卡片)
             item {
-                Card(
-                    shape = RoundedCornerShape(CornerRadius.Md),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (hasStoragePermission) {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        } else {
-                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f)
-                        }
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "存储权限",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
                     )
-                ) {
-                    Column(modifier = Modifier.padding(Spacing.Lg)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = if (hasStoragePermission) AppIcons.CheckCircle else AppIcons.Warning,
-                                    contentDescription = null,
-                                    tint = if (hasStoragePermission) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(IconSize.MediumLarge)
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.Sm))
-                                Text(
-                                    text = "所有文件访问权限",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(CornerRadius.Compact),
-                                color = if (hasStoragePermission) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
-                            ) {
-                                Text(
-                                    text = if (hasStoragePermission) "已授权" else "未授权",
-                                    color = if (hasStoragePermission) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = Spacing.Sm, vertical = Spacing.SpeedBadge)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(Spacing.Sm))
-                        Text(
-                            text = if (hasStoragePermission) {
-                                "应用已拥有全盘文件读写权限，可自由指定手机存储中的任意文件夹作为视频下载目录。"
+                    Card(
+                        shape = RoundedCornerShape(CornerRadius.Md),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (hasStoragePermission) {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                             } else {
-                                "Android 11+ 系统需授予「所有文件访问权限」才能正常在设备存储或 SD 卡中创建和选择下载目录。"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f)
+                            }
                         )
-
-                        if (!hasStoragePermission) {
-                            Spacer(modifier = Modifier.height(Spacing.Intermediate))
-                            Button(
-                                onClick = { StoragePermissionHelper.requestAllFilesAccess(context) },
+                    ) {
+                        Column(modifier = Modifier.padding(Spacing.Lg)) {
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Icon(AppIcons.Security, contentDescription = null, modifier = Modifier.size(IconSize.Intermediate))
-                                Spacer(modifier = Modifier.width(Spacing.Compact))
-                                Text("前往系统设置开启权限")
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = if (hasStoragePermission) AppIcons.CheckCircle else AppIcons.Warning,
+                                        contentDescription = null,
+                                        tint = if (hasStoragePermission) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(IconSize.MediumLarge)
+                                    )
+                                    Spacer(modifier = Modifier.width(Spacing.Sm))
+                                    Text(
+                                        text = "所有文件访问权限",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(CornerRadius.Compact),
+                                    color = if (hasStoragePermission) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+                                ) {
+                                    Text(
+                                        text = if (hasStoragePermission) "已授权" else "未授权",
+                                        color = if (hasStoragePermission) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = Spacing.Sm, vertical = Spacing.SpeedBadge)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(Spacing.Sm))
+                            Text(
+                                text = if (hasStoragePermission) {
+                                    "应用已拥有全盘文件读写权限，可自由指定手机存储中的任意文件夹作为视频下载目录。"
+                                } else {
+                                    "Android 11+ 系统需授予「所有文件访问权限」才能正常在设备存储或 SD 卡中创建和选择下载目录。"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            if (!hasStoragePermission) {
+                                Spacer(modifier = Modifier.height(Spacing.Intermediate))
+                                Button(
+                                    onClick = { StoragePermissionHelper.requestAllFilesAccess(context) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Icon(AppIcons.Security, contentDescription = null, modifier = Modifier.size(IconSize.Intermediate))
+                                    Spacer(modifier = Modifier.width(Spacing.Compact))
+                                    Text("前往系统设置开启权限")
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // 2. 自定义下载目录 (内置文件夹选择器)
+            // 区块 2: 下载路径 (自定义下载目录，内置文件夹选择器)
             item {
-                Card(
-                    shape = RoundedCornerShape(CornerRadius.Md),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "下载路径",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
                     )
-                ) {
-                    Column(modifier = Modifier.padding(Spacing.Lg)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "自定义下载目录",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            IconButton(onClick = {
-                                if (hasStoragePermission) {
-                                    showFolderBrowserDialog = true
-                                } else {
-                                    showPermissionGuideDialog = true
-                                }
-                            }) {
-                                Icon(
-                                    imageVector = AppIcons.FolderOpen,
-                                    contentDescription = "选择目录",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-
-                        Text(
-                            text = "离线缓存与视频切片保存的主目录。点击下方路径或右侧图标可打开内置文件夹选择器浏览、新建目录。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Card(
+                        shape = RoundedCornerShape(CornerRadius.Md),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
-
-                        Spacer(modifier = Modifier.height(Spacing.Intermediate))
-
-                        Surface(
-                            shape = RoundedCornerShape(CornerRadius.Sm),
-                            color = MaterialTheme.colorScheme.surface,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    if (hasStoragePermission) {
-                                        showFolderBrowserDialog = true
-                                    } else {
-                                        showPermissionGuideDialog = true
-                                    }
-                                }
-                        ) {
+                    ) {
+                        Column(modifier = Modifier.padding(Spacing.Lg)) {
                             Row(
-                                modifier = Modifier.padding(Spacing.Md),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Icon(
-                                    imageVector = AppIcons.Folder,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(IconSize.Lg)
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.Intermediate))
                                 Text(
-                                    text = currentDisplayDownloadPath,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.weight(1f)
+                                    text = "自定义下载目录",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
                                 )
-                                TextButton(onClick = {
+                                IconButton(onClick = {
                                     if (hasStoragePermission) {
                                         showFolderBrowserDialog = true
                                     } else {
                                         showPermissionGuideDialog = true
                                     }
                                 }) {
-                                    Text("更改", style = MaterialTheme.typography.labelMedium)
+                                    Icon(
+                                        imageVector = AppIcons.FolderOpen,
+                                        contentDescription = "选择目录",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = "离线缓存与视频切片保存的主目录。点击下方路径或右侧图标可打开内置文件夹选择器浏览、新建目录。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.height(Spacing.Intermediate))
+
+                            Surface(
+                                shape = RoundedCornerShape(CornerRadius.Sm),
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (hasStoragePermission) {
+                                            showFolderBrowserDialog = true
+                                        } else {
+                                            showPermissionGuideDialog = true
+                                        }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(Spacing.Md),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = AppIcons.Folder,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(IconSize.Lg)
+                                    )
+                                    Spacer(modifier = Modifier.width(Spacing.Intermediate))
+                                    Text(
+                                        text = currentDisplayDownloadPath,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    TextButton(onClick = {
+                                        if (hasStoragePermission) {
+                                            showFolderBrowserDialog = true
+                                        } else {
+                                            showPermissionGuideDialog = true
+                                        }
+                                    }) {
+                                        Text("更改", style = MaterialTheme.typography.labelMedium)
+                                    }
                                 }
                             }
                         }
@@ -354,18 +391,27 @@ fun SettingsDownloadScreen(
                 }
             }
 
-            // 3. 自定义外部下载器
+            // 区块 3: 外部调用 (自定义外部下载器)
             item {
-                ExternalAppCard(
-                    title = "自定义外部下载器",
-                    actionIcon = AppIcons.Download,
-                    description = "详情页长按下载按钮可唤起所选外部下载器（如 1DM, ADM, 迅雷等）",
-                    selectedPackage = state.externalDownloaderPkg,
-                    selectedApp = selectedDownloaderApp,
-                    defaultFallbackIcon = AppIcons.DownloadForOffline,
-                    onOpenPicker = { showDownloaderPickerDialog = true },
-                    onClearPackage = { viewModel.setExternalDownloader("") }
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.GroupItemSpacing)) {
+                    Text(
+                        text = "外部调用",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = Spacing.Xs, bottom = Spacing.Xs)
+                    )
+                    ExternalAppCard(
+                        title = "自定义外部下载器",
+                        actionIcon = AppIcons.Download,
+                        description = "详情页长按下载按钮可唤起所选外部下载器（如 1DM, ADM, 迅雷等）",
+                        selectedPackage = state.externalDownloaderPkg,
+                        selectedApp = selectedDownloaderApp,
+                        defaultFallbackIcon = AppIcons.DownloadForOffline,
+                        onOpenPicker = { showDownloaderPickerDialog = true },
+                        onClearPackage = { viewModel.setExternalDownloader("") }
+                    )
+                }
             }
         }
     }

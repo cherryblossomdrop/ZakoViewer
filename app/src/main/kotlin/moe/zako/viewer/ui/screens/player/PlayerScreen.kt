@@ -233,12 +233,12 @@ fun PlayerScreen(
                         .statusBarsPadding()
                 ) {
                     DropdownMenuItem(
-                        text = { Text("添加到收藏夹") },
+                        text = { Text("加入收藏") },
                         leadingIcon = { Icon(imageVector = AppIcons.AddToFavorites, contentDescription = null) },
                         onClick = { viewModel.openAddToFavorites() }
                     )
                     DropdownMenuItem(
-                        text = { Text("添加到稍后再看") },
+                        text = { Text("稍后再看") },
                         leadingIcon = { Icon(imageVector = AppIcons.WatchLater, contentDescription = null) },
                         onClick = {
                             viewModel.addToWatchLater()
@@ -247,25 +247,25 @@ fun PlayerScreen(
                     )
                     if (state.isLocalPlayback && onNavigateToDetail != null) {
                         DropdownMenuItem(
-                            text = { Text("查看视频详情页") },
+                            text = { Text("视频详情") },
                             leadingIcon = { Icon(imageVector = AppIcons.Info, contentDescription = null) },
                             onClick = { viewModel.onViewDetailClicked(onNavigateToDetail) }
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text("使用外部播放器打开") },
+                        text = { Text("外部播放") },
                         leadingIcon = { Icon(imageVector = AppIcons.OpenInNew, contentDescription = null) },
                         onClick = { viewModel.openWithExternalPlayer(context) }
                     )
                     DropdownMenuItem(
-                        text = { Text("选择 CDN 节点播放") },
+                        text = { Text("节点选择") },
                         leadingIcon = { Icon(imageVector = AppIcons.AltRoute, contentDescription = null) },
                         onClick = { viewModel.showSelectCdnDialog() }
                     )
                     DropdownMenuItem(
                         text = {
                             Column {
-                                Text("播放内核切换")
+                                Text("播放内核")
                                 Text(
                                     text = "当前: ${state.playerState.engine.label}",
                                     fontSize = FontSizes.Badge,
@@ -282,7 +282,7 @@ fun PlayerScreen(
                     DropdownMenuItem(
                         text = {
                             Column {
-                                Text("硬件解码设置")
+                                Text("硬件解码")
                                 Text(
                                     text = "当前: ${state.playerState.hwDecMode.label}",
                                     fontSize = FontSizes.Badge,

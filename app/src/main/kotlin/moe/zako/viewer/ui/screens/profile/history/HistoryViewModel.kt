@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import moe.zako.viewer.ZakoApplication
 import moe.zako.viewer.core.download.DownloadManager
+import moe.zako.viewer.core.duration.VideoDurationManager
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
 import moe.zako.viewer.data.repository.FavoriteRepository
@@ -39,6 +40,7 @@ class HistoryViewModel(
     val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
 
     init {
+        VideoDurationManager.syncMissingDurations(ZakoApplication.instance)
         viewModelScope.launch {
             downloadManager.completedVideoIdsFlow.collect { ids ->
                 _uiState.update { it.copy(downloadedVideoIds = ids) }

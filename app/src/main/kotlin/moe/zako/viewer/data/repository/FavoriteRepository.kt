@@ -2,6 +2,7 @@
 
 import moe.zako.viewer.ZakoApplication
 import moe.zako.viewer.core.cover.CoverCacheManager
+import moe.zako.viewer.core.duration.VideoDurationManager
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.data.local.dao.FavoriteDao
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
@@ -124,16 +125,24 @@ class FavoriteRepository(private val favoriteDao: FavoriteDao) {
         duration: String = "",
         isVip: Boolean = false
     ) {
+        val finalDuration = if (duration.isNotBlank()) {
+            duration
+        } else {
+            favoriteDao.getItemByVideoId(videoId)?.duration?.takeIf { it.isNotBlank() } ?: ""
+        }
         favoriteDao.insertItem(
             FavoriteItemEntity(
                 folderId = folderId,
                 videoId = videoId,
                 title = title,
                 coverUrl = coverUrl,
-                duration = duration,
+                duration = finalDuration,
                 isVip = isVip
             )
         )
+        if (finalDuration.isNotBlank()) {
+            VideoDurationManager.updateDurationAcrossAllTables(ZakoApplication.instance, videoId, finalDuration)
+        }
         try {
             CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, coverUrl)
         } catch (_: Exception) {}

@@ -3,6 +3,7 @@ package moe.zako.viewer.data.repository
 import kotlinx.coroutines.flow.Flow
 import moe.zako.viewer.ZakoApplication
 import moe.zako.viewer.core.cover.CoverCacheManager
+import moe.zako.viewer.core.duration.VideoDurationManager
 import moe.zako.viewer.data.local.dao.SearchHistoryDao
 import moe.zako.viewer.data.local.dao.WatchHistoryDao
 import moe.zako.viewer.data.local.dao.WatchLaterDao
@@ -61,6 +62,9 @@ class HistoryRepository(
                 totalDurationMs = finalTotalDurationMs
             )
         )
+        if (finalDuration.isNotBlank()) {
+            VideoDurationManager.updateDurationAcrossAllTables(ZakoApplication.instance, videoId, finalDuration)
+        }
         try {
             CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, finalCoverUrl)
         } catch (_: Exception) {}
@@ -119,6 +123,9 @@ class HistoryRepository(
                 isVip = finalIsVip
             )
         )
+        if (finalDuration.isNotBlank()) {
+            VideoDurationManager.updateDurationAcrossAllTables(ZakoApplication.instance, videoId, finalDuration)
+        }
         try {
             CoverCacheManager.ensureCoverPersistedAsync(ZakoApplication.instance, videoId, finalCoverUrl)
         } catch (_: Exception) {}

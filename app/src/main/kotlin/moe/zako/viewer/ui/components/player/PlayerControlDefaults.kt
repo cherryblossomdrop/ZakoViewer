@@ -12,6 +12,9 @@ import moe.zako.viewer.ui.theme.TouchTarget
  * 底层对齐 Dimens 基础令牌
  */
 object PlayerControlDefaults {
+    /** 控制条与锁定图标自动隐藏倒计时 (4000ms) */
+    const val AutoHideTimeoutMs: Long = 4000L
+
     /** 常规控制图标标准大小 (24.dp) */
     val ControlIconSize: Dp = IconSize.Lg
 

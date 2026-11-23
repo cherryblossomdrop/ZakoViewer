@@ -244,13 +244,17 @@ fun DetailEmbeddedPlayer(
                 isSpeedBoosted = state.isSpeedBoosted, boostSpeed = state.boostSpeed
             )
 
-            // 4. 锁定状态浮动解锁按钮
-            if (playerState.isLocked) {
+            // 4. 锁定状态浮动解锁按钮 (仅在锁定时且控制显示状态下呈现，跟随倒计时自动隐藏)
+            AnimatedVisibility(
+                visible = state.showControls && playerState.isLocked,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
                 Surface(
                     shape = CircleShape,
                     color = PlayerOverlayTokens.HudBackground,
                     modifier = Modifier
-                        .align(Alignment.CenterStart)
                         .padding(start = if (isFullscreen) Spacing.Xl else Spacing.Md)
                         .clickable { viewModel.toggleLock() }
                 ) {

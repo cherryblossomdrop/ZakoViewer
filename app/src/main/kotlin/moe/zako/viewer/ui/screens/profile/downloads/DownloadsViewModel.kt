@@ -2,7 +2,9 @@
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import moe.zako.viewer.ZakoApplication
 import moe.zako.viewer.core.download.DownloadManager
+import moe.zako.viewer.core.duration.VideoDurationManager
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.repository.FavoriteRepository
@@ -44,6 +46,7 @@ class DownloadsViewModel(
 
     init {
         downloadManager.reconcileLocalDownloadFiles()
+        VideoDurationManager.syncMissingDurations(ZakoApplication.instance, settingsRepository)
         viewModelScope.launch {
             downloadManager.completedDownloadsFlow.collect { list ->
                 _uiState.update { it.copy(completedList = list) }
@@ -249,7 +252,7 @@ class DownloadsViewModel(
                 videoId = item.videoId,
                 title = item.title,
                 coverUrl = item.coverUrl,
-                duration = "",
+                duration = item.duration,
                 isVip = false
             )
             _uiState.update { it.copy(showFolderSelector = false, pendingFavoriteItem = null) }

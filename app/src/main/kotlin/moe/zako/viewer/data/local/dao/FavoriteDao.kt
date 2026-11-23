@@ -101,6 +101,9 @@ interface FavoriteDao {
     @Query("UPDATE favorite_items SET coverUrl = :coverUrl WHERE videoId = :videoId")
     suspend fun updateCoverUrl(videoId: String, coverUrl: String)
 
+    @Query("UPDATE favorite_items SET duration = :duration WHERE videoId = :videoId")
+    suspend fun updateDuration(videoId: String, duration: String)
+
     @Query("DELETE FROM favorite_items WHERE videoId = :videoId")
     suspend fun deleteItemByVideoId(videoId: String)
 

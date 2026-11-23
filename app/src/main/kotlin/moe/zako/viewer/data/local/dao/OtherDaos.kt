@@ -27,6 +27,9 @@ interface WatchHistoryDao {
     @Query("UPDATE watch_history SET coverUrl = :coverUrl WHERE videoId = :videoId")
     suspend fun updateCoverUrl(videoId: String, coverUrl: String)
 
+    @Query("UPDATE watch_history SET duration = :duration WHERE videoId = :videoId")
+    suspend fun updateDuration(videoId: String, duration: String)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(history: WatchHistoryEntity)
 
@@ -53,6 +56,9 @@ interface WatchLaterDao {
 
     @Query("UPDATE watch_later SET coverUrl = :coverUrl WHERE videoId = :videoId")
     suspend fun updateCoverUrl(videoId: String, coverUrl: String)
+
+    @Query("UPDATE watch_later SET duration = :duration WHERE videoId = :videoId")
+    suspend fun updateDuration(videoId: String, duration: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: WatchLaterEntity)
@@ -104,6 +110,9 @@ interface DownloadDao {
 
     @Query("UPDATE downloads SET coverUrl = :coverUrl WHERE videoId = :videoId")
     suspend fun updateCoverUrl(videoId: String, coverUrl: String)
+
+    @Query("UPDATE downloads SET duration = :duration WHERE videoId = :videoId")
+    suspend fun updateDuration(videoId: String, duration: String)
 
     @Query("DELETE FROM downloads WHERE videoId = :videoId")
     suspend fun deleteByVideoId(videoId: String)

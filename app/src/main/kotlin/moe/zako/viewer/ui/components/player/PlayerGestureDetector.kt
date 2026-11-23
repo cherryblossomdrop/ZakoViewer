@@ -36,8 +36,6 @@ fun Modifier.playerGestureDetector(
     onVolumeDrag: (percent: Int) -> Unit,
     onVolumeDragEnd: () -> Unit
 ): Modifier {
-    if (isLocked) return this
-
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
     val audioManager = remember(context) {
@@ -68,6 +66,34 @@ fun Modifier.playerGestureDetector(
                 val downPos = down.position
                 val screenWidth = size.width
                 val screenHeight = size.height
+
+                if (isLocked) {
+                    var wasConsumed = down.isConsumed
+                    var isMoved = false
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (change.isConsumed) {
+                            wasConsumed = true
+                        }
+                        if (change.changedToUp()) {
+                            if (!change.isConsumed) {
+                                change.consume()
+                            }
+                            break
+                        }
+                        if (!change.pressed) break
+                        val currentPos = change.position
+                        val touchSlop = viewConfiguration.touchSlop
+                        if (abs(currentPos.x - downPos.x) > touchSlop || abs(currentPos.y - downPos.y) > touchSlop) {
+                            isMoved = true
+                        }
+                    }
+                    if (!wasConsumed && !isMoved) {
+                        currentOnSingleTap()
+                    }
+                    return@awaitEachGesture
+                }
 
                 var isDrag = false
                 var isLongPress = false

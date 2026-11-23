@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import moe.zako.viewer.ZakoApplication
 import moe.zako.viewer.core.download.DownloadManager
+import moe.zako.viewer.core.duration.VideoDurationManager
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.data.local.entities.WatchLaterEntity
@@ -36,6 +37,7 @@ class WatchLaterViewModel(
     val uiState: StateFlow<WatchLaterUiState> = _uiState.asStateFlow()
 
     init {
+        VideoDurationManager.syncMissingDurations(ZakoApplication.instance)
         viewModelScope.launch {
             downloadManager.completedVideoIdsFlow.collect { ids ->
                 _uiState.update { it.copy(downloadedVideoIds = ids) }

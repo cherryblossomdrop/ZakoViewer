@@ -17,7 +17,8 @@ import moe.zako.viewer.core.network.NetworkClientProvider
 import moe.zako.viewer.core.network.isHttpUrl
 import moe.zako.viewer.core.storage.StorageConstants
 import moe.zako.viewer.data.local.ZakoDatabase
-import moe.zako.viewer.data.source.cosav.CosApiClient
+import moe.zako.viewer.data.repository.SettingsRepository
+import moe.zako.viewer.data.source.DataSourceRegistry
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -176,22 +177,26 @@ object CoverCacheManager {
 
         // 优先级 3: 调用视频详情接口获取最新封面并回填数据库
         try {
-            val detail = downloadSemaphore.withPermit {
-                CosApiClient.instance.getVideoDetail(videoId)
-            }
-            val netCover = detail?.displayCover?.trim()
-            if (netCover.isHttpUrl()) {
-                val ok = downloadSemaphore.withPermit {
-                    downloadUrlToFile(netCover, targetFile)
+            val settingsRepo = SettingsRepository(context)
+            val activeSource = DataSourceRegistry.getActiveDataSource(settingsRepo)
+            if (activeSource != null) {
+                val detail = downloadSemaphore.withPermit {
+                    activeSource.getVideoDetail(videoId)
                 }
-                if (ok && hasValidCover(context, videoId)) {
-                    ZakoLog.i(TAG, "Persisted cover for $videoId via API detail and backfilled DB ($netCover)")
-                    // 顺带回填数据库里的 coverUrl
-                    db.favoriteDao().updateCoverUrl(videoId, netCover)
-                    db.downloadDao().updateCoverUrl(videoId, netCover)
-                    db.watchLaterDao().updateCoverUrl(videoId, netCover)
-                    db.watchHistoryDao().updateCoverUrl(videoId, netCover)
-                    return true
+                val netCover = detail?.displayCover?.trim()
+                if (netCover.isHttpUrl()) {
+                    val ok = downloadSemaphore.withPermit {
+                        downloadUrlToFile(netCover, targetFile)
+                    }
+                    if (ok && hasValidCover(context, videoId)) {
+                        ZakoLog.i(TAG, "Persisted cover for $videoId via API detail and backfilled DB ($netCover)")
+                        // 顺带回填数据库里的 coverUrl
+                        db.favoriteDao().updateCoverUrl(videoId, netCover)
+                        db.downloadDao().updateCoverUrl(videoId, netCover)
+                        db.watchLaterDao().updateCoverUrl(videoId, netCover)
+                        db.watchHistoryDao().updateCoverUrl(videoId, netCover)
+                        return true
+                    }
                 }
             }
         } catch (e: Exception) {

@@ -37,6 +37,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object SettingsShare : Screen("settings/share", "分享设置")
     object SettingsPlayer : Screen("settings/player", "播放设置")
     object SettingsDownload : Screen("settings/download", "下载设置")
+    object SettingsDataSource : Screen("settings/datasource", "数据源设置")
 
     object About : Screen("about", "关于 APP")
     object LogViewer : Screen("log_viewer", "运行日志")

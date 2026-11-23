@@ -22,9 +22,11 @@ import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.repository.FavoriteRepository
 import moe.zako.viewer.data.repository.HistoryRepository
 import moe.zako.viewer.data.repository.SettingsRepository
-import moe.zako.viewer.data.source.cosav.CosApiClient
+import moe.zako.viewer.data.source.DataSourceRegistry
 import moe.zako.viewer.data.source.cosav.CosVideoItem
+import moe.zako.viewer.ui.components.player.PlayerControlDefaults
 import moe.zako.viewer.ui.components.ZakoToast
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,7 +74,6 @@ class PlayerViewModel(
     private val initialLocalPath: String = "",
     private val forceOnline: Boolean = false,
     val player: ZakoPlayer,
-    private val apiClient: CosApiClient = CosApiClient.instance,
     private val favoriteRepository: FavoriteRepository,
     private val historyRepository: HistoryRepository,
     private val settingsRepository: SettingsRepository,
@@ -96,6 +97,7 @@ class PlayerViewModel(
         observeSettings()
         loadFolders()
         loadAndStartPlayback()
+        resetControlsTimeout()
     }
 
     private fun observePlayerState() {
@@ -236,7 +238,7 @@ class PlayerViewModel(
                     // 后台异步静默拉取详情（简介、标签、CDN线路列表等，离线或失败不影响本地播放）
                     launch(Dispatchers.IO) {
                         try {
-                            val detail = apiClient.getVideoDetail(videoId)
+                            val detail = DataSourceRegistry.getActiveDataSource(settingsRepository)?.getVideoDetail(videoId)
                             if (detail != null && !isExited) {
                                 _uiState.update { current ->
                                     val mergedCover = if (detail.displayCover.startsWith("http", ignoreCase = true)) {
@@ -258,7 +260,7 @@ class PlayerViewModel(
 
                 // 2. 本地文件未命中，按数据源设置进入在线 CDN 路由流程
                 _uiState.update { it.copy(isLocalPlayback = false) }
-                val detail = apiClient.getVideoDetail(videoId)
+                val detail = DataSourceRegistry.getActiveDataSource(settingsRepository)?.getVideoDetail(videoId)
                 _uiState.update { it.copy(video = detail) }
 
                 detail?.let { vid ->
@@ -310,21 +312,43 @@ class PlayerViewModel(
         }
     }
 
+    private var autoHideControlsJob: Job? = null
+
+    fun resetControlsTimeout() {
+        autoHideControlsJob?.cancel()
+        if (_uiState.value.showControls && !_uiState.value.showMoreMenu &&
+            !_uiState.value.showCdnDialog && !_uiState.value.showEngineDialog &&
+            !_uiState.value.showHwDecDialog && !_uiState.value.showSpeedDialog
+        ) {
+            autoHideControlsJob = viewModelScope.launch {
+                try {
+                    delay(PlayerControlDefaults.AutoHideTimeoutMs)
+                    _uiState.update { it.copy(showControls = false) }
+                } catch (e: CancellationException) {
+                    throw e
+                }
+            }
+        }
+    }
+
     // --- Controls and Menu ---
     fun toggleControls() {
         if (_uiState.value.showMoreMenu) {
             return
         }
-        if (!_uiState.value.playerState.isLocked) {
-            _uiState.update { it.copy(showControls = !it.showControls) }
+        val nextShow = !_uiState.value.showControls
+        _uiState.update { it.copy(showControls = nextShow) }
+        if (nextShow) {
+            resetControlsTimeout()
+        } else {
+            autoHideControlsJob?.cancel()
         }
     }
 
     fun toggleLock() {
         player.toggleLock()
-        if (player.state.value.isLocked) {
-            _uiState.update { it.copy(showControls = false) }
-        }
+        _uiState.update { it.copy(showControls = true) }
+        resetControlsTimeout()
     }
 
     fun toggleOrientation() {
@@ -345,10 +369,12 @@ class PlayerViewModel(
 
     fun showMoreMenu(show: Boolean) {
         _uiState.update { it.copy(showMoreMenu = show, showControls = if (show) true else it.showControls) }
+        if (show) autoHideControlsJob?.cancel() else resetControlsTimeout()
     }
 
     fun showEngineDialog(show: Boolean) {
         _uiState.update { it.copy(showEngineDialog = show) }
+        if (show) autoHideControlsJob?.cancel() else resetControlsTimeout()
     }
 
     fun switchEngine(engine: PlayerEngine) {
@@ -402,6 +428,7 @@ class PlayerViewModel(
 
     fun showHwDecDialog(show: Boolean) {
         _uiState.update { it.copy(showHwDecDialog = show) }
+        if (show) autoHideControlsJob?.cancel() else resetControlsTimeout()
     }
 
     fun switchHwDecMode(mode: HwDecMode) {
@@ -505,6 +532,7 @@ class PlayerViewModel(
 
     fun showSpeedDialog(show: Boolean) {
         _uiState.update { it.copy(showSpeedDialog = show) }
+        if (show) autoHideControlsJob?.cancel() else resetControlsTimeout()
     }
 
     fun setPlaybackSpeed(speed: Float) {
@@ -589,12 +617,13 @@ class PlayerViewModel(
     // 4. 选择 CDN 节点播放 (弹窗打开即自动并发测速并自动选优，支持随时手动选线覆盖)
     fun showSelectCdnDialog() {
         _uiState.update { it.copy(showMoreMenu = false, showCdnDialog = true) }
+        autoHideControlsJob?.cancel()
 
         viewModelScope.launch {
             // 确保获取到所有可用的在线 CDN 线路
             var lines = _uiState.value.video?.allVideoLines?.ifEmpty { _uiState.value.video?.allMp4Lines } ?: emptyList()
             if (lines.isEmpty()) {
-                val detail = apiClient.getVideoDetail(videoId)
+                val detail = DataSourceRegistry.getActiveDataSource(settingsRepository)?.getVideoDetail(videoId)
                 if (detail != null) {
                     _uiState.update { current ->
                         val mergedCover = if (detail.displayCover.startsWith("http", ignoreCase = true)) {
@@ -630,6 +659,7 @@ class PlayerViewModel(
     fun dismissCdnDialog() {
         playbackCoordinator.cancelSpeedTestSession()
         _uiState.update { it.copy(showCdnDialog = false) }
+        resetControlsTimeout()
     }
 
     fun selectCdnNode(node: CdnNode) {
@@ -639,11 +669,13 @@ class PlayerViewModel(
 
         if (!_uiState.value.isLocalPlayback && activeUrl == node.url) {
             _uiState.update { it.copy(showCdnDialog = false) }
+            resetControlsTimeout()
             return
         }
 
         switchPlayToCdnNode(node, resumePos = currentPos)
         _uiState.update { it.copy(showCdnDialog = false) }
+        resetControlsTimeout()
         ZakoToast.show("已切至: ${node.name}")
     }
 
@@ -705,6 +737,7 @@ class PlayerViewModel(
     fun onExit() {
         if (isExited) return
         isExited = true
+        autoHideControlsJob?.cancel()
         savePlaybackProgress()
         playbackJob?.cancel()
         playbackCoordinator.release(videoId)

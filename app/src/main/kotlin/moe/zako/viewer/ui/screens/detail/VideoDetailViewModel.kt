@@ -19,9 +19,11 @@ import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.repository.FavoriteRepository
 import moe.zako.viewer.data.repository.HistoryRepository
 import moe.zako.viewer.data.repository.SettingsRepository
-import moe.zako.viewer.data.source.cosav.CosApiClient
+import moe.zako.viewer.data.source.DataSourceRegistry
 import moe.zako.viewer.data.source.cosav.CosVideoItem
+import moe.zako.viewer.ui.components.player.PlayerControlDefaults
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -73,7 +75,6 @@ data class VideoDetailUiState(
 
 class VideoDetailViewModel(
     val videoId: String,
-    private val apiClient: CosApiClient = CosApiClient.instance,
     private val favoriteRepository: FavoriteRepository,
     private val historyRepository: HistoryRepository,
     private val settingsRepository: SettingsRepository,
@@ -99,7 +100,18 @@ class VideoDetailViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                val detail = apiClient.getVideoDetail(videoId)
+                val dataSource = DataSourceRegistry.getActiveDataSource(settingsRepository)
+                if (dataSource == null) {
+                    val local = downloadManager.findLocalCompletedVideo(videoId)
+                    if (local != null && local.file.exists()) {
+                        val localItem = CosVideoItem(id = videoId, title = local.title.ifBlank { local.file.nameWithoutExtension })
+                        _uiState.update { it.copy(video = localItem, isLoading = false) }
+                        return@launch
+                    }
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "当前未启用任何数据源") }
+                    return@launch
+                }
+                val detail = dataSource.getVideoDetail(videoId)
                 if (detail != null) {
                     var related = detail.relatedVideos?.toMutableList() ?: mutableListOf()
                     if (related.size < 10) {
@@ -109,7 +121,7 @@ class VideoDetailViewModel(
                             ?: ""
                         if (supplementKeyword.isNotEmpty()) {
                             try {
-                                val searchRes = apiClient.getVideoLists(keyword = supplementKeyword, limit = 20)
+                                val searchRes = dataSource.getVideoLists(keyword = supplementKeyword, limit = 20)
                                 val extraItems = searchRes.items.filter { it.id != detail.id && related.none { r -> r.id == it.id } }
                                 related.addAll(extraItems)
                             } catch (e: Exception) {
@@ -119,7 +131,7 @@ class VideoDetailViewModel(
                         }
                         if (related.size < 10) {
                             try {
-                                val recs = apiClient.getVideoRecommend()
+                                val recs = dataSource.getVideoRecommend()
                                 val extraRecs = recs.filter { it.id != detail.id && related.none { r -> r.id == it.id } }
                                 related.addAll(extraRecs)
                             } catch (e: Exception) {
@@ -386,6 +398,7 @@ class VideoDetailViewModel(
                     headers = resolved.headers
                 )
                 player.play()
+                resetControlsTimeout()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 ZakoLog.e(TAG, "Error starting inline playback for $videoId", e)
@@ -405,20 +418,43 @@ class VideoDetailViewModel(
         _uiState.update { it.copy(isFullscreen = fullscreen) }
     }
 
+    private var autoHideControlsJob: Job? = null
+
+    fun resetControlsTimeout() {
+        autoHideControlsJob?.cancel()
+        if (_uiState.value.showControls && !_uiState.value.showMoreMenu &&
+            !_uiState.value.showCdnDialog && !_uiState.value.showEngineDialog &&
+            !_uiState.value.showHwDecDialog && !_uiState.value.showSpeedDialog &&
+            !_uiState.value.showFolderSelector && !_uiState.value.showDownloadChoiceDialog
+        ) {
+            autoHideControlsJob = viewModelScope.launch {
+                try {
+                    delay(PlayerControlDefaults.AutoHideTimeoutMs)
+                    _uiState.update { it.copy(showControls = false) }
+                } catch (e: CancellationException) {
+                    throw e
+                }
+            }
+        }
+    }
+
     fun toggleControls() {
         if (_uiState.value.showMoreMenu) {
             return
         }
-        if (!_uiState.value.playerState.isLocked) {
-            _uiState.update { it.copy(showControls = !it.showControls) }
+        val nextShow = !_uiState.value.showControls
+        _uiState.update { it.copy(showControls = nextShow) }
+        if (nextShow) {
+            resetControlsTimeout()
+        } else {
+            autoHideControlsJob?.cancel()
         }
     }
 
     fun toggleLock() {
         player.toggleLock()
-        if (player.state.value.isLocked) {
-            _uiState.update { it.copy(showControls = false) }
-        }
+        _uiState.update { it.copy(showControls = true) }
+        resetControlsTimeout()
     }
 
     fun cycleAspectRatio(): AspectRatioMode {
@@ -448,10 +484,12 @@ class VideoDetailViewModel(
 
     fun showMoreMenu(show: Boolean) {
         _uiState.update { it.copy(showMoreMenu = show, showControls = if (show) true else it.showControls) }
+        if (show) autoHideControlsJob?.cancel() else resetControlsTimeout()
     }
 
     fun showEngineDialog(show: Boolean) {
         _uiState.update { it.copy(showEngineDialog = show) }
+        if (show) autoHideControlsJob?.cancel() else resetControlsTimeout()
     }
 
     fun switchEngine(engine: PlayerEngine) {
@@ -489,6 +527,7 @@ class VideoDetailViewModel(
 
     fun showHwDecDialog(show: Boolean) {
         _uiState.update { it.copy(showHwDecDialog = show) }
+        if (show) autoHideControlsJob?.cancel() else resetControlsTimeout()
     }
 
     fun switchHwDecMode(mode: HwDecMode) {
@@ -574,6 +613,7 @@ class VideoDetailViewModel(
 
     fun showSpeedDialog(show: Boolean) {
         _uiState.update { it.copy(showSpeedDialog = show) }
+        if (show) autoHideControlsJob?.cancel() else resetControlsTimeout()
     }
 
     fun setPlaybackSpeed(speed: Float) {
@@ -592,6 +632,7 @@ class VideoDetailViewModel(
 
     fun showSelectCdnDialog() {
         _uiState.update { it.copy(showMoreMenu = false, showCdnDialog = true) }
+        autoHideControlsJob?.cancel()
         val current = _uiState.value.video ?: return
         val lines = current.allVideoLines.ifEmpty { current.allMp4Lines }
         if (lines.isNotEmpty()) {
@@ -613,6 +654,7 @@ class VideoDetailViewModel(
     fun dismissCdnDialog() {
         playbackCoordinator.cancelSpeedTestSession()
         _uiState.update { it.copy(showCdnDialog = false) }
+        resetControlsTimeout()
     }
 
     fun selectCdnNode(node: CdnNode) {
@@ -710,6 +752,7 @@ class VideoDetailViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        autoHideControlsJob?.cancel()
         try {
             savePlaybackProgress()
             playbackCoordinator.release(videoId)

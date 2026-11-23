@@ -43,6 +43,7 @@ fun SettingsScreen(
     onNavigateToShare: () -> Unit,
     onNavigateToPlayer: () -> Unit,
     onNavigateToDownload: () -> Unit,
+    onNavigateToDataSource: () -> Unit = {},
     onNavigateToLogs: () -> Unit = {},
     onNavigateBack: () -> Unit
 ) {
@@ -134,11 +135,24 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(
                             topStart = CornerRadius.Xs,
                             topEnd = CornerRadius.Xs,
-                            bottomStart = CornerRadius.Lg,
-                            bottomEnd = CornerRadius.Lg
+                            bottomStart = if (state.hasVisibleDataSourceSettings) CornerRadius.Xs else CornerRadius.Lg,
+                            bottomEnd = if (state.hasVisibleDataSourceSettings) CornerRadius.Xs else CornerRadius.Lg
                         ),
                         onClick = onNavigateToDownload
                     )
+                    if (state.hasVisibleDataSourceSettings) {
+                        SettingsCategoryItem(
+                            icon = AppIcons.AltRoute,
+                            title = "数据源设置",
+                            shape = RoundedCornerShape(
+                                topStart = CornerRadius.Xs,
+                                topEnd = CornerRadius.Xs,
+                                bottomStart = CornerRadius.Lg,
+                                bottomEnd = CornerRadius.Lg
+                            ),
+                            onClick = onNavigateToDataSource
+                        )
+                    }
                 }
             }
 

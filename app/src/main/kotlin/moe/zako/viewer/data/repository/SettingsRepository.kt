@@ -6,9 +6,15 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import moe.zako.viewer.data.source.cosav.CosAvDataSource
 import moe.zako.viewer.ui.theme.ThemePreset
 import org.json.JSONArray
 import java.io.File
@@ -56,6 +62,58 @@ class SettingsRepository(private val context: Context) {
         val KEY_LAYOUT_MODE = stringPreferencesKey("layout_mode")
         val KEY_AUTO_SELECT_CDN = booleanPreferencesKey("auto_select_cdn")
         val KEY_DEFAULT_CDN_INDEX = intPreferencesKey("default_cdn_index")
+        val KEY_DATA_SOURCE_SECTION_UNLOCKED = booleanPreferencesKey("data_source_section_unlocked")
+        val KEY_ENABLED_DATA_SOURCES = stringSetPreferencesKey("enabled_data_source_ids")
+        val KEY_INITIALIZED_DATA_SOURCE_PREFS = booleanPreferencesKey("initialized_data_source_prefs")
+
+        fun checkIsLegacyUpgrade(context: Context, prefs: androidx.datastore.preferences.core.Preferences): Boolean {
+            val logPrefs = context.getSharedPreferences("zakoviewer_log_prefs", Context.MODE_PRIVATE)
+            val hasLegacyLog = logPrefs.contains("last_version_code")
+            val dbFile = context.getDatabasePath("zako_database")
+            val hasExistingDb = dbFile.exists() && dbFile.length() > 0L
+            val hasExistingSettings = prefs.contains(KEY_PLAYER_ENGINE) || prefs.contains(KEY_CUSTOM_THEME) || prefs.contains(KEY_COVER_BLUR)
+            return hasLegacyLog || hasExistingDb || hasExistingSettings
+        }
+    }
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                ensureDataSourcePreferencesInitialized()
+            } catch (_: Exception) {}
+        }
+    }
+
+    suspend fun ensureDataSourcePreferencesInitialized() {
+        context.dataStore.edit { prefs ->
+            if (!prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
+                val isLegacy = checkIsLegacyUpgrade(context, prefs)
+                if (isLegacy) {
+                    prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] = true
+                    prefs[KEY_ENABLED_DATA_SOURCES] = setOf(CosAvDataSource.ID)
+                } else {
+                    prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] = false
+                    prefs[KEY_ENABLED_DATA_SOURCES] = emptySet()
+                }
+                prefs[KEY_INITIALIZED_DATA_SOURCE_PREFS] = true
+            }
+        }
+    }
+
+    val isDataSourceSectionUnlocked: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
+            prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] ?: false
+        } else {
+            checkIsLegacyUpgrade(context, prefs)
+        }
+    }
+
+    val enabledDataSourceIds: Flow<Set<String>> = context.dataStore.data.map { prefs ->
+        if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
+            prefs[KEY_ENABLED_DATA_SOURCES] ?: emptySet()
+        } else {
+            if (checkIsLegacyUpgrade(context, prefs)) setOf(CosAvDataSource.ID) else emptySet()
+        }
     }
 
     val autoSelectCdnFlow: Flow<Boolean> = context.dataStore.data.map {
@@ -258,6 +316,36 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setLayoutMode(mode: LayoutMode) {
         context.dataStore.edit { it[KEY_LAYOUT_MODE] = mode.name }
+    }
+
+    suspend fun setDataSourceSectionUnlocked(unlocked: Boolean) {
+        context.dataStore.edit { it[KEY_DATA_SOURCE_SECTION_UNLOCKED] = unlocked }
+    }
+
+    suspend fun setDataSourceEnabled(sourceId: String, enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[KEY_ENABLED_DATA_SOURCES] ?: emptySet()
+            val updated = if (enabled) current + sourceId else current - sourceId
+            prefs[KEY_ENABLED_DATA_SOURCES] = updated
+        }
+    }
+
+    suspend fun isDataSourceSectionUnlockedSnapshot(): Boolean {
+        val prefs = context.dataStore.data.first()
+        return if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
+            prefs[KEY_DATA_SOURCE_SECTION_UNLOCKED] ?: false
+        } else {
+            checkIsLegacyUpgrade(context, prefs)
+        }
+    }
+
+    suspend fun getEnabledDataSourceIdsSnapshot(): Set<String> {
+        val prefs = context.dataStore.data.first()
+        return if (prefs.contains(KEY_INITIALIZED_DATA_SOURCE_PREFS)) {
+            prefs[KEY_ENABLED_DATA_SOURCES] ?: emptySet()
+        } else {
+            if (checkIsLegacyUpgrade(context, prefs)) setOf(CosAvDataSource.ID) else emptySet()
+        }
     }
 
     suspend fun toggleLayoutMode() {

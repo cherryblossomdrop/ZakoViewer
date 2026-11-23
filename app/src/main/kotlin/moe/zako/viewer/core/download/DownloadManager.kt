@@ -17,7 +17,7 @@ import moe.zako.viewer.core.storage.StorageConstants
 import moe.zako.viewer.data.local.ZakoDatabase
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.repository.SettingsRepository
-import moe.zako.viewer.data.source.cosav.CosApiClient
+import moe.zako.viewer.data.source.DataSourceRegistry
 import java.io.File
 
 /**
@@ -456,7 +456,8 @@ class DownloadManager private constructor(private val context: Context) {
             var cdnUrls = entity.cdnUrlsJson.split("\n").filter { it.isNotBlank() }
             if (cdnUrls.isEmpty()) {
                 try {
-                    val detail = CosApiClient.instance.getVideoDetail(videoId)
+                    val activeSource = DataSourceRegistry.getActiveDataSource(settingsRepository)
+                    val detail = activeSource?.getVideoDetail(videoId)
                     cdnUrls = detail?.allMp4Lines?.ifEmpty { detail.allVideoLines } ?: emptyList()
                 } catch (e: Exception) {
                     ZakoLog.w(TAG, "Could not fetch video detail to resume $videoId: ${e.message}")

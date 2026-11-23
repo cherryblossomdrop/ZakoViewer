@@ -101,4 +101,18 @@ object SearchQueryParser {
             orTerms = orList
         )
     }
+
+    /**
+     * 校验搜索输入是否为当前版本对应的 Base64 数据源设置解锁暗号
+     * 动态计算 BuildConfig.VERSION_NAME 的标准 Base64 编码 (NO_WRAP)
+     */
+    fun isDataSourceUnlockCipher(raw: String): Boolean {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return false
+        val expectedCipher = android.util.Base64.encodeToString(
+            moe.zako.viewer.BuildConfig.VERSION_NAME.toByteArray(Charsets.UTF_8),
+            android.util.Base64.NO_WRAP
+        ).trim()
+        return trimmed == expectedCipher
+    }
 }

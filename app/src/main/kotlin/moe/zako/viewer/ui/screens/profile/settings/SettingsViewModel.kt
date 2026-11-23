@@ -27,6 +27,14 @@ enum class ShareSettingItem {
     LONG_PRESS_SHARE_URL
 }
 
+/**
+ * 数据源设置子页面可配置项枚举（可扩展架构定义）
+ */
+enum class DataSourceSettingItem {
+    /** CosAV 内置数据源插件 */
+    COSAV_PLUGIN
+}
+
 data class SettingsUiState(
     val longPressSpeed: Float = 2.0f,
     val externalPlayerPkg: String = "",
@@ -43,6 +51,8 @@ data class SettingsUiState(
     val isLongPressShareEnabled: Boolean = false,
     val autoSelectCdn: Boolean = true,
     val defaultCdnIndex: Int = 0,
+    val isDataSourceSectionUnlocked: Boolean = false,
+    val enabledDataSourceIds: Set<String> = emptySet(),
     val showMigrationDialog: Boolean = false,
     val pendingNewDownloadPath: String = "",
     val filesToMigrateCount: Int = 0,
@@ -67,6 +77,24 @@ data class SettingsUiState(
      */
     val hasVisibleShareSettings: Boolean
         get() = visibleShareSettingItems.isNotEmpty()
+
+    /**
+     * 动态汇总数据源设置子页面当前所有实际可见的配置项集合
+     * 架构解耦：防硬绑定单个布尔值，未来新增数据源配置项直接在此集合追加判定即可自动生效
+     */
+    val visibleDataSourceSettingItems: Set<DataSourceSettingItem>
+        get() = buildSet {
+            if (isDataSourceSectionUnlocked) {
+                add(DataSourceSettingItem.COSAV_PLUGIN)
+            }
+            // 未来新增其他数据源配置项时直接在此追加判定
+        }
+
+    /**
+     * 是否存在任何可见的数据源设置配置项
+     */
+    val hasVisibleDataSourceSettings: Boolean
+        get() = visibleDataSourceSettingItems.isNotEmpty()
 }
 
 class SettingsViewModel(
@@ -96,7 +124,9 @@ class SettingsViewModel(
                     settingsRepository.longPressShareUnlockedFlow,
                     settingsRepository.longPressShareEnabledFlow,
                     settingsRepository.autoSelectCdnFlow,
-                    settingsRepository.defaultCdnIndexFlow
+                    settingsRepository.defaultCdnIndexFlow,
+                    settingsRepository.isDataSourceSectionUnlocked,
+                    settingsRepository.enabledDataSourceIds
                 )
             ) { args: Array<Any> ->
                 @Suppress("UNCHECKED_CAST")
@@ -116,6 +146,8 @@ class SettingsViewModel(
                     isLongPressShareEnabled = args[12] as Boolean,
                     autoSelectCdn = args[13] as Boolean,
                     defaultCdnIndex = args[14] as Int,
+                    isDataSourceSectionUnlocked = args[15] as Boolean,
+                    enabledDataSourceIds = args[16] as Set<String>,
                     cacheSizeFormatted = _uiState.value.cacheSizeFormatted
                 )
             }.collect { state ->
@@ -182,6 +214,22 @@ class SettingsViewModel(
 
     fun setDefaultCdnIndex(index: Int) {
         viewModelScope.launch { settingsRepository.setDefaultCdnIndex(index) }
+    }
+
+    fun setDataSourceSectionUnlocked(unlocked: Boolean) {
+        viewModelScope.launch { settingsRepository.setDataSourceSectionUnlocked(unlocked) }
+    }
+
+    fun toggleDataSourceEnabled(sourceId: String) {
+        viewModelScope.launch {
+            val current = _uiState.value.enabledDataSourceIds
+            val isEnabled = current.contains(sourceId)
+            settingsRepository.setDataSourceEnabled(sourceId, !isEnabled)
+        }
+    }
+
+    fun setDataSourceEnabled(sourceId: String, enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setDataSourceEnabled(sourceId, enabled) }
     }
 
     fun requestChangeDownloadPath(newPath: String, currentDefaultPath: String) {

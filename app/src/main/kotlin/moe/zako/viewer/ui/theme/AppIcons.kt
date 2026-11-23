@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreateNewFolder
@@ -160,6 +161,7 @@ object AppIcons {
     val OfflinePin: ImageVector = Icons.Outlined.OfflinePin
     val CleaningServices: ImageVector = Icons.Default.CleaningServices
     val Terminal: ImageVector = Icons.Default.Terminal
+    val Code: ImageVector = Icons.Default.Code
     val Apps: ImageVector = Icons.Default.Apps
     val AltRoute: ImageVector = Icons.AutoMirrored.Filled.AltRoute
     val NetworkCheck: ImageVector = Icons.Rounded.NetworkCheck

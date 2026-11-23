@@ -53,6 +53,7 @@ import moe.zako.viewer.ui.screens.profile.downloads.DownloadsViewModel
 import moe.zako.viewer.ui.screens.profile.history.HistoryScreen
 import moe.zako.viewer.ui.screens.profile.history.HistoryViewModel
 import moe.zako.viewer.ui.screens.profile.settings.SettingsAppearanceScreen
+import moe.zako.viewer.ui.screens.profile.settings.SettingsDataSourceScreen
 import moe.zako.viewer.ui.screens.profile.settings.SettingsDownloadScreen
 import moe.zako.viewer.ui.screens.profile.settings.SettingsPlayerScreen
 import moe.zako.viewer.ui.screens.profile.settings.SettingsPrivacyScreen
@@ -384,6 +385,7 @@ fun ZakoNavHost(
                     onNavigateToShare = { navController.navigate(Screen.SettingsShare.route) },
                     onNavigateToPlayer = { navController.navigate(Screen.SettingsPlayer.route) },
                     onNavigateToDownload = { navController.navigate(Screen.SettingsDownload.route) },
+                    onNavigateToDataSource = { navController.navigate(Screen.SettingsDataSource.route) },
                     onNavigateToLogs = { navController.navigate(Screen.LogViewer.route) },
                     onNavigateBack = { navController.popBackStack() }
                 )
@@ -443,6 +445,17 @@ fun ZakoNavHost(
                     )
                 }
                 SettingsDownloadScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // 9.6 数据源设置
+            composable(Screen.SettingsDataSource.route) {
+                val viewModel: SettingsViewModel = viewModel {
+                    SettingsViewModel(settingsRepository = app.settingsRepository)
+                }
+                SettingsDataSourceScreen(
                     viewModel = viewModel,
                     onNavigateBack = { navController.popBackStack() }
                 )

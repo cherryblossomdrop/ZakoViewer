@@ -1,5 +1,7 @@
 ﻿package moe.zako.viewer.ui.screens.profile.about
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
 import moe.zako.viewer.core.storage.PublicStorageHelper
@@ -47,6 +50,7 @@ fun AboutScreen(
     onNavigateBack: () -> Unit,
     onNavigateToLogs: () -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val isUnlocked by settingsRepository.longPressShareUnlockedFlow.collectAsState(initial = false)
 
@@ -135,30 +139,7 @@ fun AboutScreen(
                 }
             }
 
-            // Open-source Licenses Declarations
-            item {
-                Card(
-                    shape = RoundedCornerShape(CornerRadius.Md),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                ) {
-                    Column(modifier = Modifier.padding(Spacing.Lg)) {
-                        Text(
-                            text = "开源组件许可声明",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.Sm))
-                        LicenseItem("libmpv", "GPLv2 / LGPLv2.1", "Cross-platform video player core")
-                        LicenseItem("NextPlayerCloud / NeoPlayer", "GPLv3", "Android MPV playback architecture & JNI bindings")
-                        LicenseItem("Jetpack Compose & Material 3", "Apache-2.0", "Google Android UI Toolkit")
-                        LicenseItem("OkHttp", "Apache-2.0", "Square Inc. HTTP client")
-                        LicenseItem("Coil", "Apache-2.0", "Image loading for Android Compose")
-                        LicenseItem("Room", "Apache-2.0", "Android SQLite ORM")
-                    }
-                }
-            }
-
-            // Submenu: 导出日志 (放置在开源组件许可声明下方)
+            // Submenu: 导出日志 (放置在版本卡片与开源组件许可声明之间)
             item {
                 Card(
                     modifier = Modifier
@@ -183,6 +164,73 @@ fun AboutScreen(
                             Text(text = "导出日志", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 text = "实时查看客户端运行日志，一键导出为文本文件排错\n日志保存目录：${PublicStorageHelper.LOGS_DISPLAY_DIR}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(imageVector = AppIcons.ChevronRight, contentDescription = null)
+                    }
+                }
+            }
+
+            // Open-source Licenses Declarations
+            item {
+                Card(
+                    shape = RoundedCornerShape(CornerRadius.Md),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                ) {
+                    Column(modifier = Modifier.padding(Spacing.Lg)) {
+                        Text(
+                            text = "开源组件许可声明",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.Sm))
+                        LicenseItem("libmpv", "GPLv2 / LGPLv2.1", "Cross-platform video player core")
+                        LicenseItem("NextPlayerCloud / NeoPlayer", "GPLv3", "Android MPV playback architecture & JNI bindings")
+                        LicenseItem("Jetpack Compose & Material 3", "Apache-2.0", "Google Android UI Toolkit")
+                        LicenseItem("OkHttp", "Apache-2.0", "Square Inc. HTTP client")
+                        LicenseItem("Coil", "Apache-2.0", "Image loading for Android Compose")
+                        LicenseItem("Room", "Apache-2.0", "Android SQLite ORM")
+                    }
+                }
+            }
+
+            // Submenu: 开源仓库 (放置在开源组件许可声明下方)
+            item {
+                val repoUrl = "https://github.com/cherryblossomdrop/ZakoViewer"
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl)).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                ZakoToast.show("未找到可用的网页浏览器")
+                            }
+                        },
+                    shape = RoundedCornerShape(CornerRadius.Md),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(Spacing.Lg),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Code,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.Lg))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = "开源仓库", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = "欢迎在 GitHub 提交反馈、问题 Issue 或参与贡献\n$repoUrl",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

@@ -7,9 +7,10 @@ import moe.zako.viewer.core.search.SearchQueryParser
 import moe.zako.viewer.data.repository.LayoutMode
 import moe.zako.viewer.data.repository.SearchHistoryRepository
 import moe.zako.viewer.data.repository.SettingsRepository
-import moe.zako.viewer.data.source.cosav.CosApiClient
+import moe.zako.viewer.data.source.DataSourceRegistry
 import moe.zako.viewer.data.source.cosav.CosApiException
 import moe.zako.viewer.data.source.cosav.CosVideoItem
+import moe.zako.viewer.ui.components.ZakoToast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -62,7 +63,6 @@ data class HomeUiState(
 )
 
 class HomeViewModel(
-    private val apiClient: CosApiClient = CosApiClient.instance,
     private val settingsRepository: SettingsRepository,
     private val searchHistoryRepository: SearchHistoryRepository? = null
 ) : ViewModel() {
@@ -120,7 +120,11 @@ class HomeViewModel(
                 }
             }
         }
-        loadVideos(refresh = true)
+        viewModelScope.launch {
+            settingsRepository.enabledDataSourceIds.collect {
+                loadVideos(refresh = true)
+            }
+        }
     }
 
     fun onSearchQueryChange(query: String) {
@@ -130,6 +134,14 @@ class HomeViewModel(
     fun submitSearch() {
         val q = _uiState.value.searchQuery.trim()
         if (q.isNotEmpty()) {
+            if (SearchQueryParser.isDataSourceUnlockCipher(q)) {
+                viewModelScope.launch {
+                    settingsRepository.setDataSourceSectionUnlocked(true)
+                }
+                _uiState.update { it.copy(searchQuery = "") }
+                ZakoToast.show("数据源设置已解锁")
+                return
+            }
             viewModelScope.launch {
                 searchHistoryRepository?.saveSearchQuery(q)
             }
@@ -359,6 +371,22 @@ class HomeViewModel(
 
         loadJob = viewModelScope.launch {
             try {
+                val dataSource = DataSourceRegistry.getActiveDataSource(settingsRepository)
+                if (dataSource == null) {
+                    _uiState.update { current ->
+                        current.copy(
+                            videos = emptyList(),
+                            page = 1,
+                            totalPages = null,
+                            hasMore = false,
+                            isLoading = false,
+                            isRefreshing = false,
+                            errorMessage = "当前未启用任何数据源"
+                        )
+                    }
+                    return@launch
+                }
+
                 val query = _uiState.value.searchQuery.trim()
                 val orderParam = _uiState.value.sortDimension.apiOrder
 
@@ -380,7 +408,7 @@ class HomeViewModel(
 
                     if (isPaginated) {
                         // Paginated mode: request specific page
-                        val response = apiClient.getVideoLists(
+                        val response = dataSource.getVideoLists(
                             page = currentPage,
                             keyword = apiKw,
                             tags = searchTag,
@@ -406,7 +434,7 @@ class HomeViewModel(
                             var totalCount = 0
                             for (p in 1..3) {
                                 if (!isActive) return@launch
-                                val resp = apiClient.getVideoLists(
+                                val resp = dataSource.getVideoLists(
                                     page = p,
                                     keyword = apiKw,
                                     tags = searchTag,
@@ -430,7 +458,7 @@ class HomeViewModel(
                                 )
                             }
                         } else {
-                            val response = apiClient.getVideoLists(
+                            val response = dataSource.getVideoLists(
                                 page = currentPage,
                                 keyword = apiKw,
                                 tags = searchTag,
@@ -460,13 +488,13 @@ class HomeViewModel(
                     if (cat == "推荐" && tag.isEmpty() && timeRange == TimeRange.ALL) {
                         if (isPaginated) {
                             val (items, totalCount) = if (currentPage <= 1) {
-                                val recDeferred = async { apiClient.getVideoRecommend() }
-                                val listDeferred = async { apiClient.getVideoLists(page = 1, order = "mv", limit = 20) }
+                                val recDeferred = async { dataSource.getVideoRecommend() }
+                                val listDeferred = async { dataSource.getVideoLists(page = 1, order = "mv", limit = 20) }
                                 val recItems = recDeferred.await()
                                 val listResp = listDeferred.await()
                                 Pair(recItems, listResp.totalCount)
                             } else {
-                                val resp = apiClient.getVideoLists(page = currentPage, order = "mv", limit = 20)
+                                val resp = dataSource.getVideoLists(page = currentPage, order = "mv", limit = 20)
                                 Pair(resp.items, resp.totalCount)
                             }
                             if (!isActive) return@launch
@@ -484,7 +512,7 @@ class HomeViewModel(
                         } else {
                             // Fixed / continuous recommendation flow for Waterfall
                             if (refresh || currentPage <= 1) {
-                                val recommendItems = apiClient.getVideoRecommend()
+                                val recommendItems = dataSource.getVideoRecommend()
                                 if (!isActive) return@launch
                                 _uiState.update { current ->
                                     current.copy(
@@ -496,7 +524,7 @@ class HomeViewModel(
                                     )
                                 }
                             } else {
-                                val moreRecs = apiClient.getVideoRecommend()
+                                val moreRecs = dataSource.getVideoRecommend()
                                 if (!isActive) return@launch
                                 _uiState.update { current ->
                                     val existingIds = current.videos.map { it.id }.toSet()
@@ -527,7 +555,7 @@ class HomeViewModel(
                             else -> ""
                         }
 
-                        val response = apiClient.getVideoLists(
+                        val response = dataSource.getVideoLists(
                             page = currentPage,
                             order = apiOrder,
                             tags = apiTags,

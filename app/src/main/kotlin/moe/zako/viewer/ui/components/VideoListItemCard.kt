@@ -87,6 +87,7 @@ fun VideoListItemCard(
     coverBadge: @Composable (BoxScope.() -> Unit)? = null,
     titleColor: Color = MaterialTheme.colorScheme.onSurface,
     titleMaxLines: Int = 2,
+    isLocalCached: Boolean = false,
     subtitle: @Composable (ColumnScope.() -> Unit)? = null,
     actions: @Composable (RowScope.() -> Unit)? = null,
     bottomContent: @Composable (ColumnScope.() -> Unit)? = null,
@@ -168,9 +169,22 @@ fun VideoListItemCard(
                         maxLines = titleMaxLines,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (subtitle != null) {
+                    if (subtitle != null || isLocalCached) {
                         Spacer(modifier = Modifier.height(Spacing.Xs))
-                        subtitle()
+                        if (subtitle != null) {
+                            subtitle()
+                        }
+                        if (isLocalCached) {
+                            if (subtitle != null) {
+                                Spacer(modifier = Modifier.height(Spacing.Xxs))
+                            }
+                            Text(
+                                text = "本地已缓存",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
 

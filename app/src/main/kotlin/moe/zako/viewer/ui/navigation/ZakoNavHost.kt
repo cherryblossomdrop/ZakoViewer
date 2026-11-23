@@ -199,7 +199,8 @@ fun ZakoNavHost(
                         val viewModel: FavoritesViewModel = viewModel {
                             FavoritesViewModel(
                                 favoriteRepository = app.favoriteRepository,
-                                downloadDao = app.database.downloadDao()
+                                downloadDao = app.database.downloadDao(),
+                                downloadManager = app.downloadManager
                             )
                         }
                         FavoritesScreen(
@@ -344,7 +345,8 @@ fun ZakoNavHost(
                 val viewModel: HistoryViewModel = viewModel {
                     HistoryViewModel(
                         historyRepository = app.historyRepository,
-                        favoriteRepository = app.favoriteRepository
+                        favoriteRepository = app.favoriteRepository,
+                        downloadManager = app.downloadManager
                     )
                 }
                 HistoryScreen(
@@ -359,7 +361,8 @@ fun ZakoNavHost(
                 val viewModel: WatchLaterViewModel = viewModel {
                     WatchLaterViewModel(
                         historyRepository = app.historyRepository,
-                        favoriteRepository = app.favoriteRepository
+                        favoriteRepository = app.favoriteRepository,
+                        downloadManager = app.downloadManager
                     )
                 }
                 WatchLaterScreen(

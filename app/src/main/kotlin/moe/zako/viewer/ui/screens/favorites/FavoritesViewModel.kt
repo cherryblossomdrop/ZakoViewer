@@ -2,6 +2,8 @@
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import moe.zako.viewer.ZakoApplication
+import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.core.logger.ZakoLog
 import moe.zako.viewer.data.local.dao.DownloadDao
 import moe.zako.viewer.data.local.entities.DownloadEntity
@@ -36,7 +38,8 @@ data class FavoritesUiState(
     val showFolderSelectorForCopy: Boolean = false,
     val singleItemToMove: Long? = null,
     val singleItemToCopy: FavoriteItemEntity? = null,
-    val singleFolderToMove: Long? = null
+    val singleFolderToMove: Long? = null,
+    val downloadedVideoIds: Set<String> = emptySet()
 ) {
     val totalSelectedCount: Int
         get() = selectedItemIds.size + selectedFolderIds.size
@@ -44,7 +47,8 @@ data class FavoritesUiState(
 
 class FavoritesViewModel(
     private val favoriteRepository: FavoriteRepository,
-    private val downloadDao: DownloadDao
+    private val downloadDao: DownloadDao,
+    private val downloadManager: DownloadManager = DownloadManager.getInstance(ZakoApplication.instance)
 ) : ViewModel() {
     companion object {
         private const val TAG = "FavoritesViewModel"
@@ -54,6 +58,11 @@ class FavoritesViewModel(
     val uiState: StateFlow<FavoritesUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            downloadManager.completedVideoIdsFlow.collect { ids ->
+                _uiState.update { it.copy(downloadedVideoIds = ids) }
+            }
+        }
         viewModelScope.launch {
             val root = favoriteRepository.ensureDefaultRootFolderExists()
             _uiState.update { it.copy(currentFolder = root, breadcrumbs = listOf(root)) }

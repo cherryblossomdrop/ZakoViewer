@@ -2,6 +2,8 @@
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import moe.zako.viewer.ZakoApplication
+import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
 import moe.zako.viewer.data.repository.FavoriteRepository
@@ -23,18 +25,25 @@ data class HistoryUiState(
     val selectedVideoIds: Set<String> = emptySet(),
     val allFolders: List<FavoriteFolderEntity> = emptyList(),
     val showFolderSelector: Boolean = false,
-    val pendingSingleItem: WatchHistoryEntity? = null
+    val pendingSingleItem: WatchHistoryEntity? = null,
+    val downloadedVideoIds: Set<String> = emptySet()
 )
 
 class HistoryViewModel(
     private val historyRepository: HistoryRepository,
-    private val favoriteRepository: FavoriteRepository
+    private val favoriteRepository: FavoriteRepository,
+    private val downloadManager: DownloadManager = DownloadManager.getInstance(ZakoApplication.instance)
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HistoryUiState())
     val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            downloadManager.completedVideoIdsFlow.collect { ids ->
+                _uiState.update { it.copy(downloadedVideoIds = ids) }
+            }
+        }
         observeHistory()
         loadFolders()
     }

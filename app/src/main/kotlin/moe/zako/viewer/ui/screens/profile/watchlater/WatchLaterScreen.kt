@@ -167,7 +167,8 @@ fun WatchLaterScreen(
                                 menuTargetItem = item
                             }
                         },
-                        onRemove = { viewModel.remove(item.videoId) }
+                        onRemove = { viewModel.remove(item.videoId) },
+                        isLocalCached = state.downloadedVideoIds.contains(item.videoId)
                     )
                 }
             }
@@ -299,6 +300,7 @@ fun WatchLaterItemCard(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onRemove: () -> Unit,
+    isLocalCached: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -310,6 +312,7 @@ fun WatchLaterItemCard(
         coverModel = coverModel,
         title = item.title,
         duration = item.duration,
+        isLocalCached = isLocalCached,
         isSelectionMode = isSelectionMode,
         isSelected = isSelected,
         onSelectToggle = onSelectToggle,

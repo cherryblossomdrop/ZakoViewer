@@ -532,6 +532,12 @@ class BackupRestoreManager(
                         ?: matchedLater?.coverUrl
                         ?: ""
 
+                    val duration = matchedBundleDl?.duration
+                        ?: matchedFav?.duration
+                        ?: matchedHist?.duration
+                        ?: matchedLater?.duration
+                        ?: ""
+
                     val newEntity = DownloadEntity(
                         videoId = if (idCandidate.isNotEmpty()) idCandidate else fileName.substringBeforeLast(".mp4"),
                         title = title.ifEmpty { "视频 $idCandidate" },
@@ -541,7 +547,8 @@ class BackupRestoreManager(
                         downloadedBytes = outFile.length(),
                         status = DownloadEntity.STATUS_COMPLETED,
                         createdAt = System.currentTimeMillis(),
-                        completedAt = System.currentTimeMillis()
+                        completedAt = System.currentTimeMillis(),
+                        duration = duration
                     )
                     db.downloadDao().insertOrUpdate(newEntity)
                     ZakoLog.i(TAG, "Restored and registered download entity: ${newEntity.title} (${newEntity.videoId})")

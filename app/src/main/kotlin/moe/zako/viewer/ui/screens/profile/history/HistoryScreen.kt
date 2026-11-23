@@ -200,7 +200,8 @@ fun HistoryScreen(
                                     } else {
                                         menuTargetItem = historyItem
                                     }
-                                }
+                                },
+                                isLocalCached = state.downloadedVideoIds.contains(historyItem.videoId)
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = Spacing.Lg))
                         }
@@ -315,7 +316,8 @@ fun HistoryRowItem(
     isSelected: Boolean,
     onSelectToggle: () -> Unit,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    isLocalCached: Boolean = false
 ) {
     val context = LocalContext.current
     val coverModel = remember(item.videoId, item.coverUrl) {
@@ -326,6 +328,7 @@ fun HistoryRowItem(
         coverModel = coverModel,
         title = item.title,
         duration = item.duration,
+        isLocalCached = isLocalCached,
         isSelectionMode = isSelectionMode,
         isSelected = isSelected,
         onSelectToggle = onSelectToggle,

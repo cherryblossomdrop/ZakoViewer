@@ -239,21 +239,28 @@ fun ProfileScreen(
                     ProfileItemCard(
                         icon = AppIcons.Security,
                         title = "隐私设置",
-                        shape = RoundedCornerShape(CornerRadius.Xs),
-                        onClick = onNavigateToPrivacy
-                    )
-
-                    ProfileItemCard(
-                        icon = AppIcons.Share,
-                        title = "分享设置",
                         shape = RoundedCornerShape(
                             topStart = CornerRadius.Xs,
                             topEnd = CornerRadius.Xs,
-                            bottomStart = CornerRadius.Lg,
-                            bottomEnd = CornerRadius.Lg
+                            bottomStart = if (settingsState.hasVisibleShareSettings) CornerRadius.Xs else CornerRadius.Lg,
+                            bottomEnd = if (settingsState.hasVisibleShareSettings) CornerRadius.Xs else CornerRadius.Lg
                         ),
-                        onClick = onNavigateToShare
+                        onClick = onNavigateToPrivacy
                     )
+
+                    if (settingsState.hasVisibleShareSettings) {
+                        ProfileItemCard(
+                            icon = AppIcons.Share,
+                            title = "分享设置",
+                            shape = RoundedCornerShape(
+                                topStart = CornerRadius.Xs,
+                                topEnd = CornerRadius.Xs,
+                                bottomStart = CornerRadius.Lg,
+                                bottomEnd = CornerRadius.Lg
+                            ),
+                            onClick = onNavigateToShare
+                        )
+                    }
                 }
             }
 

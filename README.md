@@ -6,18 +6,18 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 ## 📊 工程源码规模统计
 
-本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.58**）代码规模统计如下：
+本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.2.59**）代码规模统计如下：
 
 | 语言 / 类型 | 模块数 | 源码行数 | 核心架构与工程职责 |
 | :--- | :---: | :---: | :--- |
-| **Kotlin (`.kt`)** | 115 | 25,622 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、网络底座、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
+| **Kotlin (`.kt`)** | 115 | 25,705 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、网络底座、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
 | **C++ / JNI (`.cpp`)** | 1 | 561 | libmpv 原生硬件加速渲染、跨语言 JNI 互斥锁、异步 Seek 屏障与原生日志捕获 |
 | **Gradle 构建 (`.kts`)** | 3 | 150 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
 | **资源配置 (`.xml`)** | 26 | 338 | 跨版本清单配置、多主题矢量图形及自适应图标资源 |
 | **构建配置 (CMake)** | 1 | 25 | CMake 原生链接编排与编译参数 |
 | **CI/CD 工作流 (`.yml`)** | 1 | 112 | 自动化 GitHub Release 发版与纯源码无污染归档流水线 |
-| **项目规范与文档 (`.md`)** | 3 | 303 | 自动化版本递增、Commit 规范、发版发布、代码索引与编译验证准则 |
-| **总计** | **150** | **27,111** | **全项目共计约 2.71 万行高质量工程源码** |
+| **项目规范与文档 (`.md`)** | 3 | 334 | 自动化版本递增、Commit 规范、发版发布、代码索引与编译验证准则 |
+| **总计** | **150** | **27,225** | **全项目共计约 2.72 万行高质量工程源码** |
 
 ---
 
@@ -56,9 +56,10 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 - **全域搜索框自动失焦与状态感知**：在 `ZakoSearchBar` 中内建严密的软键盘展开收起监听判定（`wasImeVisible && !isImeVisible`）与搜索提交失焦机制，并抽离出可复用的 `clearFocusOnScroll` 与 `clearFocusOnTap` 修饰符，全面接入首页、收藏夹、历史记录与应用选择器，实现顺畅自如的失焦与浏览体验；
 - **全域搜索框组件与带微动效一键清空归一**：抽离 `ZakoSearchBar` 与 `SearchBarTokens`，全应用（首页搜索条、收藏夹内搜索、历史记录搜索及应用选择器）统一 28dp 胶囊轮廓、中性前景色（`onSurfaceVariant`，禁止随主题色变色）与图标规格。彻底移除右侧向右箭头，替换为一键清空按钮，配合 `AnimatedVisibility` 平滑进出过渡，并在点击瞬间触发缩放回弹与轻度旋转的触感微动效；
 - **首页筛选、排序与布局切换圆形按钮着色统一**：抽离 `FilterBarCircleButton` 与 `FilterBarTokens`，统一采用 Material 3 Tonal 逻辑（`secondaryContainer` 底色 + `onSecondaryContainer` 图标色），并在激活态（勾选综合筛选条件或非默认排序）统一切换为高对比主题色（`primary` 底色 + `onPrimary` 图标色），彻底消除视觉割裂与间距硬编码；
-- **全链路 1-based 分页拓扑与防抖限流自愈**：统一全端页码基准（杜绝 `page=0` 异常请求），网络请求接入可取消协程（`suspendCancellableCoroutine` + 底层 Socket 物理连接立即熔断），并在 ViewModel 层建立 400ms 相同参数并发请求拦截屏障；精确解析服务端业务响应码（如 HTTP 200 下返回的 429 频繁风控），透传明确错误态与重试指引，彻底根除偶发展示「未找到相关视频」的静默吞错；底部分页栏支持点击胶囊弹窗直达指定页并复位滚动；
+- **全链路 1-based 分页拓扑与防抖限流自愈**：统一全端页码基准（杜绝 `page=0` 异常请求），网络请求接入可取消协程（`suspendCancellableCoroutine` + 底层 Socket 物理连接立即熔断），并在 ViewModel 层建立 400ms 相同参数并发请求拦截屏障；首次推荐加载即并发拉取列表总数初始化准确的 `totalPages` 跳转范围，当跳转超界导致空列表时底部分页栏（上一页/第 X 页/下一页）保持常驻杜绝界面卡死；精确解析服务端业务响应码（如 HTTP 200 下返回的 429 频繁风控），透传明确错误态与重试指引；
 - **系统级莫奈动态取色**：支持随 Android 12+ 动态壁纸主色实时流动重绘，并内置紫色（`#686BDD`）、浅绿、淡黄及无级自定义调色板；
-- **全域横向视频列表卡片收口归一**：抽离全局统一组件 `VideoListItemCard`，合并收藏夹、离线下载、历史记录及稍后再看 4 大列表镜像卡片结构，统一由 `VideoCoverTokens`（120x68dp）、`Dimens` 与主题色驱动，集成隐私模糊、`DurationBadge` 时长角标、多选状态机、副信息插槽及尾部操作区，并支持通过 `bottomContent` 插槽承载下载进度指示器；
+- **全域横向视频列表卡片收口归一与本地缓存标识**：抽离全局统一组件 `VideoListItemCard`，合并收藏夹、离线下载、历史记录及稍后再看 4 大列表镜像卡片结构，统一由 `VideoCoverTokens`（120x68dp）、`Dimens` 与主题色驱动，全量集成隐私模糊、`DurationBadge` 封面时长角标、`isLocalCached` 本地已缓存标识、多选状态机、副信息插槽及尾部操作区；离线下载任务条目优化排版，将实时速率移至底部统计行与已下/总大小并列展示杜绝截断；
+- **分享设置动态可见性判定与圆角自适应**：为分享设置抽离 `ShareSettingItem` 与 `visibleShareSettingItems` 集合，避免将入口硬绑定到单一布尔值上；动态汇总所有可见配置项，为空时在「我的」页与设置主页优雅隐藏「分享设置」入口并自适应相邻项底部大圆角；
 - **目录迁移弹窗与生命周期存储权限监听收敛**：抽离 `MigrationProgressDialog` 统一离线下载与全局存储设置的跨目录迁移确认及进度展示；抽离可复用 Compose 副作用组件 `ObserveStoragePermissionOnResume`（利用 `rememberUpdatedState` 彻底防止捕获过期闭包），统一下载、设置、备份恢复及目录浏览器的生命周期权限恢复监听；收藏夹文件夹抽屉全面收口复用 `VideoActionBottomSheet` 与 `MenuTokens`；
 - **日志查看器搜索一致性与备份恢复视窗瘦身解耦**：实时日志页 `LogViewerScreen` 接入全局统一胶囊搜索框 `ZakoSearchBar` 并挂载 `clearFocusOnScroll` 与 `clearFocusOnTap`，实现关键词快速定位与一致的自动失焦体验；拆分 `BackupRestoreScreen`（从 667 行瘦身至 323 行），将导入/导出进度、恢复结果及成功分享弹窗完整解耦至同包 `BackupRestoreDialogs`；
 - **全域图标与上下文菜单 Design Token 归一**：建立 `AppIcons` 语义化图标 Token 与 `MenuTokens` 菜单样式规范，以「离线下载」多选图标（Checklist）作为全应用唯一基准，历史记录、我的收藏与稍后再看三大列表全面对齐；基于 `VideoActionBottomSheet` 抽离高度复用的长按上下文操作菜单，驱动离线下载、历史记录、我的收藏与稍后再看四大核心页面在圆角、标高、内边距、图标尺寸与动效上实现像素级视觉一致，全链路打通单项添加到层级收藏夹，并为稍后再看补全多选模式、批量转存收藏夹与批量移出的统一交互；

@@ -2,6 +2,8 @@
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import moe.zako.viewer.ZakoApplication
+import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
 import moe.zako.viewer.data.local.entities.WatchLaterEntity
@@ -20,18 +22,25 @@ data class WatchLaterUiState(
     val selectedVideoIds: Set<String> = emptySet(),
     val showFolderSelector: Boolean = false,
     val allFolders: List<FavoriteFolderEntity> = emptyList(),
-    val pendingVideo: WatchLaterEntity? = null
+    val pendingVideo: WatchLaterEntity? = null,
+    val downloadedVideoIds: Set<String> = emptySet()
 )
 
 class WatchLaterViewModel(
     private val historyRepository: HistoryRepository,
-    private val favoriteRepository: FavoriteRepository
+    private val favoriteRepository: FavoriteRepository,
+    private val downloadManager: DownloadManager = DownloadManager.getInstance(ZakoApplication.instance)
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WatchLaterUiState())
     val uiState: StateFlow<WatchLaterUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            downloadManager.completedVideoIdsFlow.collect { ids ->
+                _uiState.update { it.copy(downloadedVideoIds = ids) }
+            }
+        }
         viewModelScope.launch {
             historyRepository.getWatchLaterFlow().collect { items ->
                 _uiState.update { current ->

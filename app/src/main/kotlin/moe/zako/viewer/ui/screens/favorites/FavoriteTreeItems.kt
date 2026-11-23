@@ -183,6 +183,7 @@ fun FavoriteVideoItem(
     onPlayClick: () -> Unit,
     onSelectToggle: () -> Unit,
     onMenuClick: () -> Unit,
+    isLocalCached: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -194,6 +195,7 @@ fun FavoriteVideoItem(
         coverModel = coverModel,
         title = item.title,
         duration = item.duration,
+        isLocalCached = isLocalCached,
         isSelectionMode = isSelectionMode,
         isSelected = isSelected,
         onSelectToggle = onSelectToggle,

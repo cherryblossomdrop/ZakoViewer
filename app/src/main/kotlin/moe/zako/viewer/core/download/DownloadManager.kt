@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -112,6 +113,7 @@ class DownloadManager private constructor(private val context: Context) {
             if (matchedFile != null && matchedFile.canRead() && matchedFile.length() > 0L) {
                 val title = record?.title ?: matchedFile.nameWithoutExtension
                 val cover = record?.coverUrl ?: ""
+                val duration = record?.duration ?: ""
                 val updated = (record ?: DownloadEntity(
                     videoId = videoId,
                     title = title,
@@ -121,12 +123,14 @@ class DownloadManager private constructor(private val context: Context) {
                     downloadedBytes = matchedFile.length(),
                     status = DownloadEntity.STATUS_COMPLETED,
                     createdAt = matchedFile.lastModified(),
-                    completedAt = matchedFile.lastModified()
+                    completedAt = matchedFile.lastModified(),
+                    duration = duration
                 )).copy(
                     savePath = matchedFile.absolutePath,
                     status = DownloadEntity.STATUS_COMPLETED,
                     totalBytes = matchedFile.length(),
-                    downloadedBytes = matchedFile.length()
+                    downloadedBytes = matchedFile.length(),
+                    duration = duration.ifEmpty { record?.duration ?: "" }
                 )
                 downloadDao.insertOrUpdate(updated)
                 ZakoLog.i(TAG, "Found local video in directory scan for $videoId: ${matchedFile.absolutePath}, updated database.")
@@ -153,6 +157,19 @@ class DownloadManager private constructor(private val context: Context) {
 
     val activeDownloadsFlow: Flow<List<DownloadEntity>> = downloadDao.getActiveDownloadsFlow()
     val completedDownloadsFlow: Flow<List<DownloadEntity>> = downloadDao.getCompletedDownloadsFlow()
+
+    /**
+     * 响应式暴露当前已在本地完成下载且文件真实有效的视频 ID 集合
+     */
+    val completedVideoIdsFlow: Flow<Set<String>> = completedDownloadsFlow.map { list ->
+        list.asSequence()
+            .filter { entity ->
+                val file = File(entity.savePath)
+                file.exists() && file.isFile && file.length() > 0L
+            }
+            .map { it.videoId }
+            .toSet()
+    }
 
     fun getDownloadStatusFlow(videoId: String): Flow<DownloadEntity?> = downloadDao.getDownloadFlow(videoId)
 
@@ -211,6 +228,7 @@ class DownloadManager private constructor(private val context: Context) {
 
                         val sourceCover = matchedFav?.coverUrl ?: matchedHist?.coverUrl ?: matchedLater?.coverUrl ?: ""
                         val cleanSourceCover = if (sourceCover.startsWith("http://", true) || sourceCover.startsWith("https://", true)) sourceCover else ""
+                        val sourceDuration = matchedFav?.duration ?: matchedHist?.duration ?: matchedLater?.duration ?: ""
 
                         val existing = downloadDao.getDownloadByVideoId(videoId)
                         if (existing == null) {
@@ -224,12 +242,16 @@ class DownloadManager private constructor(private val context: Context) {
                                 downloadedBytes = file.length(),
                                 status = DownloadEntity.STATUS_COMPLETED,
                                 createdAt = file.lastModified(),
-                                completedAt = file.lastModified()
+                                completedAt = file.lastModified(),
+                                duration = sourceDuration
                             )
                             downloadDao.insertOrUpdate(newEntity)
                             ZakoLog.i(TAG, "Reconciled local video file into downloads: ${file.name} ($videoId)")
                         } else {
                             var updated = existing
+                            if (sourceDuration.isNotBlank() && existing.duration.isBlank()) {
+                                updated = updated.copy(duration = sourceDuration)
+                            }
                             if (existing.status != DownloadEntity.STATUS_COMPLETED || existing.savePath != file.absolutePath) {
                                 updated = updated.copy(
                                     savePath = file.absolutePath,

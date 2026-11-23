@@ -123,9 +123,8 @@ fun SettingsShareScreen(
                 .padding(Spacing.Lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.Lg)
         ) {
-            // 当 isLongPressShareUnlocked == false 时，界面上完全不渲染该开关
-            // 当 isLongPressShareUnlocked == true 时，显示“开启长按分享复制完整链接”开关
-            if (state.isLongPressShareUnlocked) {
+            // 动态依据可见项集合判定渲染
+            if (state.visibleShareSettingItems.contains(ShareSettingItem.LONG_PRESS_SHARE_URL)) {
                 item {
                     SettingsCard(shape = RoundedCornerShape(CornerRadius.CardGroup)) {
                         SettingsSwitchItem(

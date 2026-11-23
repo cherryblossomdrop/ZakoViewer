@@ -90,20 +90,27 @@ fun SettingsScreen(
                     SettingsCategoryItem(
                         icon = AppIcons.Security,
                         title = "隐私设置",
-                        shape = RoundedCornerShape(CornerRadius.Xs),
-                        onClick = onNavigateToPrivacy
-                    )
-                    SettingsCategoryItem(
-                        icon = AppIcons.Share,
-                        title = "分享设置",
                         shape = RoundedCornerShape(
                             topStart = CornerRadius.Xs,
                             topEnd = CornerRadius.Xs,
-                            bottomStart = CornerRadius.Lg,
-                            bottomEnd = CornerRadius.Lg
+                            bottomStart = if (state.hasVisibleShareSettings) CornerRadius.Xs else CornerRadius.Lg,
+                            bottomEnd = if (state.hasVisibleShareSettings) CornerRadius.Xs else CornerRadius.Lg
                         ),
-                        onClick = onNavigateToShare
+                        onClick = onNavigateToPrivacy
                     )
+                    if (state.hasVisibleShareSettings) {
+                        SettingsCategoryItem(
+                            icon = AppIcons.Share,
+                            title = "分享设置",
+                            shape = RoundedCornerShape(
+                                topStart = CornerRadius.Xs,
+                                topEnd = CornerRadius.Xs,
+                                bottomStart = CornerRadius.Lg,
+                                bottomEnd = CornerRadius.Lg
+                            ),
+                            onClick = onNavigateToShare
+                        )
+                    }
                 }
             }
 

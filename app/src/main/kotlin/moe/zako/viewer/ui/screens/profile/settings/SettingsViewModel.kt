@@ -19,6 +19,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
+/**
+ * 分享设置子页面可配置项枚举（可扩展架构定义）
+ */
+enum class ShareSettingItem {
+    /** 开启长按分享复制完整链接 */
+    LONG_PRESS_SHARE_URL
+}
+
 data class SettingsUiState(
     val longPressSpeed: Float = 2.0f,
     val externalPlayerPkg: String = "",
@@ -41,7 +49,25 @@ data class SettingsUiState(
     val isMigrating: Boolean = false,
     val migrationProgressText: String = "",
     val cacheSizeFormatted: String = "计算中..."
-)
+) {
+    /**
+     * 动态汇总分享设置子页面当前所有实际可见的配置项集合
+     * 架构解耦：防硬绑定单个布尔值，未来新增分享配置项直接在此集合追加判定即可自动生效
+     */
+    val visibleShareSettingItems: Set<ShareSettingItem>
+        get() = buildSet {
+            if (isLongPressShareUnlocked) {
+                add(ShareSettingItem.LONG_PRESS_SHARE_URL)
+            }
+            // 未来新增其他分享设置项时直接在此追加判定
+        }
+
+    /**
+     * 是否存在任何可见的分享设置配置项
+     */
+    val hasVisibleShareSettings: Boolean
+        get() = visibleShareSettingItems.isNotEmpty()
+}
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,

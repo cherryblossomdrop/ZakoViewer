@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -73,6 +75,7 @@ fun LogViewerScreen(
     var exportedResult by remember { mutableStateOf<ExportResult?>(null) }
     var isExporting by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
 
     val filteredLogs = remember(logs, searchQuery) {
         if (searchQuery.isBlank()) logs
@@ -171,6 +174,33 @@ fun LogViewerScreen(
         )
     }
 
+    // 清空日志二次确认弹窗
+    if (showClearConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmDialog = false },
+            icon = { Icon(AppIcons.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("确认清空日志") },
+            text = { Text("确定要清空当前所有运行诊断日志吗？此操作不可恢复。") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearConfirmDialog = false
+                        ZakoLog.clear()
+                        ZakoToast.show("运行日志已清空")
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认清空")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmDialog = false }) {
+                    Text("取消操作")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -186,10 +216,7 @@ fun LogViewerScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        ZakoLog.clear()
-                        ZakoToast.show("运行日志已清空")
-                    }) {
+                    IconButton(onClick = { showClearConfirmDialog = true }) {
                         Icon(imageVector = AppIcons.Delete, contentDescription = "清空日志")
                     }
                     IconButton(

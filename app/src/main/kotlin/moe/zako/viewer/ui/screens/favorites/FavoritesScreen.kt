@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -65,6 +68,11 @@ fun FavoritesScreen(
     var itemMenuTarget by remember { mutableStateOf<FavoriteItemEntity?>(null) }
     var localVideoInfoToShow by remember { mutableStateOf<LocalFileInfo?>(null) }
     var localInfoForTarget by remember { mutableStateOf<LocalFileInfo?>(null) }
+
+    // 删除确认弹窗状态
+    var folderToDelete by remember { mutableStateOf<FavoriteFolderEntity?>(null) }
+    var itemToDelete by remember { mutableStateOf<FavoriteItemEntity?>(null) }
+    var showBatchDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(itemMenuTarget) {
         localInfoForTarget = null
@@ -138,7 +146,7 @@ fun FavoritesScreen(
                             Text("复制 (${state.selectedItemIds.size})")
                         }
 
-                        TextButton(onClick = { viewModel.batchDeleteSelected() }) {
+                        TextButton(onClick = { showBatchDeleteConfirmDialog = true }) {
                             Icon(
                                 imageVector = AppIcons.Delete,
                                 contentDescription = null,
@@ -273,9 +281,10 @@ fun FavoritesScreen(
                 folderMenuTarget = null
                 viewModel.showMoveDialogForSingleFolder(fid)
             },
-            onDelete = { fid ->
+            onDelete = { _ ->
+                val f = folder
                 folderMenuTarget = null
-                viewModel.deleteFolder(fid)
+                folderToDelete = f
             },
             onDismissRequest = { folderMenuTarget = null }
         )
@@ -311,9 +320,10 @@ fun FavoritesScreen(
                 itemMenuTarget = null
                 localVideoInfoToShow = info
             },
-            onDelete = { iid ->
+            onDelete = { _ ->
+                val itm = item
                 itemMenuTarget = null
-                viewModel.deleteItem(iid)
+                itemToDelete = itm
             },
             onDismissRequest = { itemMenuTarget = null }
         )
@@ -379,6 +389,86 @@ fun FavoritesScreen(
             onDismiss = { viewModel.dismissCopyDialog() },
             onFolderSelected = { targetId -> viewModel.executeCopy(targetId) },
             onCreateFolder = { name, parentId -> viewModel.createFolder(name, parentId) }
+        )
+    }
+
+    // 9. 删除收藏夹二次确认弹窗
+    folderToDelete?.let { folder ->
+        AlertDialog(
+            onDismissRequest = { folderToDelete = null },
+            icon = { Icon(AppIcons.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("确认删除收藏夹") },
+            text = { Text("确定要删除收藏夹「${folder.name}」及其包含的所有子收藏夹与视频条目吗？此操作不可恢复。") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val fid = folder.id
+                        folderToDelete = null
+                        viewModel.deleteFolder(fid)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { folderToDelete = null }) {
+                    Text("取消操作")
+                }
+            }
+        )
+    }
+
+    // 10. 移出收藏二次确认弹窗
+    itemToDelete?.let { itm ->
+        AlertDialog(
+            onDismissRequest = { itemToDelete = null },
+            icon = { Icon(AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("确认移出收藏") },
+            text = { Text("确定要将「${itm.title}」从当前收藏夹中移出吗？") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val iid = itm.id
+                        itemToDelete = null
+                        viewModel.deleteItem(iid)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToDelete = null }) {
+                    Text("取消操作")
+                }
+            }
+        )
+    }
+
+    // 11. 批量删除二次确认弹窗
+    if (showBatchDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showBatchDeleteConfirmDialog = false },
+            icon = { Icon(AppIcons.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("确认批量删除") },
+            text = { Text("确定要删除所选的 ${state.totalSelectedCount} 个项目吗？若包含收藏夹，其下所有子内容也将一并删除。") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBatchDeleteConfirmDialog = false
+                        viewModel.batchDeleteSelected()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatchDeleteConfirmDialog = false }) {
+                    Text("取消操作")
+                }
+            }
         )
     }
 }

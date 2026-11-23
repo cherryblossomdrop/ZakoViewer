@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -69,6 +72,10 @@ fun HistoryScreen(
     var localInfoForTarget by remember { mutableStateOf<LocalFileInfo?>(null) }
     var showFileInfoDialog by remember { mutableStateOf(false) }
 
+    // 删除确认弹窗状态
+    var historyToDelete by remember { mutableStateOf<WatchHistoryEntity?>(null) }
+    var showBatchDeleteConfirmDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(menuTargetItem) {
         localInfoForTarget = null
         val target = menuTargetItem ?: return@LaunchedEffect
@@ -107,9 +114,6 @@ fun HistoryScreen(
                         IconButton(onClick = { viewModel.toggleSelectionMode() }) {
                             Icon(imageVector = AppIcons.MultiSelect, contentDescription = "多选")
                         }
-                        IconButton(onClick = { viewModel.clearAllHistory() }) {
-                            Icon(imageVector = AppIcons.DeleteSweep, contentDescription = "清空记录")
-                        }
                     }
                 )
             }
@@ -127,7 +131,7 @@ fun HistoryScreen(
                             Spacer(modifier = Modifier.width(Spacing.Xs))
                             Text("加入收藏夹")
                         }
-                        TextButton(onClick = { viewModel.deleteSelected() }) {
+                        TextButton(onClick = { showBatchDeleteConfirmDialog = true }) {
                             Icon(imageVector = AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             Spacer(modifier = Modifier.width(Spacing.Xs))
                             Text("删除", color = MaterialTheme.colorScheme.error)
@@ -275,7 +279,7 @@ fun HistoryScreen(
                     icon = AppIcons.Delete,
                     isDangerous = true,
                     onClick = {
-                        viewModel.deleteHistory(target.videoId)
+                        historyToDelete = target
                     }
                 )
             )
@@ -301,6 +305,60 @@ fun HistoryScreen(
             onDismiss = { viewModel.dismissFolderDialog() },
             onFolderSelected = { targetId -> viewModel.onFolderSelected(targetId) },
             onCreateFolder = { name, parentId -> viewModel.createFolder(name, parentId) }
+        )
+    }
+
+    // 单条历史记录删除确认弹窗
+    if (historyToDelete != null) {
+        val target = historyToDelete!!
+        AlertDialog(
+            onDismissRequest = { historyToDelete = null },
+            icon = { Icon(AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("确认删除记录") },
+            text = { Text("确定要将「${target.title}」从观看历史中删除吗？") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val vid = target.videoId
+                        historyToDelete = null
+                        viewModel.deleteHistory(vid)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { historyToDelete = null }) {
+                    Text("取消操作")
+                }
+            }
+        )
+    }
+
+    // 批量删除确认弹窗
+    if (showBatchDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showBatchDeleteConfirmDialog = false },
+            icon = { Icon(AppIcons.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("确认批量删除") },
+            text = { Text("确定要删除选中的 ${state.selectedVideoIds.size} 条观看历史记录吗？") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBatchDeleteConfirmDialog = false
+                        viewModel.deleteSelected()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatchDeleteConfirmDialog = false }) {
+                    Text("取消操作")
+                }
+            }
         )
     }
 }

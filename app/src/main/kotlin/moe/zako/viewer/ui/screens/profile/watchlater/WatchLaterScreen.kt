@@ -62,6 +62,7 @@ fun WatchLaterScreen(
     var localInfoForTarget by remember { mutableStateOf<LocalFileInfo?>(null) }
     var showFileInfoDialog by remember { mutableStateOf(false) }
     var showBatchDeleteDialog by remember { mutableStateOf(false) }
+    var itemToRemove by remember { mutableStateOf<WatchLaterEntity?>(null) }
 
     LaunchedEffect(menuTargetItem) {
         localInfoForTarget = null
@@ -167,7 +168,7 @@ fun WatchLaterScreen(
                                 menuTargetItem = item
                             }
                         },
-                        onRemove = { viewModel.remove(item.videoId) },
+                        onRemove = { itemToRemove = item },
                         isLocalCached = state.downloadedVideoIds.contains(item.videoId)
                     )
                 }
@@ -229,7 +230,7 @@ fun WatchLaterScreen(
                     icon = AppIcons.Delete,
                     isDangerous = true,
                     onClick = {
-                        viewModel.remove(target.videoId)
+                        itemToRemove = target
                     }
                 )
             )
@@ -246,6 +247,34 @@ fun WatchLaterScreen(
         LocalFileInfoDialog(
             info = localInfoForTarget!!,
             onDismiss = { showFileInfoDialog = false }
+        )
+    }
+
+    // 单条移出二次确认弹窗
+    if (itemToRemove != null) {
+        val target = itemToRemove!!
+        AlertDialog(
+            onDismissRequest = { itemToRemove = null },
+            icon = { Icon(AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("确认移出待看") },
+            text = { Text("确定要将「${target.title}」从稍后再看列表中移除吗？") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val vid = target.videoId
+                        itemToRemove = null
+                        viewModel.remove(vid)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认移出")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToRemove = null }) {
+                    Text("取消操作")
+                }
+            }
         )
     }
 
@@ -269,7 +298,7 @@ fun WatchLaterScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showBatchDeleteDialog = false }) {
-                    Text("取消")
+                    Text("取消操作")
                 }
             }
         )

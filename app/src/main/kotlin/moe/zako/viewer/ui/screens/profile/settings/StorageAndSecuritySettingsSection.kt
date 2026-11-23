@@ -240,30 +240,23 @@ fun SettingsDownloadScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = if (hasStoragePermission) AppIcons.CheckCircle else AppIcons.Warning,
-                                        contentDescription = null,
-                                        tint = if (hasStoragePermission) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(IconSize.MediumLarge)
-                                    )
-                                    Spacer(modifier = Modifier.width(Spacing.Sm))
-                                    Text(
-                                        text = "所有文件访问权限",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                                Surface(
-                                    shape = RoundedCornerShape(CornerRadius.Compact),
-                                    color = if (hasStoragePermission) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+                                Text(
+                                    text = "所有文件访问权限",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                IconButton(
+                                    onClick = {
+                                        if (!hasStoragePermission) {
+                                            StoragePermissionHelper.requestAllFilesAccess(context)
+                                        }
+                                    },
+                                    enabled = !hasStoragePermission
                                 ) {
-                                    Text(
-                                        text = if (hasStoragePermission) "已授权" else "未授权",
-                                        color = if (hasStoragePermission) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = Spacing.Sm, vertical = Spacing.SpeedBadge)
+                                    Icon(
+                                        imageVector = if (hasStoragePermission) AppIcons.Check else AppIcons.Close,
+                                        contentDescription = if (hasStoragePermission) "已授权" else "未授权",
+                                        tint = if (hasStoragePermission) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                                     )
                                 }
                             }

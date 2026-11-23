@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -26,12 +29,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import moe.zako.viewer.ui.components.ZakoSearchBar
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.CornerRadius
@@ -64,6 +69,11 @@ fun HomeSearchBar(
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
+
+    // 删除确认弹窗状态
+    var itemToDelete by remember { mutableStateOf<String?>(null) }
+    var showBatchDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showClearAllConfirmDialog by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         // 统一搜索输入框（右侧箭头已彻底移除，复用公共组件与一键清空微动效）
@@ -121,7 +131,7 @@ fun HomeSearchBar(
                                     Text(if (allSelected) "取消全选" else "全选", fontSize = FontSizes.Caption)
                                 }
                                 TextButton(
-                                    onClick = onDeleteSelectedHistory,
+                                    onClick = { showBatchDeleteConfirmDialog = true },
                                     enabled = selectedHistoryQueries.isNotEmpty(),
                                     contentPadding = PaddingValues(horizontal = Spacing.Compact, vertical = Spacing.Xxs)
                                 ) {
@@ -132,11 +142,7 @@ fun HomeSearchBar(
                                     )
                                 }
                                 TextButton(
-                                    onClick = {
-                                        onClearAllHistory()
-                                        focusManager.clearFocus()
-                                        onSearchFocusChanged(false)
-                                    },
+                                    onClick = { showClearAllConfirmDialog = true },
                                     contentPadding = PaddingValues(horizontal = Spacing.Compact, vertical = Spacing.Xxs)
                                 ) {
                                     Text("清空全部", fontSize = FontSizes.Caption, color = MaterialTheme.colorScheme.error)
@@ -217,7 +223,7 @@ fun HomeSearchBar(
                                     },
                                     trailingIcon = {
                                         IconButton(
-                                            onClick = { onDeleteSearchHistoryItem(historyQuery) },
+                                            onClick = { itemToDelete = historyQuery },
                                             modifier = Modifier.size(IconSize.Intermediate)
                                         ) {
                                             Icon(
@@ -233,6 +239,86 @@ fun HomeSearchBar(
                     }
                 }
             }
+        }
+
+        // 单条搜索历史删除确认弹窗
+        itemToDelete?.let { query ->
+            AlertDialog(
+                onDismissRequest = { itemToDelete = null },
+                icon = { Icon(AppIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                title = { Text("确认删除记录") },
+                text = { Text("确定要删除搜索历史词条「$query」吗？") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            itemToDelete = null
+                            onDeleteSearchHistoryItem(query)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("确认删除")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { itemToDelete = null }) {
+                        Text("取消操作")
+                    }
+                }
+            )
+        }
+
+        // 批量删除搜索历史确认弹窗
+        if (showBatchDeleteConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showBatchDeleteConfirmDialog = false },
+                icon = { Icon(AppIcons.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                title = { Text("确认批量删除") },
+                text = { Text("确定要删除选中的 ${selectedHistoryQueries.size} 条搜索历史吗？") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showBatchDeleteConfirmDialog = false
+                            onDeleteSelectedHistory()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("确认删除")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showBatchDeleteConfirmDialog = false }) {
+                        Text("取消操作")
+                    }
+                }
+            )
+        }
+
+        // 清空全部搜索历史确认弹窗
+        if (showClearAllConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearAllConfirmDialog = false },
+                icon = { Icon(AppIcons.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                title = { Text("确认清空全部") },
+                text = { Text("确定要清空全部搜索历史记录吗？此操作不可恢复。") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showClearAllConfirmDialog = false
+                            onClearAllHistory()
+                            focusManager.clearFocus()
+                            onSearchFocusChanged(false)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("确认清空")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearAllConfirmDialog = false }) {
+                        Text("取消操作")
+                    }
+                }
+            )
         }
     }
 }

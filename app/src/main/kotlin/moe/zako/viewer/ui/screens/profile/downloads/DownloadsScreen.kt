@@ -88,6 +88,9 @@ fun DownloadsScreen(
     // 批量删除确认弹窗状态
     var showBatchDeleteConfirmDialog by remember { mutableStateOf(false) }
 
+    // 单条任务删除确认弹窗状态
+    var itemToDelete by remember { mutableStateOf<DownloadEntity?>(null) }
+
     fun requestChangeFolder() {
         if (StoragePermissionHelper.hasAllFilesAccess()) {
             showFolderBrowserDialog = true
@@ -150,9 +153,6 @@ fun DownloadsScreen(
                             IconButton(onClick = { viewModel.enterMultiSelect() }) {
                                 Icon(imageVector = AppIcons.MultiSelect, contentDescription = "多选")
                             }
-                        }
-                        IconButton(onClick = { requestChangeFolder() }) {
-                            Icon(imageVector = AppIcons.FolderOpen, contentDescription = "存储路径")
                         }
                     }
                 )
@@ -226,7 +226,7 @@ fun DownloadsScreen(
                                 isSelected = isSelected,
                                 onSelectToggle = { viewModel.toggleSelect(item.videoId) },
                                 onPlay = { handlePlayClick(item) },
-                                onDelete = { viewModel.deleteDownload(item.videoId) },
+                                onDelete = { itemToDelete = item },
                                 onLongClick = {
                                     if (state.isMultiSelectMode) {
                                         viewModel.toggleSelect(item.videoId)
@@ -261,7 +261,7 @@ fun DownloadsScreen(
                                 onSelectToggle = { viewModel.toggleSelect(item.videoId) },
                                 onPause = { viewModel.pauseDownload(item.videoId) },
                                 onResume = { viewModel.resumeDownload(item.videoId) },
-                                onDelete = { viewModel.deleteDownload(item.videoId) },
+                                onDelete = { itemToDelete = item },
                                 onLongClick = {
                                     if (state.isMultiSelectMode) {
                                         viewModel.toggleSelect(item.videoId)
@@ -341,6 +341,22 @@ fun DownloadsScreen(
                 ZakoToast.show("已删除所选任务")
             },
             onDismiss = { showBatchDeleteConfirmDialog = false }
+        )
+    }
+
+    // 单条任务删除确认弹窗
+    itemToDelete?.let { target ->
+        val isCompleted = target.status == DownloadEntity.STATUS_COMPLETED
+        SingleDeleteConfirmDialog(
+            title = target.title,
+            isCompleted = isCompleted,
+            onConfirm = {
+                val videoId = target.videoId
+                itemToDelete = null
+                viewModel.deleteDownload(videoId)
+                ZakoToast.show(if (isCompleted) "已删除视频" else "已取消下载")
+            },
+            onDismiss = { itemToDelete = null }
         )
     }
 

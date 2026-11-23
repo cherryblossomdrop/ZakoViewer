@@ -1,6 +1,6 @@
 ﻿# ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（v1.3.9），全项目核心工程源码共计 **126** 个文件，累计 **30,022** 行代码。  
+> **版本定位**：截至最新构建（v1.3.10），全项目核心工程源码共计 **126** 个文件，累计 **30,363** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -161,12 +161,12 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/DetailInfoAndActionsSection.kt` | 429 | 视频标题、核心操作栏与元数据展示卡片 | 呈现 VIP 徽标、可复制标题，集成五角星收藏/下载/稍后再看/暗号分享操作栏及点击检索元数据芯片 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/DetailRelatedAndCommentsSection.kt` | 284 | 相关推荐视频列表与留言区交互面板 | 折叠/展开留言评论区、横屏网格与竖屏列表相关视频渲染，复用共享弹窗组件 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/detail/VideoDetailViewModel.kt` | 762 | 视频详情页状态中枢，负责详情拉取、收藏夹归属、稍后再看与下载创建 | 聚合各仓库门面，setFullscreen 契约锁定全屏维持当前在线片源与进度，统筹选线起播、测速会话与进度保存透传时长 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesScreen.kt` | 384 | 收藏夹树状目录管理视窗，支持多选批量操纵与长按菜单 | 统一多选反选逻辑，长按固定跳转详情页、本地视频弹出 `LocalFileInfoDialog`，接入 `MultiSelectTopBar`、`ZakoSearchBar` 与本地已缓存标识渲染 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesScreen.kt` | 474 | 收藏夹树状目录管理视窗，支持多选批量操纵与长按菜单 | 统一多选反选逻辑，补齐移出单条收藏、删除子收藏夹与批量删除 AlertDialog 二次确认弹窗且按钮 4 字对齐，接入 `MultiSelectTopBar` 与 `ZakoSearchBar` |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoriteTreeItems.kt` | 257 | 收藏夹树状组件（面包屑路径条、子收藏夹卡片与视频卡片） | 呈现 `BreadcrumbBar` 路径芯片、`FavoriteFolderItem` 文件夹卡片与视频卡片，接入 isLocalCached 本地缓存状态与时长角标 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesDialogs.kt` | 271 | 收藏夹业务弹窗与操作抽屉宿主 | 提供新建/重命名文件夹弹窗、重命名视频弹窗及统一「视频详情」的长按操作抽屉，清理未使用导包 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesViewModel.kt` | 432 | 收藏夹业务状态中枢，处理层级切换、批量移动/删除与搜索 | 调度 `FavoriteRepository`，原子清空 `toggleSelectAll()`，响应式监听 DownloadManager 已完成视频 ID 维护本地缓存状态 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeScreen.kt` | 520 | 首页主页面视窗，负责列表滚动骨架、瀑布流/网格排布与状态机调度 | 维护下拉刷新、触底分页预加载、状态机隔离，移除未启用数据源态冗余重试，抽离 HomePaginationBar，分页模式空状态下保持翻页栏常驻杜绝卡死 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeSearchBar.kt` | 237 | 首页搜索输入框、暗号直达提示与搜索历史交互面板 | 彻底移除向右箭头，复用 `ZakoSearchBar` 统一胶囊搜索框与中性色一键清空微动效，统筹搜索历史展开、清空失焦与批量删除 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeSearchBar.kt` | 324 | 首页搜索输入框、暗号直达提示与搜索历史交互面板 | 彻底移除向右箭头，复用 `ZakoSearchBar` 统一胶囊搜索框与中性色一键清空微动效，统筹搜索历史单条删除、批量删除与清空全部 AlertDialog 二次确认及 4 字按钮对齐 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeFilterBar.kt` | 459 | 首页分类标签栏、排序模式切换、视图切换与综合筛选抽屉 | 统一筛选、排序、布局切换按钮着色（布局模式保持 Tonal 浅色着色，筛选按钮着色与排序逻辑对齐，仅在非默认筛选时激活） |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeJumpPageDialog.kt` | 173 | 首页分页排布模式跳转指定页弹窗 (Material 3 AlertDialog) | 纯数字输入拦截、自动请求焦点并弹起软键盘、边界合法性校验、回车直达与即时收起 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeViewModel.kt` | 606 | 首页状态机中枢，管理视频列表分页、搜索词历史与暗号直达 | 协同 `DataSourceRegistry` 与 `SearchHistoryRepository`，统一 1-based 分页调度，支持暗号解锁数据源插件并异步落库 |
@@ -174,24 +174,24 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerViewModel.kt` | 755 | 播放器状态机中枢，统筹起播选线、实时测速热切、进度保存与外部播放 | 驱动 `ZakoPlayer` 与 `PlaybackSourceCoordinator`，统筹本地/在线起播选线，起播与退出保存进度完整透传时长与 VIP |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/ProfileScreen.kt` | 425 | 个人中心主入口视窗 | 提供离线下载、稍后再看、源站设置（解锁可见）、数据备份与全局设置等子模块聚合导航列表，严格遵循 MD3E 双层间距规范 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/AboutScreen.kt` | 296 | 关于视窗，展示应用版本信息、开源协议与开发者鸣谢 | 调整许可声明与开源仓库上下顺序并补齐左侧图标基线对齐，导出日志独立为「诊断与排错」区块，收敛双层间距 Token |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/LogViewerScreen.kt` | 339 | 实时应用日志查看器视窗 | 提供日志实时流刷新、级别筛选、关键词搜索、清空及外部导出分享功能，级别颜色收敛至 LogLevelColors 并自适应深浅色，字体收敛至 ExtraTextStyles |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/LogViewerScreen.kt` | 366 | 实时应用日志查看器视窗 | 提供日志实时流刷新、级别筛选、关键词搜索、清空日志二次确认弹窗（4 字对齐）及外部导出分享功能，级别颜色收敛至 LogLevelColors |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/backup/BackupRestoreScreen.kt` | 378 | 数据备份与恢复视窗 | 规范导出备份与恢复备份 MD3E 区块标题与双层间距 Token，提供生成全量 ZIP 备份文件、导入恢复与进度反馈 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/backup/BackupRestoreDialogs.kt` | 373 | 数据备份与恢复相关模态弹窗集 | 承接新建备份确认、恢复提示、密码输入及完成反馈对话框，进度条与描边全量收敛至 Design Tokens |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/backup/BackupRestoreViewModel.kt` | 266 | 数据备份与恢复业务逻辑控制器 | 调度 `BackupRestoreManager` 执行流式序列化/反序列化，缓冲区收敛至 StorageConstants，暴露进度与完成弹窗状态 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/downloads/DownloadsScreen.kt` | 377 | 离线下载管理视窗，分栏管理已下载/下载中任务，支持多选与长按菜单 | 接入 `LocalFileInfoDialog`，长按固定视频详情，修复 `toggleSelectAll()` 原子清空，存储路径与列表留白全量 Token 化 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/downloads/DownloadsScreen.kt` | 393 | 离线下载管理视窗，分栏管理已下载/下载中任务，支持多选与长按菜单 | 移除顶栏冗余存储路径按钮，接入 `SingleDeleteConfirmDialog` 补齐单条已下载/下载中任务删除二次确认，存储路径与列表留白全量 Token 化 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/downloads/DownloadTaskItems.kt` | 243 | 离线下载任务条目卡片组件（已下载卡片与下载中卡片） | 接入 `DurationBadge` 呈现封面时长角标，优化 ActiveDownloadItem 下载中卡片排版将实时速率移至底部统计行消除文字截断 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/downloads/DownloadsDialogs.kt` | 155 | 离线下载弹窗与长按抽屉宿主 | 提供 `DownloadActionBottomSheet` 菜单，统一文案「视频详情」，移除冗余文件信息弹窗复用公共组件，间距全量收敛至 Spacing |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/downloads/DownloadsDialogs.kt` | 196 | 离线下载弹窗与长按抽屉宿主 | 提供 `DownloadActionBottomSheet` 菜单，规范 `BatchDeleteConfirmDialog` 与新增 `SingleDeleteConfirmDialog` 弹窗 4 字按钮文案对齐，间距全量收敛至 Spacing |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/downloads/DownloadsViewModel.kt` | 270 | 离线下载业务状态中枢，负责任务流监听、暂停/继续/重下与跨目录迁移 | 监听 `DownloadManager` 进度流，修复 `toggleSelectAll()` 判定与处理路径迁移 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/history/HistoryScreen.kt` | 344 | 历史记录视窗，按天隔离分组呈现历史记录，支持批量管理与长按菜单 | 接入 `DurationBadge` 时长角标、本地已缓存标识与统一「视频详情」长按菜单，按天分组头与间距全量 Token 化 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/history/HistoryScreen.kt` | 402 | 历史记录视窗，按天隔离分组呈现历史记录，支持批量管理与长按菜单 | 精简顶栏移除清空按钮仅保留多选，长按删除与批量删除补齐 AlertDialog 二次确认弹窗且 4 字按钮对齐，按天分组头与间距全量 Token 化 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/history/HistoryViewModel.kt` | 215 | 历史记录业务状态中枢，处理历史检索、批量删除及收藏夹转存 | 调度 `HistoryRepository`，响应式监听 completedVideoIdsFlow 维护本地缓存状态，提供 `toggleSelectAll()` 原子清空 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/SettingsScreen.kt` | 245 | 全局设置主入口视窗，负责顶栏导航、分组卡片拼装与缓存清理弹窗宿主 | 严格配备「个性化与隐私」「播放与下载」「存储与日志」MD3E 区块标题，统一双层间距 Token 与 CosAV 数据源副标题 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/SettingsComponents.kt` | 327 | 设置同包共享基础组件与弹窗容器 | 提供 `SettingsCategoryItem`、`SettingsCard`、`SettingsSwitchItem`、`ExternalAppCard` 以及权限/迁移弹窗组件，几何尺寸收敛至 SettingsTokens |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/AppearanceSettingsSection.kt` | 399 | 外观与主题设置视窗，支持莫奈动态色、自定义调色盘与图标主题跟随 | 严格规范「应用图标」与「主题与配色」MD3E 区块层级与分组卡片圆角，双层间距全量 Token 化 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/PlaybackSettingsSection.kt` | 253 | 播放核心引擎、长按倍速与外部播放器配置视窗 | 严格规范「手势与倍速」「内核与解码」「在线流媒体」「外部播放器」MD3E 区块标题与双层间距 Token |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/DataSourceSettingsSection.kt` | 214 | 源站设置与在线流媒体 CDN 线路选优调度配置视窗与区块 | 独立源站设置子页面，配备「视频数据源」与「流媒体线路」区块标题，更名「CosAV 数据源」，双层间距全量 Token 化 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/StorageAndSecuritySettingsSection.kt` | 466 | 存储路径、文件权限、离线迁移、封面脱敏及长按分享配置视窗 | 隐私页配备「隐私防护」、分享页配备「链接分享」、下载页配备「存储权限」「下载路径」「外部调用」MD3E 区块标题，双层间距 Token 化 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/StorageAndSecuritySettingsSection.kt` | 459 | 存储路径、文件权限、离线迁移、封面脱敏及长按分享配置视窗 | 统一文件访问权限卡片样式，标题左对齐并右置矢量状态图标（对齐下游卡片），配备「存储权限」「下载路径」「外部调用」MD3E 区块标题，双层间距 Token 化 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/settings/SettingsViewModel.kt` | 428 | 全局配置业务状态机控制器 | 调度 `SettingsRepository`，抽离 ShareSettingItem 枚举与 visibleShareSettingItems/hasVisibleShareSettings 动态计算属性，响应式更新 DataStore 偏好并触发图标别名同步 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/watchlater/WatchLaterScreen.kt` | 328 | 稍后再看视窗，展现待看列表并支持多选模式、批量管理与长按上下文菜单 | 接入 `DurationBadge` 与本地已缓存标识，统一长按「视频详情」、检测本地视频展示「文件信息」，全量 Token 化 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/watchlater/WatchLaterScreen.kt` | 357 | 稍后再看视窗，展现待看列表并支持多选模式、批量管理与长按上下文菜单 | 补齐单条卡片删除、长按移出待看与批量移出 AlertDialog 二次确认弹窗且按钮 4 字对齐，统一长按「视频详情」，全量 Token 化 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/watchlater/WatchLaterViewModel.kt` | 204 | 稍后再看业务控制器与多选状态中枢 | 监听待看流与 completedVideoIdsFlow 维护本地缓存状态，统筹多选模式切换、`toggleSelectAll()` 全选/反选与批量转存收藏夹 |
 
 ---

@@ -154,7 +154,7 @@ fun LocalFileInfoDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("关闭")
+                Text("确认关闭")
             }
         }
     )

@@ -322,7 +322,7 @@ fun StoragePermissionGuideDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text("暂不开启")
             }
         }
     )

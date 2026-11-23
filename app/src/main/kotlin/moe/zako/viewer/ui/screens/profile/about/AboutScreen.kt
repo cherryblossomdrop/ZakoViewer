@@ -160,11 +160,22 @@ fun AboutScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                     ) {
                         Column(modifier = Modifier.padding(Spacing.Lg)) {
-                            Text(
-                                text = "开源组件许可声明",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.License,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.Lg))
+                                Text(
+                                    text = "开源组件许可声明",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                             Spacer(modifier = Modifier.height(Spacing.Sm))
                             LicenseItem("libmpv", "GPLv2 / LGPLv2.1", "Cross-platform video player core")
                             LicenseItem("NextPlayerCloud / NeoPlayer", "GPLv3", "Android MPV playback architecture & JNI bindings")

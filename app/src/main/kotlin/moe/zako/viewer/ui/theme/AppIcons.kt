@@ -61,6 +61,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.Search
@@ -143,10 +144,12 @@ object AppIcons {
     val Copy: ImageVector = Icons.Default.ContentCopy
     val Move: ImageVector = Icons.AutoMirrored.Filled.DriveFileMove
     val Search: ImageVector = Icons.Default.Search
+    val Refresh: ImageVector = Icons.Default.Refresh
     val MoreVert: ImageVector = Icons.Default.MoreVert
     val WorkspacePremium: ImageVector = Icons.Default.WorkspacePremium
     val CheckCircle: ImageVector = Icons.Default.CheckCircle
     val Info: ImageVector = Icons.Default.Info
+    val License: ImageVector = Icons.AutoMirrored.Filled.Article
     val Error: ImageVector = Icons.Default.Error
 
     // 设置、系统与硬件

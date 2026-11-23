@@ -150,7 +150,7 @@ fun LogViewerScreen(
                         exportedResult = null
                     }
                 ) {
-                    Text("分享")
+                    Text("分享日志")
                 }
             },
             dismissButton = {
@@ -164,7 +164,7 @@ fun LogViewerScreen(
                         Text("复制路径")
                     }
                     TextButton(onClick = { exportedResult = null }) {
-                        Text("确定")
+                        Text("确认关闭")
                     }
                 }
             }

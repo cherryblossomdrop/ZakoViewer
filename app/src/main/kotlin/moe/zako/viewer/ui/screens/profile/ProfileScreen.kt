@@ -313,7 +313,7 @@ fun ProfileScreen(
 
                     ProfileItemCard(
                         icon = AppIcons.Info,
-                        title = "关于",
+                        title = "关于应用",
                         shape = RoundedCornerShape(
                             topStart = CornerRadius.Xs,
                             topEnd = CornerRadius.Xs,

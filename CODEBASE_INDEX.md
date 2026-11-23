@@ -1,6 +1,6 @@
 ﻿# ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（v1.3.6），全项目核心工程源码共计 **126** 个文件，累计 **29,998** 行代码。  
+> **版本定位**：截至最新构建（v1.3.7），全项目核心工程源码共计 **126** 个文件，累计 **30,021** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -96,7 +96,7 @@
 
 | 文件路径 | 代码行数 | 职责与功能（做了什么） | 核心实现方式（怎么做） |
 | :--- | :---: | :--- | :--- |
-| `app/src/main/kotlin/moe/zako/viewer/ui/theme/AppIcons.kt` | 192 | 全局统一图标 Design Token 门面 | 集中统一管理应用内的矢量图标引用，清理冗余别名，全仓业务与组件代码直接引用 Icons/ZakoIcons 归零 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/theme/AppIcons.kt` | 195 | 全局统一图标 Design Token 门面 | 集中统一管理应用内的矢量图标引用，收敛 Refresh/License/MultiSelect 语义图标，全仓业务与组件代码直接引用 Icons/ZakoIcons 归零 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/Color.kt` | 496 | 全局色彩拓扑、调色板预设与莫奈动态取色方案 | 定义多种内置主题色盘、PlayerOverlayTokens 及自适应深浅色 LogLevelColors 诊断日志颜色，全仓裸写 Color(0x...) 归零 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/Dimens.kt` | 317 | 全局基础尺寸、双层间距、圆角、图标大小与标高设计令牌 | 集中规范语义化双层间距 SectionSpacing 与 GroupItemSpacing、圆角 CornerRadius、图标尺寸 IconSize、SettingsTokens 与 ProfileTokens |
 | `app/src/main/kotlin/moe/zako/viewer/ui/theme/FilterBarTokens.kt` | 14 | 首页筛选栏操作按钮 Design Token | 集中规范首页筛选、排序、布局切换等圆形操作按钮的尺寸、图标及间距，底层对齐 Dimens 基础令牌 |
@@ -165,7 +165,7 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoriteTreeItems.kt` | 257 | 收藏夹树状组件（面包屑路径条、子收藏夹卡片与视频卡片） | 呈现 `BreadcrumbBar` 路径芯片、`FavoriteFolderItem` 文件夹卡片与视频卡片，接入 isLocalCached 本地缓存状态与时长角标 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesDialogs.kt` | 271 | 收藏夹业务弹窗与操作抽屉宿主 | 提供新建/重命名文件夹弹窗、重命名视频弹窗及统一「视频详情」的长按操作抽屉，清理未使用导包 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/favorites/FavoritesViewModel.kt` | 432 | 收藏夹业务状态中枢，处理层级切换、批量移动/删除与搜索 | 调度 `FavoriteRepository`，原子清空 `toggleSelectAll()`，响应式监听 DownloadManager 已完成视频 ID 维护本地缓存状态 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeScreen.kt` | 510 | 首页主页面视窗，负责列表滚动骨架、瀑布流/网格排布与状态机调度 | 维护下拉刷新、触底分页预加载、状态机隔离，抽离 HomePaginationBar，分页模式空状态下保持翻页栏常驻杜绝卡死，错误态支持明确限流提示与重试 |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeScreen.kt` | 519 | 首页主页面视窗，负责列表滚动骨架、瀑布流/网格排布与状态机调度 | 维护下拉刷新、触底分页预加载、状态机隔离，空状态重试按钮矢量图标化，抽离 HomePaginationBar，分页模式空状态下保持翻页栏常驻杜绝卡死 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeSearchBar.kt` | 237 | 首页搜索输入框、暗号直达提示与搜索历史交互面板 | 彻底移除向右箭头，复用 `ZakoSearchBar` 统一胶囊搜索框与中性色一键清空微动效，统筹搜索历史展开、清空失焦与批量删除 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeFilterBar.kt` | 459 | 首页分类标签栏、排序模式切换、视图切换与综合筛选抽屉 | 统一筛选、排序、布局切换按钮着色（布局模式保持 Tonal 浅色着色，筛选按钮着色与排序逻辑对齐，仅在非默认筛选时激活） |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/home/HomeJumpPageDialog.kt` | 173 | 首页分页排布模式跳转指定页弹窗 (Material 3 AlertDialog) | 纯数字输入拦截、自动请求焦点并弹起软键盘、边界合法性校验、回车直达与即时收起 |
@@ -173,7 +173,7 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerScreen.kt` | 401 | 独立全屏播放视窗，集成控制层覆盖物、CDN 测速面板与画幅调整 | 装载 `MPVView` 纯原生渲染视口，全面复用 `PlayerTopBar`、`PlayerBottomControls`，统一「更多」菜单 4 字规范与「视频详情」 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerViewModel.kt` | 755 | 播放器状态机中枢，统筹起播选线、实时测速热切、进度保存与外部播放 | 驱动 `ZakoPlayer` 与 `PlaybackSourceCoordinator`，统筹本地/在线起播选线，起播与退出保存进度完整透传时长与 VIP |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/ProfileScreen.kt` | 425 | 个人中心主入口视窗 | 提供离线下载、稍后再看、源站设置（解锁可见）、数据备份与全局设置等子模块聚合导航列表，严格遵循 MD3E 双层间距规范 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/AboutScreen.kt` | 285 | 关于视窗，展示应用版本信息、开源协议与开发者鸣谢 | 调整开源组件许可声明与开源仓库上下顺序并对调 MD3E 分段圆角，导出日志独立为「诊断与排错」区块，收敛双层间距 Token |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/AboutScreen.kt` | 296 | 关于视窗，展示应用版本信息、开源协议与开发者鸣谢 | 调整开源组件许可声明与开源仓库上下顺序并补齐左侧图标基线对齐，导出日志独立为「诊断与排错」区块，收敛双层间距 Token |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/LogViewerScreen.kt` | 339 | 实时应用日志查看器视窗 | 提供日志实时流刷新、级别筛选、关键词搜索、清空及外部导出分享功能，级别颜色收敛至 LogLevelColors 并自适应深浅色，字体收敛至 ExtraTextStyles |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/backup/BackupRestoreScreen.kt` | 378 | 数据备份与恢复视窗 | 规范导出备份与恢复备份 MD3E 区块标题与双层间距 Token，提供生成全量 ZIP 备份文件、导入恢复与进度反馈 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/backup/BackupRestoreDialogs.kt` | 373 | 数据备份与恢复相关模态弹窗集 | 承接新建备份确认、恢复提示、密码输入及完成反馈对话框，进度条与描边全量收敛至 Design Tokens |

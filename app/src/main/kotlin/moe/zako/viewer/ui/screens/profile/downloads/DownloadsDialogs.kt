@@ -36,13 +36,13 @@ fun DownloadActionBottomSheet(
     val actions = listOf(
         VideoMenuAction(
             id = "multi_select",
-            title = "多选",
+            title = "批量多选",
             icon = AppIcons.MultiSelect,
             onClick = { onEnterMultiSelect(target.videoId) }
         ),
         VideoMenuAction(
             id = "add_to_favorites",
-            title = "添加到收藏夹",
+            title = "加入收藏",
             icon = AppIcons.AddToFavorites,
             onClick = { onAddToFavorites(target) }
         ),
@@ -100,7 +100,7 @@ fun MissingFileDialog(
                 }
                 Spacer(modifier = Modifier.width(Spacing.Xs))
                 TextButton(onClick = onDismiss) {
-                    Text("取消")
+                    Text("取消返回")
                 }
             }
         }

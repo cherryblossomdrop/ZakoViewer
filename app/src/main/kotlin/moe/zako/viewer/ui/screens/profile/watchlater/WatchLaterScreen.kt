@@ -182,7 +182,7 @@ fun WatchLaterScreen(
             add(
                 VideoMenuAction(
                     id = "multi_select",
-                    title = "多选",
+                    title = "批量多选",
                     icon = AppIcons.MultiSelect,
                     onClick = {
                         viewModel.enterSelectionWithItem(target.videoId)
@@ -192,7 +192,7 @@ fun WatchLaterScreen(
             add(
                 VideoMenuAction(
                     id = "add_to_favorites",
-                    title = "添加到收藏夹",
+                    title = "加入收藏",
                     icon = AppIcons.AddToFavorites,
                     onClick = {
                         viewModel.showAddToFavorites(target)
@@ -225,7 +225,7 @@ fun WatchLaterScreen(
             add(
                 VideoMenuAction(
                     id = "remove_watch_later",
-                    title = "移出稍后再看",
+                    title = "移出待看",
                     icon = AppIcons.Delete,
                     isDangerous = true,
                     onClick = {

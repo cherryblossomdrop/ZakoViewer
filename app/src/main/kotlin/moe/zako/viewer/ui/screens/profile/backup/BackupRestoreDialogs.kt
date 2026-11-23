@@ -356,7 +356,7 @@ fun BackupExportResultDialog(
                     context.startActivity(Intent.createChooser(shareIntent, "分享备份文件"))
                 }
             ) {
-                Text("分享")
+                Text("分享备份")
             }
         },
         dismissButton = {
@@ -370,7 +370,7 @@ fun BackupExportResultDialog(
                     Text("复制路径")
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("确定")
+                    Text("确认关闭")
                 }
             }
         }

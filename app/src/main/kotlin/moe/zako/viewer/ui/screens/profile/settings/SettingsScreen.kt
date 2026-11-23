@@ -232,7 +232,7 @@ fun SettingsScreen(
                         viewModel.clearAppCache(context)
                     }
                 ) {
-                    Text("彻底清理")
+                    Text("清理")
                 }
             },
             dismissButton = {

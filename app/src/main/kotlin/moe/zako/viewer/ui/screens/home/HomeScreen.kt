@@ -29,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -305,8 +306,12 @@ fun HomeScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     if (state.errorMessage != null) {
-                                        Button(onClick = { viewModel.refresh() }) {
-                                            Text("重试")
+                                        IconButton(onClick = { viewModel.refresh() }) {
+                                            Icon(
+                                                imageVector = AppIcons.Refresh,
+                                                contentDescription = "重试",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
                                     }
                                 }
@@ -362,8 +367,12 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (state.errorMessage != null) {
-                            Button(onClick = { viewModel.refresh() }) {
-                                Text("重试")
+                            IconButton(onClick = { viewModel.refresh() }) {
+                                Icon(
+                                    imageVector = AppIcons.Refresh,
+                                    contentDescription = "重试",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }

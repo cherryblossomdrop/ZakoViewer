@@ -218,7 +218,7 @@ fun HistoryScreen(
             add(
                 VideoMenuAction(
                     id = "multi_select",
-                    title = "多选",
+                    title = "批量多选",
                     icon = AppIcons.MultiSelect,
                     onClick = {
                         viewModel.enterSelectionWithItem(target.videoId)
@@ -228,7 +228,7 @@ fun HistoryScreen(
             add(
                 VideoMenuAction(
                     id = "add_to_favorites",
-                    title = "添加到收藏夹",
+                    title = "加入收藏",
                     icon = AppIcons.AddToFavorites,
                     onClick = {
                         viewModel.showAddToFavoritesForSingleItem(target)

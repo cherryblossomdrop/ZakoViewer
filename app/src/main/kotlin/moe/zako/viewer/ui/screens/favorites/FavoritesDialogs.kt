@@ -37,25 +37,25 @@ fun FolderActionBottomSheet(
     val actions = listOf(
         VideoMenuAction(
             id = "multi_select",
-            title = "多选",
+            title = "批量多选",
             icon = AppIcons.MultiSelect,
             onClick = { onStartSelection(folder.id) }
         ),
         VideoMenuAction(
             id = "rename",
-            title = "重命名",
+            title = "修改名称",
             icon = AppIcons.Edit,
             onClick = { onRename(folder) }
         ),
         VideoMenuAction(
             id = "move",
-            title = "移动到",
+            title = "移动目录",
             icon = AppIcons.Move,
             onClick = { onMove(folder.id) }
         ),
         VideoMenuAction(
             id = "delete",
-            title = "删除",
+            title = "删除目录",
             icon = AppIcons.Delete,
             isDangerous = true,
             onClick = { onDelete(folder.id) }
@@ -89,7 +89,7 @@ fun FavoriteItemActionBottomSheet(
         add(
             VideoMenuAction(
                 id = "multi_select",
-                title = "多选",
+                title = "批量多选",
                 icon = AppIcons.MultiSelect,
                 onClick = { onStartSelection(item.id) }
             )
@@ -97,7 +97,7 @@ fun FavoriteItemActionBottomSheet(
         add(
             VideoMenuAction(
                 id = "rename",
-                title = "重命名",
+                title = "修改名称",
                 icon = AppIcons.Edit,
                 onClick = { onRename(item) }
             )
@@ -105,7 +105,7 @@ fun FavoriteItemActionBottomSheet(
         add(
             VideoMenuAction(
                 id = "move",
-                title = "移动到",
+                title = "移动视频",
                 icon = AppIcons.Move,
                 onClick = { onMove(item.id) }
             )
@@ -113,7 +113,7 @@ fun FavoriteItemActionBottomSheet(
         add(
             VideoMenuAction(
                 id = "copy",
-                title = "复制到",
+                title = "复制视频",
                 icon = AppIcons.Copy,
                 onClick = { onCopy(item) }
             )
@@ -140,7 +140,7 @@ fun FavoriteItemActionBottomSheet(
         add(
             VideoMenuAction(
                 id = "delete",
-                title = "从收藏夹删除",
+                title = "移出收藏",
                 icon = AppIcons.Delete,
                 isDangerous = true,
                 onClick = { onDelete(item.id) }

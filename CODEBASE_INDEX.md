@@ -1,6 +1,6 @@
 ﻿# ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（v1.3.4），全项目核心工程源码共计 **126** 个文件，累计 **30,007** 行代码。  
+> **版本定位**：截至最新构建（v1.3.5），全项目核心工程源码共计 **126** 个文件，累计 **30,008** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -173,7 +173,7 @@
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerScreen.kt` | 401 | 独立全屏播放视窗，集成控制层覆盖物、CDN 测速面板与画幅调整 | 装载 `MPVView` 纯原生渲染视口，全面复用 `PlayerTopBar`、`PlayerBottomControls`，统一「更多」菜单 4 字规范与「视频详情」 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/player/PlayerViewModel.kt` | 755 | 播放器状态机中枢，统筹起播选线、实时测速热切、进度保存与外部播放 | 驱动 `ZakoPlayer` 与 `PlaybackSourceCoordinator`，统筹本地/在线起播选线，起播与退出保存进度完整透传时长与 VIP |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/ProfileScreen.kt` | 425 | 个人中心主入口视窗 | 提供离线下载、稍后再看、源站设置（解锁可见）、数据备份与全局设置等子模块聚合导航列表，严格遵循 MD3E 双层间距规范 |
-| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/AboutScreen.kt` | 284 | 关于视窗，展示应用版本信息、开源协议与开发者鸣谢 | 重组开源仓库与组件许可至「开源与许可」MD3E 分组，导出日志独立为「诊断与排错」区块，收敛双层间距 Token |
+| `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/AboutScreen.kt` | 285 | 关于视窗，展示应用版本信息、开源协议与开发者鸣谢 | 调整开源组件许可声明与开源仓库上下顺序并对调 MD3E 分段圆角，导出日志独立为「诊断与排错」区块，收敛双层间距 Token |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/about/LogViewerScreen.kt` | 339 | 实时应用日志查看器视窗 | 提供日志实时流刷新、级别筛选、关键词搜索、清空及外部导出分享功能，级别颜色收敛至 LogLevelColors 并自适应深浅色，字体收敛至 ExtraTextStyles |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/backup/BackupRestoreScreen.kt` | 378 | 数据备份与恢复视窗 | 规范导出备份与恢复备份 MD3E 区块标题与双层间距 Token，提供生成全量 ZIP 备份文件、导入恢复与进度反馈 |
 | `app/src/main/kotlin/moe/zako/viewer/ui/screens/profile/backup/BackupRestoreDialogs.kt` | 373 | 数据备份与恢复相关模态弹窗集 | 承接新建备份确认、恢复提示、密码输入及完成反馈对话框，进度条与描边全量收敛至 Design Tokens |

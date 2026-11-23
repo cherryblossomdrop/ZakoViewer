@@ -50,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import moe.zako.viewer.core.search.SearchQueryParser
 import moe.zako.viewer.core.share.ShareCipherUtil
 import moe.zako.viewer.data.repository.LayoutMode
@@ -65,6 +64,8 @@ import moe.zako.viewer.ui.theme.IconSize
 import moe.zako.viewer.ui.theme.Spacing
 import moe.zako.viewer.ui.theme.TouchTarget
 import moe.zako.viewer.ui.theme.VideoCoverTokens
+
+private const val MSG_NO_DATA_SOURCE = "当前未启用任何数据源"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -305,7 +306,7 @@ fun HomeScreen(
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    if (state.errorMessage != null) {
+                                    if (state.errorMessage != null && state.errorMessage != MSG_NO_DATA_SOURCE) {
                                         IconButton(onClick = { viewModel.refresh() }) {
                                             Icon(
                                                 imageVector = AppIcons.Refresh,
@@ -366,7 +367,7 @@ fun HomeScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (state.errorMessage != null) {
+                        if (state.errorMessage != null && state.errorMessage != MSG_NO_DATA_SOURCE) {
                             IconButton(onClick = { viewModel.refresh() }) {
                                 Icon(
                                     imageVector = AppIcons.Refresh,

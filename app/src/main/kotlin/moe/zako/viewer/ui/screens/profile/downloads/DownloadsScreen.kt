@@ -290,6 +290,10 @@ fun DownloadsScreen(
                 fileInfoTargetItem = target
                 showFileInfoDialog = true
             },
+            onDelete = { target ->
+                showMenuBottomSheet = false
+                itemToDelete = target
+            },
             onDismissRequest = { showMenuBottomSheet = false }
         )
     }

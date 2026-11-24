@@ -205,6 +205,7 @@ fun HistoryScreen(
                                         menuTargetItem = historyItem
                                     }
                                 },
+                                onDelete = { historyToDelete = historyItem },
                                 isLocalCached = state.downloadedVideoIds.contains(historyItem.videoId)
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = Spacing.Lg))
@@ -328,6 +329,7 @@ fun HistoryRowItem(
     onSelectToggle: () -> Unit,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onDelete: () -> Unit,
     isLocalCached: Boolean = false
 ) {
     val context = LocalContext.current
@@ -354,6 +356,15 @@ fun HistoryRowItem(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
             )
+        },
+        actions = {
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = AppIcons.DeleteOutline,
+                    contentDescription = "删除",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     )
 }

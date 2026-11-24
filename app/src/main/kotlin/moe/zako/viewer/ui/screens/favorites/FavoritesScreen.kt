@@ -258,6 +258,7 @@ fun FavoritesScreen(
                         onPlayClick = { onNavigateToPlayer(item.videoId) },
                         onSelectToggle = { viewModel.toggleItemSelection(item.id) },
                         onMenuClick = { itemMenuTarget = item },
+                        onDeleteClick = { itemToDelete = item },
                         isLocalCached = state.downloadedVideoIds.contains(item.videoId)
                     )
                 }

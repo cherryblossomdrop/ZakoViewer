@@ -32,9 +32,12 @@ fun DownloadActionBottomSheet(
     onAddToWatchLater: (DownloadEntity) -> Unit,
     onNavigateToDetail: (String) -> Unit,
     onShowFileInfo: (DownloadEntity) -> Unit,
-    onDismissRequest: () -> Unit,
-    onDelete: ((DownloadEntity) -> Unit)? = null
+    onDelete: (DownloadEntity) -> Unit,
+    onDismissRequest: () -> Unit
 ) {
+    val isCompleted = target.status == DownloadEntity.STATUS_COMPLETED
+    val deleteTitle = if (isCompleted) "删除文件" else "删除任务"
+
     StandardVideoActionMenu(
         title = target.title,
         onDismissRequest = onDismissRequest,
@@ -44,15 +47,13 @@ fun DownloadActionBottomSheet(
         onAddToWatchLater = { onAddToWatchLater(target) },
         onVideoDetail = { onNavigateToDetail(target.videoId) },
         onFileInfo = { onShowFileInfo(target) },
-        destructiveAction = onDelete?.let {
-            VideoMenuAction(
-                id = "delete",
-                title = "删除任务",
-                icon = AppIcons.Delete,
-                isDangerous = true,
-                onClick = { it(target) }
-            )
-        }
+        destructiveAction = VideoMenuAction(
+            id = "delete",
+            title = deleteTitle,
+            icon = AppIcons.Delete,
+            isDangerous = true,
+            onClick = { onDelete(target) }
+        )
     )
 }
 

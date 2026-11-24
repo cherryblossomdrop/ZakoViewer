@@ -183,6 +183,7 @@ fun FavoriteVideoItem(
     onPlayClick: () -> Unit,
     onSelectToggle: () -> Unit,
     onMenuClick: () -> Unit,
+    onDeleteClick: () -> Unit,
     isLocalCached: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -246,10 +247,10 @@ fun FavoriteVideoItem(
             }
         },
         actions = {
-            IconButton(onClick = onMenuClick) {
+            IconButton(onClick = onDeleteClick) {
                 Icon(
-                    imageVector = AppIcons.MoreVert,
-                    contentDescription = "选项",
+                    imageVector = AppIcons.DeleteOutline,
+                    contentDescription = "删除",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

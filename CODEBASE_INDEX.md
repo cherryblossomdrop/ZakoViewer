@@ -1,6 +1,6 @@
 ﻿# ZakoViewer 全局代码索引与架构映射 (Codebase Index)
 
-> **版本定位**：截至最新构建（v1.3.11），全项目核心工程源码共计 **126** 个文件，累计 **30,364** 行代码。  
+> **版本定位**：截至最新构建（v1.3.12），全项目核心工程源码共计 **126** 个文件，累计 **30,368** 行代码。  
 > **协作准则**：在排查故障、分析逻辑链路或规划功能改动前，**必须优先查阅本索引**快速定位关键文件。每次新增、删除、重命名或修改代码文件后，必须同步维护受影响条目的文件路径、精确行数与核心实现方式。
 
 ---
@@ -202,5 +202,5 @@
 | :--- | :---: | :--- | :--- |
 | `build.gradle.kts` | 5 | 根工程 Gradle 构建拓扑脚本 | 配置根级构建脚本与基础插件别名声明 |
 | `settings.gradle.kts` | 18 | 模块依赖树与 Maven 插件仓库编排 | 定义工程名 `NeoViewer`，编排 Google、MavenCentral 及本地插件存储库 |
-| `app/build.gradle.kts` | 147 | 核心应用模块构建参数、依赖声明与发版配置 | 配置 Android SDK 34、CMake 原生链接、R8 混淆、签名配置及动态版本号递增字段（v1.3.11 / versionCode 75） |
+| `app/build.gradle.kts` | 151 | 核心应用模块构建参数、依赖声明与发版配置 | 配置 Android SDK 34、CMake 原生链接、R8 混淆、签名配置、base.archivesName 动态规范化输出产物命名（ZakoViewer-${versionName}-arm64-v8a-${buildType}.apk）及动态版本号递增字段（v1.3.12 / versionCode 76） |
 | `.github/workflows/release.yml` | 130 | GitHub Actions 自动化发版流水线工作流 | 监听版本 Tag（`v*`），自动化构建环境，生成更新日志并自动归档发布纯源码压缩包 |

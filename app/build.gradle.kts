@@ -26,8 +26,8 @@ android {
         applicationId = "moe.zako.viewer"
         minSdk = 26
         targetSdk = 34
-        versionCode = 75
-        versionName = "1.3.11"
+        versionCode = 76
+        versionName = "1.3.12"
 
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
 
@@ -110,6 +110,10 @@ android {
             useLegacyPackaging = true
         }
     }
+}
+
+base {
+    archivesName.set("ZakoViewer-${android.defaultConfig.versionName}-arm64-v8a")
 }
 
 dependencies {

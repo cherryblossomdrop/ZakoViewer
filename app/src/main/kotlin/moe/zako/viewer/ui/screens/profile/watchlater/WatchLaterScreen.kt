@@ -34,14 +34,12 @@ import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.data.local.entities.WatchLaterEntity
-import moe.zako.viewer.ui.components.BaseBatchMenuAction
 import moe.zako.viewer.ui.components.BaseVideoMenuAction
-import moe.zako.viewer.ui.components.BatchMenuAction
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
-import moe.zako.viewer.ui.components.StandardBatchActionMenu
+import moe.zako.viewer.ui.components.StandardVideoActionDropdown
 import moe.zako.viewer.ui.components.StandardVideoActionMenu
 import moe.zako.viewer.ui.components.VideoListItemCard
 import moe.zako.viewer.ui.components.VideoMenuAction
@@ -85,15 +83,15 @@ fun WatchLaterScreen(
                     allSelected = allSelected,
                     onToggleSelectAll = { viewModel.toggleSelectAll() },
                     menuContent = { expanded, onDismissRequest ->
-                        StandardBatchActionMenu(
+                        StandardVideoActionDropdown(
                             expanded = expanded,
                             onDismissRequest = onDismissRequest,
-                            excluded = setOf(BaseBatchMenuAction.ADD_TO_WATCH_LATER),
+                            excluded = setOf(BaseVideoMenuAction.WATCH_LATER),
                             onAddToFavorite = {
                                 viewModel.showBatchAddToFavoritesDialog()
                             },
                             extraActions = emptyList(),
-                            destructiveAction = BatchMenuAction(
+                            destructiveAction = VideoMenuAction(
                                 id = "delete",
                                 title = "移出待看",
                                 icon = AppIcons.Delete,
@@ -160,7 +158,6 @@ fun WatchLaterScreen(
                                 menuTargetItem = item
                             }
                         },
-                        onRemove = { itemToRemove = item },
                         isLocalCached = state.downloadedVideoIds.contains(item.videoId)
                     )
                 }
@@ -281,7 +278,6 @@ fun WatchLaterItemCard(
     onSelectToggle: () -> Unit,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onRemove: () -> Unit,
     isLocalCached: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -300,14 +296,6 @@ fun WatchLaterItemCard(
         onSelectToggle = onSelectToggle,
         onClick = onClick,
         onLongClick = onLongClick,
-        modifier = modifier,
-        actions = {
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = AppIcons.DeleteOutline,
-                    contentDescription = "移除"
-                )
-            }
-        }
+        modifier = modifier
     )
 }

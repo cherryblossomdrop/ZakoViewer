@@ -39,12 +39,11 @@ import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.data.local.entities.WatchHistoryEntity
-import moe.zako.viewer.ui.components.BatchMenuAction
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
-import moe.zako.viewer.ui.components.StandardBatchActionMenu
+import moe.zako.viewer.ui.components.StandardVideoActionDropdown
 import moe.zako.viewer.ui.components.StandardVideoActionMenu
 import moe.zako.viewer.ui.components.VideoListItemCard
 import moe.zako.viewer.ui.components.VideoMenuAction
@@ -100,7 +99,7 @@ fun HistoryScreen(
                     allSelected = allSelected,
                     onToggleSelectAll = { viewModel.toggleSelectAll() },
                     menuContent = { expanded, onDismissRequest ->
-                        StandardBatchActionMenu(
+                        StandardVideoActionDropdown(
                             expanded = expanded,
                             onDismissRequest = onDismissRequest,
                             excluded = emptySet(),
@@ -111,7 +110,7 @@ fun HistoryScreen(
                                 viewModel.batchAddToWatchLater()
                             },
                             extraActions = emptyList(),
-                            destructiveAction = BatchMenuAction(
+                            destructiveAction = VideoMenuAction(
                                 id = "delete",
                                 title = "删除记录",
                                 icon = AppIcons.Delete,
@@ -202,7 +201,6 @@ fun HistoryScreen(
                                         menuTargetItem = historyItem
                                     }
                                 },
-                                onDelete = { historyToDelete = historyItem },
                                 isLocalCached = state.downloadedVideoIds.contains(historyItem.videoId)
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = Spacing.Lg))
@@ -326,7 +324,6 @@ fun HistoryRowItem(
     onSelectToggle: () -> Unit,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onDelete: () -> Unit,
     isLocalCached: Boolean = false
 ) {
     val context = LocalContext.current
@@ -353,15 +350,6 @@ fun HistoryRowItem(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
             )
-        },
-        actions = {
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = AppIcons.DeleteOutline,
-                    contentDescription = "删除",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     )
 }

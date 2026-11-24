@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.entities.DownloadEntity
-import moe.zako.viewer.ui.components.BatchMenuAction
 import moe.zako.viewer.ui.components.FolderBrowserDialog
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.LocalFileInfo
@@ -41,7 +40,8 @@ import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MigrationProgressDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.ObserveStoragePermissionOnResume
-import moe.zako.viewer.ui.components.StandardBatchActionMenu
+import moe.zako.viewer.ui.components.StandardVideoActionDropdown
+import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.IconSize
@@ -125,7 +125,7 @@ fun DownloadsScreen(
                     allSelected = allSelected,
                     onToggleSelectAll = { viewModel.toggleSelectAll() },
                     menuContent = { expanded, onDismissRequest ->
-                        StandardBatchActionMenu(
+                        StandardVideoActionDropdown(
                             expanded = expanded,
                             onDismissRequest = onDismissRequest,
                             excluded = emptySet(),
@@ -136,7 +136,7 @@ fun DownloadsScreen(
                                 viewModel.batchAddToWatchLater()
                             },
                             extraActions = emptyList(),
-                            destructiveAction = BatchMenuAction(
+                            destructiveAction = VideoMenuAction(
                                 id = "delete",
                                 title = destructiveTitle,
                                 icon = AppIcons.Delete,
@@ -232,7 +232,6 @@ fun DownloadsScreen(
                                 isSelected = isSelected,
                                 onSelectToggle = { viewModel.toggleSelect(item.videoId) },
                                 onPlay = { handlePlayClick(item) },
-                                onDelete = { itemToDelete = item },
                                 onLongClick = {
                                     if (state.isMultiSelectMode) {
                                         viewModel.toggleSelect(item.videoId)
@@ -267,7 +266,6 @@ fun DownloadsScreen(
                                 onSelectToggle = { viewModel.toggleSelect(item.videoId) },
                                 onPause = { viewModel.pauseDownload(item.videoId) },
                                 onResume = { viewModel.resumeDownload(item.videoId) },
-                                onDelete = { itemToDelete = item },
                                 onLongClick = {
                                     if (state.isMultiSelectMode) {
                                         viewModel.toggleSelect(item.videoId)

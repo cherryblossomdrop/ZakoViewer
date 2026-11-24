@@ -94,7 +94,6 @@ fun FavoriteFolderItem(
     onFolderClick: () -> Unit,
     onSelectToggle: () -> Unit,
     onMenuClick: () -> Unit,
-    onDeleteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isRootFolder = folder.parentId == null
@@ -157,16 +156,6 @@ fun FavoriteFolderItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-
-            if (!isSelectionMode && !isRootFolder) {
-                IconButton(onClick = onDeleteClick) {
-                    Icon(
-                        imageVector = AppIcons.DeleteOutline,
-                        contentDescription = "删除",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
         }
     }
 }
@@ -184,7 +173,6 @@ fun FavoriteVideoItem(
     onPlayClick: () -> Unit,
     onSelectToggle: () -> Unit,
     onMenuClick: () -> Unit,
-    onDeleteClick: () -> Unit,
     isLocalCached: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -245,15 +233,6 @@ fun FavoriteVideoItem(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-            }
-        },
-        actions = {
-            IconButton(onClick = onDeleteClick) {
-                Icon(
-                    imageVector = AppIcons.DeleteOutline,
-                    contentDescription = "删除",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     )

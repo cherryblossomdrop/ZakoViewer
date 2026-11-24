@@ -38,7 +38,6 @@ fun CompletedDownloadItem(
     isSelected: Boolean,
     onSelectToggle: () -> Unit,
     onPlay: () -> Unit,
-    onDelete: () -> Unit,
     onLongClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -97,13 +96,6 @@ fun CompletedDownloadItem(
                     tint = if (!fileExists) MaterialTheme.colorScheme.error.copy(alpha = 0.65f) else MaterialTheme.colorScheme.primary
                 )
             }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = AppIcons.DeleteOutline,
-                    contentDescription = "删除",
-                    tint = if (!fileExists) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     )
 }
@@ -119,7 +111,6 @@ fun ActiveDownloadItem(
     onSelectToggle: () -> Unit,
     onPause: () -> Unit,
     onResume: () -> Unit,
-    onDelete: () -> Unit,
     onLongClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -180,9 +171,6 @@ fun ActiveDownloadItem(
                     imageVector = if (isPausedOrFailed) AppIcons.Play else AppIcons.Pause,
                     contentDescription = if (isPausedOrFailed) "继续下载" else "暂停下载"
                 )
-            }
-            IconButton(onClick = onDelete) {
-                Icon(imageVector = AppIcons.Close, contentDescription = "取消")
             }
         },
         bottomContent = {

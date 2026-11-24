@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -23,10 +25,10 @@ import moe.zako.viewer.ui.theme.MenuTokens
 
 /**
  * ============================================================================
- * 视频长按操作菜单架构规范（Zygote 模式）
+ * 视频操作菜单架构规范（Zygote 模式）
  * ============================================================================
- * 本文件遵循「全局基座 + 按需做减法（Zygote 模式）」，对外仅暴露 [StandardVideoActionMenu]，
- * 严禁外部业务页面直接拼装裸列表通用菜单项。
+ * 本文件遵循「全局基座 + 按需做减法（Zygote 模式）」，对外仅暴露 [StandardVideoActionMenu]
+ * 与 [StandardVideoActionDropdown]，严禁外部业务页面直接拼装裸列表通用菜单项。
  *
  * 全局渲染顺序由 [BaseVideoMenuAction] 严格锁死：
  * 1. [BaseVideoMenuAction.BATCH_SELECT] (批量多选)
@@ -65,7 +67,96 @@ data class VideoMenuAction(
 )
 
 /**
- * 全局标准视频操作菜单基座组件（Zygote 模式唯一对外暴露入口）
+ * 下拉菜单场景下默认剔除的单条专属项
+ */
+private val DEFAULT_DROPDOWN_EXCLUDED = setOf(
+    BaseVideoMenuAction.BATCH_SELECT,
+    BaseVideoMenuAction.VIDEO_DETAIL,
+    BaseVideoMenuAction.FILE_INFO
+)
+
+/**
+ * 内部通用的三段式菜单项构建函数（顺序严格锁死，封死在内部）
+ */
+private fun buildVideoMenuActions(
+    excluded: Set<BaseVideoMenuAction>,
+    onBatchSelect: () -> Unit = {},
+    onAddToFavorite: () -> Unit = {},
+    onAddToWatchLater: () -> Unit = {},
+    onVideoDetail: () -> Unit = {},
+    onFileInfo: (() -> Unit)? = null,
+    extraActions: List<VideoMenuAction> = emptyList(),
+    destructiveAction: VideoMenuAction? = null
+): List<VideoMenuAction> = buildList {
+    // 1. 通用基座区（顺序严格锁死）
+    for (action in BaseVideoMenuAction.entries) {
+        if (action in excluded) continue
+        when (action) {
+            BaseVideoMenuAction.BATCH_SELECT -> {
+                add(
+                    VideoMenuAction(
+                        id = "batch_select",
+                        title = "批量多选",
+                        icon = AppIcons.MultiSelect,
+                        onClick = onBatchSelect
+                    )
+                )
+            }
+            BaseVideoMenuAction.ADD_TO_FAVORITE -> {
+                add(
+                    VideoMenuAction(
+                        id = "add_to_favorite",
+                        title = "加入收藏",
+                        icon = AppIcons.AddToFavorites,
+                        onClick = onAddToFavorite
+                    )
+                )
+            }
+            BaseVideoMenuAction.WATCH_LATER -> {
+                add(
+                    VideoMenuAction(
+                        id = "watch_later",
+                        title = "稍后再看",
+                        icon = AppIcons.WatchLater,
+                        onClick = onAddToWatchLater
+                    )
+                )
+            }
+            BaseVideoMenuAction.VIDEO_DETAIL -> {
+                add(
+                    VideoMenuAction(
+                        id = "video_detail",
+                        title = "视频详情",
+                        icon = AppIcons.VideoDetail,
+                        onClick = onVideoDetail
+                    )
+                )
+            }
+            BaseVideoMenuAction.FILE_INFO -> {
+                if (onFileInfo != null) {
+                    add(
+                        VideoMenuAction(
+                            id = "file_info",
+                            title = "文件信息",
+                            icon = AppIcons.FileInfo,
+                            supportingText = "查看路径、大小与本地状态",
+                            onClick = onFileInfo
+                        )
+                    )
+                }
+            }
+        }
+    }
+    // 2. 页面专属插槽
+    addAll(extraActions)
+    // 3. 底部危险区
+    if (destructiveAction != null) {
+        add(destructiveAction)
+    }
+}
+
+/**
+ * 全局标准视频操作菜单基座组件（长按底部抽屉，Zygote 模式暴露入口）
  *
  * @param title 菜单顶部展示的视频/项目标题
  * @param onDismissRequest 关闭/折叠菜单回调
@@ -93,73 +184,16 @@ fun StandardVideoActionMenu(
     extraActions: List<VideoMenuAction> = emptyList(),
     destructiveAction: VideoMenuAction? = null
 ) {
-    val actions = buildList {
-        // 1. 通用基座区（顺序严格锁死）
-        for (action in BaseVideoMenuAction.entries) {
-            if (action in excluded) continue
-            when (action) {
-                BaseVideoMenuAction.BATCH_SELECT -> {
-                    add(
-                        VideoMenuAction(
-                            id = "batch_select",
-                            title = "批量多选",
-                            icon = AppIcons.MultiSelect,
-                            onClick = onBatchSelect
-                        )
-                    )
-                }
-                BaseVideoMenuAction.ADD_TO_FAVORITE -> {
-                    add(
-                        VideoMenuAction(
-                            id = "add_to_favorite",
-                            title = "加入收藏",
-                            icon = AppIcons.AddToFavorites,
-                            onClick = onAddToFavorite
-                        )
-                    )
-                }
-                BaseVideoMenuAction.WATCH_LATER -> {
-                    add(
-                        VideoMenuAction(
-                            id = "watch_later",
-                            title = "稍后再看",
-                            icon = AppIcons.WatchLater,
-                            onClick = onAddToWatchLater
-                        )
-                    )
-                }
-                BaseVideoMenuAction.VIDEO_DETAIL -> {
-                    add(
-                        VideoMenuAction(
-                            id = "video_detail",
-                            title = "视频详情",
-                            icon = AppIcons.VideoDetail,
-                            onClick = onVideoDetail
-                        )
-                    )
-                }
-                BaseVideoMenuAction.FILE_INFO -> {
-                    if (onFileInfo != null) {
-                        add(
-                            VideoMenuAction(
-                                id = "file_info",
-                                title = "文件信息",
-                                icon = AppIcons.FileInfo,
-                                supportingText = "查看路径、大小与本地状态",
-                                onClick = onFileInfo
-                            )
-                        )
-                    }
-                }
-            }
-        }
-        // 2. 页面专属插槽
-        addAll(extraActions)
-        // 3. 底部危险区
-        if (destructiveAction != null) {
-            add(destructiveAction)
-        }
-    }
+    val actions = buildVideoMenuActions(
+        excluded = excluded,
+        onBatchSelect = onBatchSelect,
+        onAddToFavorite = onAddToFavorite,
+        onAddToWatchLater = onAddToWatchLater,
+        onVideoDetail = onVideoDetail,
+        onFileInfo = onFileInfo,
+        extraActions = extraActions,
+        destructiveAction = destructiveAction
+    )
 
     VideoActionBottomSheet(
         title = title,
@@ -167,6 +201,90 @@ fun StandardVideoActionMenu(
         onDismissRequest = onDismissRequest,
         modifier = modifier
     )
+}
+
+/**
+ * 全局标准视频操作下拉菜单基座组件（供多选顶栏右上角等场景复用，Zygote 模式暴露入口）
+ *
+ * @param expanded 下拉菜单是否展开
+ * @param onDismissRequest 关闭/折叠菜单回调
+ * @param modifier 外部修饰符
+ * @param excluded 额外剔除的菜单项集合（内部已默认剔除 BATCH_SELECT、VIDEO_DETAIL、FILE_INFO 单条专属项）
+ * @param onAddToFavorite 「加入收藏」点击回调
+ * @param onAddToWatchLater 「稍后再看」点击回调
+ * @param extraActions 页面专属业务插槽列表
+ * @param destructiveAction 底部危险操作（红色高亮）
+ */
+@Composable
+fun StandardVideoActionDropdown(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    excluded: Set<BaseVideoMenuAction> = emptySet(),
+    onAddToFavorite: () -> Unit = {},
+    onAddToWatchLater: () -> Unit = {},
+    extraActions: List<VideoMenuAction> = emptyList(),
+    destructiveAction: VideoMenuAction? = null
+) {
+    val effectiveExcluded = DEFAULT_DROPDOWN_EXCLUDED + excluded
+    val actions = buildVideoMenuActions(
+        excluded = effectiveExcluded,
+        onAddToFavorite = onAddToFavorite,
+        onAddToWatchLater = onAddToWatchLater,
+        extraActions = extraActions,
+        destructiveAction = destructiveAction
+    )
+
+    VideoActionDropdownMenu(
+        expanded = expanded,
+        actions = actions,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier
+    )
+}
+
+/**
+ * 底层接收裸列表的下拉菜单渲染实现函数（设为 private 封死绕过路径，杜绝外部业务页手动拼装）
+ */
+@Composable
+private fun VideoActionDropdownMenu(
+    expanded: Boolean,
+    actions: List<VideoMenuAction>,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier
+    ) {
+        actions.forEach { action ->
+            val iconTint = if (action.isDangerous) MenuTokens.DangerColor else MenuTokens.IconDefaultTint
+            val textColor = if (action.isDangerous) MenuTokens.DangerColor else MaterialTheme.colorScheme.onSurface
+
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = action.title,
+                        color = textColor,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = action.icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(MenuTokens.IconSize)
+                    )
+                },
+                onClick = {
+                    onDismissRequest()
+                    action.onClick()
+                }
+            )
+        }
+    }
 }
 
 /**

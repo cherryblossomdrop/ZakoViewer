@@ -33,13 +33,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
-import moe.zako.viewer.ui.components.BaseBatchMenuAction
-import moe.zako.viewer.ui.components.BatchMenuAction
+import moe.zako.viewer.ui.components.BaseVideoMenuAction
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
-import moe.zako.viewer.ui.components.StandardBatchActionMenu
+import moe.zako.viewer.ui.components.StandardVideoActionDropdown
+import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.components.ZakoSearchBar
 import moe.zako.viewer.ui.components.clearFocusOnScroll
 import moe.zako.viewer.ui.components.clearFocusOnTap
@@ -95,26 +95,26 @@ fun FavoritesScreen(
                     menuContent = { expanded, onDismissRequest ->
                         when {
                             state.selectedFolderIds.isEmpty() && state.selectedItemIds.isNotEmpty() -> {
-                                StandardBatchActionMenu(
+                                StandardVideoActionDropdown(
                                     expanded = expanded,
                                     onDismissRequest = onDismissRequest,
-                                    excluded = setOf(BaseBatchMenuAction.ADD_TO_FAVORITE),
+                                    excluded = setOf(BaseVideoMenuAction.ADD_TO_FAVORITE),
                                     onAddToWatchLater = { viewModel.batchAddToWatchLater() },
                                     extraActions = listOf(
-                                        BatchMenuAction(
+                                        VideoMenuAction(
                                             id = "move",
                                             title = "移动视频",
                                             icon = AppIcons.Move,
                                             onClick = { viewModel.showMoveDialogForSelection() }
                                         ),
-                                        BatchMenuAction(
+                                        VideoMenuAction(
                                             id = "copy",
                                             title = "复制视频",
                                             icon = AppIcons.Copy,
                                             onClick = { viewModel.showCopyDialogForSelection() }
                                         )
                                     ),
-                                    destructiveAction = BatchMenuAction(
+                                    destructiveAction = VideoMenuAction(
                                         id = "delete",
                                         title = "移出收藏",
                                         icon = AppIcons.Delete,
@@ -124,22 +124,22 @@ fun FavoritesScreen(
                                 )
                             }
                             state.selectedFolderIds.isNotEmpty() && state.selectedItemIds.isEmpty() -> {
-                                StandardBatchActionMenu(
+                                StandardVideoActionDropdown(
                                     expanded = expanded,
                                     onDismissRequest = onDismissRequest,
                                     excluded = setOf(
-                                        BaseBatchMenuAction.ADD_TO_FAVORITE,
-                                        BaseBatchMenuAction.ADD_TO_WATCH_LATER
+                                        BaseVideoMenuAction.ADD_TO_FAVORITE,
+                                        BaseVideoMenuAction.WATCH_LATER
                                     ),
                                     extraActions = listOf(
-                                        BatchMenuAction(
+                                        VideoMenuAction(
                                             id = "move",
                                             title = "移动目录",
                                             icon = AppIcons.Move,
                                             onClick = { viewModel.showMoveDialogForSelection() }
                                         )
                                     ),
-                                    destructiveAction = BatchMenuAction(
+                                    destructiveAction = VideoMenuAction(
                                         id = "delete",
                                         title = "删除目录",
                                         icon = AppIcons.Delete,
@@ -149,15 +149,15 @@ fun FavoritesScreen(
                                 )
                             }
                             else -> {
-                                StandardBatchActionMenu(
+                                StandardVideoActionDropdown(
                                     expanded = expanded,
                                     onDismissRequest = onDismissRequest,
                                     excluded = setOf(
-                                        BaseBatchMenuAction.ADD_TO_FAVORITE,
-                                        BaseBatchMenuAction.ADD_TO_WATCH_LATER
+                                        BaseVideoMenuAction.ADD_TO_FAVORITE,
+                                        BaseVideoMenuAction.WATCH_LATER
                                     ),
                                     extraActions = emptyList(),
-                                    destructiveAction = BatchMenuAction(
+                                    destructiveAction = VideoMenuAction(
                                         id = "delete",
                                         title = "批量删除",
                                         icon = AppIcons.Delete,
@@ -242,8 +242,7 @@ fun FavoritesScreen(
                         isSelected = state.selectedFolderIds.contains(folder.id),
                         onFolderClick = { viewModel.openFolder(folder) },
                         onSelectToggle = { viewModel.toggleFolderSelection(folder.id) },
-                        onMenuClick = { folderMenuTarget = folder },
-                        onDeleteClick = { folderToDelete = folder }
+                        onMenuClick = { folderMenuTarget = folder }
                     )
                 }
             }
@@ -295,7 +294,6 @@ fun FavoritesScreen(
                         onPlayClick = { onNavigateToPlayer(item.videoId) },
                         onSelectToggle = { viewModel.toggleItemSelection(item.id) },
                         onMenuClick = { itemMenuTarget = item },
-                        onDeleteClick = { itemToDelete = item },
                         isLocalCached = state.downloadedVideoIds.contains(item.videoId)
                     )
                 }

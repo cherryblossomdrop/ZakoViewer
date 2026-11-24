@@ -200,6 +200,7 @@ fun ZakoNavHost(
                         val viewModel: FavoritesViewModel = viewModel {
                             FavoritesViewModel(
                                 favoriteRepository = app.favoriteRepository,
+                                historyRepository = app.historyRepository,
                                 downloadDao = app.database.downloadDao(),
                                 downloadManager = app.downloadManager
                             )
@@ -324,7 +325,8 @@ fun ZakoNavHost(
                             DownloadsViewModel(
                                 downloadManager = app.downloadManager,
                                 settingsRepository = app.settingsRepository,
-                                favoriteRepository = app.favoriteRepository
+                                favoriteRepository = app.favoriteRepository,
+                                historyRepository = app.historyRepository
                             )
                         }
                         DownloadsScreen(

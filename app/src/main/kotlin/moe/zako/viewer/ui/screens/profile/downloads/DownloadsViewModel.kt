@@ -8,6 +8,7 @@ import moe.zako.viewer.core.duration.VideoDurationManager
 import moe.zako.viewer.data.local.entities.DownloadEntity
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.repository.FavoriteRepository
+import moe.zako.viewer.data.repository.HistoryRepository
 import moe.zako.viewer.data.repository.SettingsRepository
 import moe.zako.viewer.ui.components.ZakoToast
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,8 @@ data class DownloadsUiState(
 class DownloadsViewModel(
     private val downloadManager: DownloadManager,
     private val settingsRepository: SettingsRepository,
-    private val favoriteRepository: FavoriteRepository
+    private val favoriteRepository: FavoriteRepository,
+    private val historyRepository: HistoryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DownloadsUiState())
@@ -265,6 +267,20 @@ class DownloadsViewModel(
             favoriteRepository.createFolder(name, parentId)
             val folders = favoriteRepository.getAllFolders()
             _uiState.update { it.copy(allFolders = folders) }
+        }
+    }
+
+    // --- 稍后再看互操作 ---
+    fun addToWatchLater(target: DownloadEntity) {
+        viewModelScope.launch {
+            historyRepository.addToWatchLater(
+                videoId = target.videoId,
+                title = target.title,
+                coverUrl = target.coverUrl,
+                duration = target.duration,
+                isVip = false
+            )
+            ZakoToast.show("已加入稍后再看")
         }
     }
 }

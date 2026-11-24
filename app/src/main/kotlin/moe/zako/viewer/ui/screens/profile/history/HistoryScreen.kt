@@ -47,7 +47,7 @@ import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
-import moe.zako.viewer.ui.components.VideoActionBottomSheet
+import moe.zako.viewer.ui.components.StandardVideoActionMenu
 import moe.zako.viewer.ui.components.VideoListItemCard
 import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.components.ZakoSearchBar
@@ -218,77 +218,34 @@ fun HistoryScreen(
     // 全局长按上下文操作菜单
     if (menuTargetItem != null) {
         val target = menuTargetItem!!
-        val actions = buildList {
-            add(
-                VideoMenuAction(
-                    id = "multi_select",
-                    title = "批量多选",
-                    icon = AppIcons.MultiSelect,
-                    onClick = {
-                        viewModel.enterSelectionWithItem(target.videoId)
-                    }
-                )
-            )
-            add(
-                VideoMenuAction(
-                    id = "add_to_favorites",
-                    title = "加入收藏",
-                    icon = AppIcons.AddToFavorites,
-                    onClick = {
-                        viewModel.showAddToFavoritesForSingleItem(target)
-                    }
-                )
-            )
-            add(
-                VideoMenuAction(
-                    id = "detail",
-                    title = "视频详情",
-                    icon = AppIcons.VideoDetail,
-                    onClick = {
-                        onNavigateToDetail(target.videoId)
-                    }
-                )
-            )
-            if (localInfoForTarget != null) {
-                add(
-                    VideoMenuAction(
-                        id = "file_info",
-                        title = "文件信息",
-                        icon = AppIcons.FileInfo,
-                        supportingText = "查看路径、大小与本地状态",
-                        onClick = {
-                            showFileInfoDialog = true
-                        }
-                    )
-                )
-            }
-            add(
-                VideoMenuAction(
-                    id = "watch_later",
-                    title = "稍后再看",
-                    icon = AppIcons.WatchLater,
-                    onClick = {
-                        viewModel.addToWatchLater(target)
-                    }
-                )
-            )
-            add(
-                VideoMenuAction(
-                    id = "delete",
-                    title = "删除记录",
-                    icon = AppIcons.Delete,
-                    isDangerous = true,
-                    onClick = {
-                        historyToDelete = target
-                    }
-                )
-            )
-        }
-
-        VideoActionBottomSheet(
+        StandardVideoActionMenu(
             title = target.title,
-            actions = actions,
-            onDismissRequest = { menuTargetItem = null }
+            onDismissRequest = { menuTargetItem = null },
+            excluded = emptySet(),
+            onBatchSelect = {
+                viewModel.enterSelectionWithItem(target.videoId)
+            },
+            onAddToFavorite = {
+                viewModel.showAddToFavoritesForSingleItem(target)
+            },
+            onAddToWatchLater = {
+                viewModel.addToWatchLater(target)
+            },
+            onVideoDetail = {
+                onNavigateToDetail(target.videoId)
+            },
+            onFileInfo = if (localInfoForTarget != null) {
+                { showFileInfoDialog = true }
+            } else null,
+            destructiveAction = VideoMenuAction(
+                id = "delete",
+                title = "删除记录",
+                icon = AppIcons.Delete,
+                isDangerous = true,
+                onClick = {
+                    historyToDelete = target
+                }
+            )
         )
     }
 

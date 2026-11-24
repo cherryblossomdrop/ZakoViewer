@@ -284,6 +284,7 @@ fun DownloadsScreen(
             target = menuTargetItem!!,
             onEnterMultiSelect = { videoId -> viewModel.enterMultiSelect(videoId) },
             onAddToFavorites = { target -> viewModel.showAddToFavorites(target) },
+            onAddToWatchLater = { target -> viewModel.addToWatchLater(target) },
             onNavigateToDetail = { videoId -> onNavigateToDetail(videoId) },
             onShowFileInfo = { target ->
                 fileInfoTargetItem = target

@@ -6,18 +6,18 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 
 ## 📊 工程源码规模统计
 
-本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.3.10**）代码规模统计如下：
+本项目遵循现代化 Android 与 Clean Architecture 规范精心演进，截至最新版本（**v1.3.11**）代码规模统计如下：
 
 | 语言 / 类型 | 模块数 | 源码行数 | 核心架构与工程职责 |
 | :--- | :---: | :---: | :--- |
-| **Kotlin (`.kt`)** | 119 | 29,248 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、网络底座、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
+| **Kotlin (`.kt`)** | 119 | 29,249 | 业务决策中枢、Jetpack Compose 表现层、Design Tokens、Room 响应式数据库、网络底座、下载引擎、播放器引擎适配器与 Scoped Storage 适配 |
 | **C++ / JNI (`.cpp`)** | 1 | 634 | libmpv 原生硬件加速渲染、跨语言 JNI 互斥锁、异步 Seek 屏障与原生日志捕获 |
 | **Gradle 构建 (`.kts`)** | 3 | 170 | 工程与模块级构建脚本、多维度依赖解耦与构建参数管理 |
 | **资源配置 (`.xml`)** | 26 | 355 | 跨版本清单配置、多主题矢量图形及自适应图标资源 |
 | **构建配置 (CMake)** | 1 | 32 | CMake 原生链接编排与编译参数 |
 | **CI/CD 工作流 (`.yml`)** | 1 | 130 | 自动化 GitHub Release 发版与纯源码无污染归档流水线 |
 | **项目规范与文档 (`.md`)** | 3 | 477 | 自动化版本递增、Commit 规范、发版发布、代码索引与编译验证准则 |
-| **总计** | **154** | **31,046** | **全项目共计约 3.10 万行高质量工程源码** |
+| **总计** | **154** | **31,047** | **全项目共计约 3.10 万行高质量工程源码** |
 
 ---
 
@@ -62,7 +62,7 @@ ZakoViewer 是一款基于 Kotlin 与 Jetpack Compose 构建的高性能、现�
 - **分享设置动态可见性判定与圆角自适应**：为分享设置抽离 `ShareSettingItem` 与 `visibleShareSettingItems` 集合，避免将入口硬绑定到单一布尔值上；动态汇总所有可见配置项，为空时在「我的」页与设置主页优雅隐藏「分享设置」入口并自适应相邻项底部大圆角；
 - **目录迁移弹窗与生命周期存储权限监听收敛**：抽离 `MigrationProgressDialog` 统一离线下载与全局存储设置的跨目录迁移确认及进度展示；抽离可复用 Compose 副作用组件 `ObserveStoragePermissionOnResume`（利用 `rememberUpdatedState` 彻底防止捕获过期闭包），统一下载、设置、备份恢复及目录浏览器的生命周期权限恢复监听；收藏夹文件夹抽屉全面收口复用 `VideoActionBottomSheet` 与 `MenuTokens`；
 - **日志查看器搜索一致性与备份恢复视窗瘦身解耦**：实时日志页 `LogViewerScreen` 接入全局统一胶囊搜索框 `ZakoSearchBar` 并挂载 `clearFocusOnScroll` 与 `clearFocusOnTap`，实现关键词快速定位与一致的自动失焦体验；拆分 `BackupRestoreScreen`（从 667 行瘦身至 323 行），将导入/导出进度、恢复结果及成功分享弹窗完整解耦至同包 `BackupRestoreDialogs`；
-- **全域图标与上下文菜单 Design Token 归一**：建立 `AppIcons` 语义化图标 Token 与 `MenuTokens` 菜单样式规范，以「离线下载」多选图标（Checklist）作为全应用唯一基准，历史记录、我的收藏与稍后再看三大列表全面对齐；基于 `VideoActionBottomSheet` 抽离高度复用的长按上下文操作菜单，驱动离线下载、历史记录、我的收藏与稍后再看四大核心页面在圆角、标高、内边距、图标尺寸与动效上实现像素级视觉一致，全链路打通单项添加到层级收藏夹，并为稍后再看补全多选模式、批量转存收藏夹与批量移出的统一交互；
+- **基于 Zygote 模式的长按上下文操作菜单基座与 API 封口**：基于「全局基座 + 按需做减法（Zygote 模式）」重构全局统一菜单基座 `StandardVideoActionMenu`，对外从编译期封死裸列表入口。定义 `BaseVideoMenuAction` 枚举锁死全局五段式渲染顺序（批量多选 -> 加入收藏 -> 稍后再看 -> 视频详情 -> 文件信息），通过 `excluded` 按需做减法、专属插槽 `extraActions` 扩展业务操作及 `destructiveAction` 危险区固定沉底；驱动离线下载、历史记录、我的收藏与稍后再看四大核心页面在视觉与交互顺序上完全对齐，并全链路补齐「稍后再看」透传与 Toast 反馈；
 - **全域播放组件归拢与共享控制拓扑**：建立 `ui/components/player/` 播放器专用组件库，抽离共享播放顶栏（`PlayerTopBar`）、波浪进度控制条（`PlayerBottomControls`）、CDN 测速选线抽屉（`CdnNodeSelectorDialog`）及播放内核与硬解切换弹窗，驱动独立全屏播放视窗与视频详情内嵌播放器实现高度复用与像素级对称；
 - **全域时长角标与本地文件信息规范归一**：抽离 `DurationBadge` 封面时长角标组件与解析器，统一兼容浮点秒、整数秒、毫秒与格式化串，全面覆盖离线下载、历史记录、收藏夹与稍后再看四大列表；合并本地文件信息弹窗为单一公共组件 `LocalFileInfoDialog`，长按菜单统一固定「查看详情」跳转详情页，检测到本地视频时无缝呈现「文件信息」；
 - **全仓 Design Token 覆盖与硬编码绝对清零**：全仓（涵盖个人中心、6 大设置模块、日志查看器、备份恢复、离线下载、历史记录、稍后再看与收藏夹树状体系）彻底消除散落硬编码。所有图标引用 100% 收敛至全局 `AppIcons` 门面（全仓业务与组件代码直接引用 `Icons.`/`ZakoIcons.` 数量实现绝对清零）；诊断日志级别色与控制台背景收敛至 `LogLevelColors` 并自适应深浅色模式，全仓散落裸写 `Color(0x...)` 数量归零；排版文字与几何尺寸全量对齐 `Typography` 与 `Dimens`（`Spacing`、`CornerRadius`、`IconSize`、`BorderWidth` 及 `SettingsTokens` / `ProfileTokens` 等）。

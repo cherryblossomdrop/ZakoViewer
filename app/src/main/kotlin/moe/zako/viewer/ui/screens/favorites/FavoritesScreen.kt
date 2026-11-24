@@ -310,6 +310,10 @@ fun FavoritesScreen(
                 itemMenuTarget = null
                 viewModel.showCopyDialogForSingleItem(itm)
             },
+            onAddToWatchLater = { itm ->
+                itemMenuTarget = null
+                viewModel.addToWatchLater(itm)
+            },
             onDetail = { itm ->
                 itemMenuTarget = null
                 onNavigateToDetail(itm.videoId)

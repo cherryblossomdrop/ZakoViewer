@@ -18,12 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
-import moe.zako.viewer.ui.components.VideoActionBottomSheet
+import moe.zako.viewer.ui.components.BaseVideoMenuAction
+import moe.zako.viewer.ui.components.StandardVideoActionMenu
 import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.theme.AppIcons
 
 /**
- * 子收藏夹长按操作抽屉 (基于 VideoActionBottomSheet 与 MenuTokens)
+ * 子收藏夹长按操作抽屉 (基于 StandardVideoActionMenu 与 MenuTokens)
  */
 @Composable
 fun FolderActionBottomSheet(
@@ -34,26 +35,31 @@ fun FolderActionBottomSheet(
     onDelete: (Long) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    val actions = listOf(
-        VideoMenuAction(
-            id = "multi_select",
-            title = "批量多选",
-            icon = AppIcons.MultiSelect,
-            onClick = { onStartSelection(folder.id) }
+    StandardVideoActionMenu(
+        title = folder.name,
+        onDismissRequest = onDismissRequest,
+        excluded = BaseVideoMenuAction.entries.toSet(),
+        extraActions = listOf(
+            VideoMenuAction(
+                id = "multi_select",
+                title = "批量多选",
+                icon = AppIcons.MultiSelect,
+                onClick = { onStartSelection(folder.id) }
+            ),
+            VideoMenuAction(
+                id = "rename",
+                title = "修改名称",
+                icon = AppIcons.Edit,
+                onClick = { onRename(folder) }
+            ),
+            VideoMenuAction(
+                id = "move",
+                title = "移动目录",
+                icon = AppIcons.Move,
+                onClick = { onMove(folder.id) }
+            )
         ),
-        VideoMenuAction(
-            id = "rename",
-            title = "修改名称",
-            icon = AppIcons.Edit,
-            onClick = { onRename(folder) }
-        ),
-        VideoMenuAction(
-            id = "move",
-            title = "移动目录",
-            icon = AppIcons.Move,
-            onClick = { onMove(folder.id) }
-        ),
-        VideoMenuAction(
+        destructiveAction = VideoMenuAction(
             id = "delete",
             title = "删除目录",
             icon = AppIcons.Delete,
@@ -61,16 +67,10 @@ fun FolderActionBottomSheet(
             onClick = { onDelete(folder.id) }
         )
     )
-
-    VideoActionBottomSheet(
-        title = folder.name,
-        actions = actions,
-        onDismissRequest = onDismissRequest
-    )
 }
 
 /**
- * 收藏视频条目长按操作抽屉 (基于 VideoActionBottomSheet)
+ * 收藏视频条目长按操作抽屉 (基于 StandardVideoActionMenu Zygote 基座)
  */
 @Composable
 fun FavoriteItemActionBottomSheet(
@@ -79,79 +79,48 @@ fun FavoriteItemActionBottomSheet(
     onRename: (FavoriteItemEntity) -> Unit,
     onMove: (Long) -> Unit,
     onCopy: (FavoriteItemEntity) -> Unit,
+    onAddToWatchLater: (FavoriteItemEntity) -> Unit,
     onDetail: (FavoriteItemEntity) -> Unit,
     onDelete: (Long) -> Unit,
     onDismissRequest: () -> Unit,
     hasLocalFile: Boolean = false,
     onShowFileInfo: (() -> Unit)? = null
 ) {
-    val actions = buildList {
-        add(
-            VideoMenuAction(
-                id = "multi_select",
-                title = "批量多选",
-                icon = AppIcons.MultiSelect,
-                onClick = { onStartSelection(item.id) }
-            )
-        )
-        add(
+    StandardVideoActionMenu(
+        title = item.title,
+        onDismissRequest = onDismissRequest,
+        excluded = setOf(BaseVideoMenuAction.ADD_TO_FAVORITE),
+        onBatchSelect = { onStartSelection(item.id) },
+        onAddToWatchLater = { onAddToWatchLater(item) },
+        onVideoDetail = { onDetail(item) },
+        onFileInfo = if (hasLocalFile) onShowFileInfo else null,
+        extraActions = listOf(
             VideoMenuAction(
                 id = "rename",
                 title = "修改名称",
                 icon = AppIcons.Edit,
                 onClick = { onRename(item) }
-            )
-        )
-        add(
+            ),
             VideoMenuAction(
                 id = "move",
                 title = "移动视频",
                 icon = AppIcons.Move,
                 onClick = { onMove(item.id) }
-            )
-        )
-        add(
+            ),
             VideoMenuAction(
                 id = "copy",
                 title = "复制视频",
                 icon = AppIcons.Copy,
                 onClick = { onCopy(item) }
             )
+        ),
+        destructiveAction = VideoMenuAction(
+            id = "delete",
+            title = "移出收藏",
+            icon = AppIcons.Delete,
+            isDangerous = true,
+            onClick = { onDelete(item.id) }
         )
-        add(
-            VideoMenuAction(
-                id = "detail",
-                title = "视频详情",
-                icon = AppIcons.VideoDetail,
-                onClick = { onDetail(item) }
-            )
-        )
-        if (hasLocalFile && onShowFileInfo != null) {
-            add(
-                VideoMenuAction(
-                    id = "file_info",
-                    title = "文件信息",
-                    icon = AppIcons.FileInfo,
-                    supportingText = "查看路径、大小与本地状态",
-                    onClick = onShowFileInfo
-                )
-            )
-        }
-        add(
-            VideoMenuAction(
-                id = "delete",
-                title = "移出收藏",
-                icon = AppIcons.Delete,
-                isDangerous = true,
-                onClick = { onDelete(item.id) }
-            )
-        )
-    }
-
-    VideoActionBottomSheet(
-        title = item.title,
-        actions = actions,
-        onDismissRequest = onDismissRequest
     )
 }
 

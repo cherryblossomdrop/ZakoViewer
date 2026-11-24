@@ -15,56 +15,44 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.entities.DownloadEntity
-import moe.zako.viewer.ui.components.VideoActionBottomSheet
+import moe.zako.viewer.ui.components.StandardVideoActionMenu
 import moe.zako.viewer.ui.components.VideoMenuAction
 import moe.zako.viewer.ui.screens.profile.settings.StoragePermissionGuideDialog
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.Spacing
 
 /**
- * 下载任务长按菜单底部抽屉
+ * 下载任务长按菜单底部抽屉 (基于 StandardVideoActionMenu Zygote 基座)
  */
 @Composable
 fun DownloadActionBottomSheet(
     target: DownloadEntity,
     onEnterMultiSelect: (String) -> Unit,
     onAddToFavorites: (DownloadEntity) -> Unit,
+    onAddToWatchLater: (DownloadEntity) -> Unit,
     onNavigateToDetail: (String) -> Unit,
     onShowFileInfo: (DownloadEntity) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    onDelete: ((DownloadEntity) -> Unit)? = null
 ) {
-    val actions = listOf(
-        VideoMenuAction(
-            id = "multi_select",
-            title = "批量多选",
-            icon = AppIcons.MultiSelect,
-            onClick = { onEnterMultiSelect(target.videoId) }
-        ),
-        VideoMenuAction(
-            id = "add_to_favorites",
-            title = "加入收藏",
-            icon = AppIcons.AddToFavorites,
-            onClick = { onAddToFavorites(target) }
-        ),
-        VideoMenuAction(
-            id = "detail",
-            title = "视频详情",
-            icon = AppIcons.VideoDetail,
-            onClick = { onNavigateToDetail(target.videoId) }
-        ),
-        VideoMenuAction(
-            id = "file_info",
-            title = "文件信息",
-            icon = AppIcons.FileInfo,
-            supportingText = "查看路径、大小与本地状态",
-            onClick = { onShowFileInfo(target) }
-        )
-    )
-
-    VideoActionBottomSheet(
+    StandardVideoActionMenu(
         title = target.title,
-        actions = actions,
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        excluded = emptySet(),
+        onBatchSelect = { onEnterMultiSelect(target.videoId) },
+        onAddToFavorite = { onAddToFavorites(target) },
+        onAddToWatchLater = { onAddToWatchLater(target) },
+        onVideoDetail = { onNavigateToDetail(target.videoId) },
+        onFileInfo = { onShowFileInfo(target) },
+        destructiveAction = onDelete?.let {
+            VideoMenuAction(
+                id = "delete",
+                title = "删除任务",
+                icon = AppIcons.Delete,
+                isDangerous = true,
+                onClick = { it(target) }
+            )
+        }
     )
 }
 

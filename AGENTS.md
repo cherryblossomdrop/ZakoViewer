@@ -25,7 +25,16 @@
 - **升级零损**：Room / 偏好设置 / 备份格式变更必须向后兼容旧版数据；严禁以易失的应用私有绝对路径覆盖数据库或备份中的稳定业务标识或远端源地址。
 
 ## 四、UI、状态与日志
-- **Design Token 与一致性**：新增/修改 UI 的尺寸、间距、圆角、颜色、字号、动效引用语义化 token（禁止硬编码字面量或数值式命名）；同级控件尺寸与文案风格统一。
+- **跨页面共用交互必须采用「全局基座 + 按需做减法（Zygote 模式）」**：
+  - **触发条件**：凡是新增或修改跨 2 个及以上页面复用的上下文菜单、底部操作栏、多选操作条等组件。
+  - **硬红线**：必须在 `ui/components/` 维护全局唯一基座与固定顺序枚举，默认全量继承，并将底层裸列表入口设为 `private` 封口。各业务页仅允许通过 `excluded` 做减法、通过 `extraActions` / `destructiveAction` 做局部扩展；**严禁在 `ui/screens/` 下手动拼装通用操作项列表**。
+- **全局 Design Token 绝对约束（零硬编码红线）**：
+  - **硬红线**：在 `ui/theme/` 目录之外的所有业务与组件代码（`ui/screens/`、`ui/components/`）中，**绝对禁止**：
+    - 裸写颜色值：`Color(0x...)`、`Color.Red` / `Color.White` 等（必须消费 `MaterialTheme.colorScheme` 或 `ui/theme/Color.kt` 定义的语义 Token）。
+    - 裸写尺寸/间距/圆角/字号：`16.dp`、`12.sp` 等字面量（必须消费 `Dimens.kt`、`MenuTokens.kt`、`SearchBarTokens.kt`、`FilterBarTokens.kt`、`Typography.kt`；若现有 Token 缺失，必须先在 `ui/theme/` 补充语义化 Token 再引用）。
+    - 裸写动效时长与曲线（必须消费 `MotionTokens.kt`）。
+    - 直接引用图标源：`Icons.Default.*`、`Icons.Filled.*`、`Icons.Rounded.*`、`Icons.Outlined.*`、`ZakoIcons.*`（必须统一通过 `ui/theme/AppIcons.kt` 引用）。
+  - **强制完工自检门禁**：每次修改任何 UI 文件后、提交或汇报完成前，**必须**对本次改动涉及的 `ui/screens/` 与 `ui/components/` 文件执行静态扫描（如 `rg` / `grep` 检索 `Color\(0x|\b\d+\.(dp|sp)\b|Icons\.(Default|Filled|Rounded|Outlined)|ZakoIcons\.`），确认**零违规命中**后方可交付。
 - **MD3E 区块层级与双层间距 Token 规范**：
   1. **区块独立与标题明确**：分属不同功能区块的子项必须归属在各自区块下，并配备清晰的区块标题（参考「我的」页的「内容与偏好」「数据与应用」样式），严禁将不同区块的子项无标题混排导致层级混乱。
   2. **双层间距严格走 Token**：在 `Dimens.kt` 中全局明确区分**区块间间距 Token（较宽）**与**同区块内同级子项间间距 Token（较窄，遵循 MD3E 分组卡片与分段圆角规范）**，两者尺寸明确区分，全仓严禁硬编码 `dp` 间距。

@@ -94,6 +94,7 @@ fun FavoriteFolderItem(
     onFolderClick: () -> Unit,
     onSelectToggle: () -> Unit,
     onMenuClick: () -> Unit,
+    onDeleteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isRootFolder = folder.parentId == null
@@ -157,11 +158,11 @@ fun FavoriteFolderItem(
                 overflow = TextOverflow.Ellipsis
             )
 
-            if (!isSelectionMode) {
-                IconButton(onClick = onMenuClick) {
+            if (!isSelectionMode && !isRootFolder) {
+                IconButton(onClick = onDeleteClick) {
                     Icon(
-                        imageVector = AppIcons.MoreVert,
-                        contentDescription = "菜单",
+                        imageVector = AppIcons.DeleteOutline,
+                        contentDescription = "删除",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

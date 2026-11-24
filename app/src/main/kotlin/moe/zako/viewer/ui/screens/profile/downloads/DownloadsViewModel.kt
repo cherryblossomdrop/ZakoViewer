@@ -242,22 +242,65 @@ class DownloadsViewModel(
         }
     }
 
+    fun showAddToFavoritesForSelection() {
+        viewModelScope.launch {
+            val folders = favoriteRepository.getAllFolders()
+            _uiState.update {
+                it.copy(
+                    showFolderSelector = true,
+                    allFolders = folders,
+                    pendingFavoriteItem = null
+                )
+            }
+        }
+    }
+
     fun dismissFolderSelector() {
         _uiState.update { it.copy(showFolderSelector = false, pendingFavoriteItem = null) }
     }
 
     fun addToFavoriteFolder(folderId: Long) {
-        val item = _uiState.value.pendingFavoriteItem ?: return
+        val item = _uiState.value.pendingFavoriteItem
+        if (item != null) {
+            viewModelScope.launch {
+                favoriteRepository.addToFavorites(
+                    folderId = folderId,
+                    videoId = item.videoId,
+                    title = item.title,
+                    coverUrl = item.coverUrl,
+                    duration = item.duration,
+                    isVip = false
+                )
+                _uiState.update { it.copy(showFolderSelector = false, pendingFavoriteItem = null) }
+                ZakoToast.show("已加入收藏夹")
+            }
+        } else {
+            batchAddToFavorites(folderId)
+        }
+    }
+
+    fun batchAddToFavorites(targetFolderId: Long) {
         viewModelScope.launch {
-            favoriteRepository.addToFavorites(
-                folderId = folderId,
-                videoId = item.videoId,
-                title = item.title,
-                coverUrl = item.coverUrl,
-                duration = item.duration,
-                isVip = false
-            )
-            _uiState.update { it.copy(showFolderSelector = false, pendingFavoriteItem = null) }
+            val currentList = if (_uiState.value.selectedTab == 0) _uiState.value.completedList else _uiState.value.activeList
+            val selected = currentList.filter { _uiState.value.selectedIds.contains(it.videoId) }
+            for (item in selected) {
+                favoriteRepository.addToFavorites(
+                    folderId = targetFolderId,
+                    videoId = item.videoId,
+                    title = item.title,
+                    coverUrl = item.coverUrl,
+                    duration = item.duration,
+                    isVip = false
+                )
+            }
+            _uiState.update {
+                it.copy(
+                    selectedIds = emptySet(),
+                    isMultiSelectMode = false,
+                    showFolderSelector = false,
+                    pendingFavoriteItem = null
+                )
+            }
             ZakoToast.show("已加入收藏夹")
         }
     }
@@ -281,6 +324,31 @@ class DownloadsViewModel(
                 isVip = false
             )
             ZakoToast.show("已加入稍后再看")
+        }
+    }
+
+    fun batchAddToWatchLater() {
+        viewModelScope.launch {
+            val currentList = if (_uiState.value.selectedTab == 0) _uiState.value.completedList else _uiState.value.activeList
+            val selected = currentList.filter { _uiState.value.selectedIds.contains(it.videoId) }
+            if (selected.isNotEmpty()) {
+                for (item in selected) {
+                    historyRepository.addToWatchLater(
+                        videoId = item.videoId,
+                        title = item.title,
+                        coverUrl = item.coverUrl,
+                        duration = item.duration,
+                        isVip = false
+                    )
+                }
+                ZakoToast.show("已将 ${selected.size} 个视频加入稍后再看")
+                _uiState.update {
+                    it.copy(
+                        selectedIds = emptySet(),
+                        isMultiSelectMode = false
+                    )
+                }
+            }
         }
     }
 }

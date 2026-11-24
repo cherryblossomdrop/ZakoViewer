@@ -3,16 +3,12 @@
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,11 +34,14 @@ import kotlinx.coroutines.withContext
 import moe.zako.viewer.core.cover.CoverCacheManager
 import moe.zako.viewer.core.download.DownloadManager
 import moe.zako.viewer.data.local.entities.WatchLaterEntity
+import moe.zako.viewer.ui.components.BaseBatchMenuAction
 import moe.zako.viewer.ui.components.BaseVideoMenuAction
+import moe.zako.viewer.ui.components.BatchMenuAction
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
+import moe.zako.viewer.ui.components.StandardBatchActionMenu
 import moe.zako.viewer.ui.components.StandardVideoActionMenu
 import moe.zako.viewer.ui.components.VideoListItemCard
 import moe.zako.viewer.ui.components.VideoMenuAction
@@ -84,7 +83,25 @@ fun WatchLaterScreen(
                     selectedCount = state.selectedVideoIds.size,
                     onExitSelection = { viewModel.exitSelectionMode() },
                     allSelected = allSelected,
-                    onToggleSelectAll = { viewModel.toggleSelectAll() }
+                    onToggleSelectAll = { viewModel.toggleSelectAll() },
+                    menuContent = { expanded, onDismissRequest ->
+                        StandardBatchActionMenu(
+                            expanded = expanded,
+                            onDismissRequest = onDismissRequest,
+                            excluded = setOf(BaseBatchMenuAction.ADD_TO_WATCH_LATER),
+                            onAddToFavorite = {
+                                viewModel.showBatchAddToFavoritesDialog()
+                            },
+                            extraActions = emptyList(),
+                            destructiveAction = BatchMenuAction(
+                                id = "delete",
+                                title = "移出待看",
+                                icon = AppIcons.Delete,
+                                isDangerous = true,
+                                onClick = { showBatchDeleteDialog = true }
+                            )
+                        )
+                    }
                 )
             } else {
                 TopAppBar(
@@ -102,32 +119,6 @@ fun WatchLaterScreen(
                         }
                     }
                 )
-            }
-        },
-        bottomBar = {
-            if (state.isSelectionMode && state.selectedVideoIds.isNotEmpty()) {
-                BottomAppBar {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(onClick = { viewModel.showBatchAddToFavoritesDialog() }) {
-                            Icon(imageVector = AppIcons.AddToFavorites, contentDescription = null)
-                            Spacer(modifier = Modifier.width(Spacing.Xs))
-                            Text("加入收藏夹 (${state.selectedVideoIds.size})")
-                        }
-                        TextButton(onClick = { showBatchDeleteDialog = true }) {
-                            Icon(
-                                imageVector = AppIcons.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                            Spacer(modifier = Modifier.width(Spacing.Xs))
-                            Text("移出稍后再看 (${state.selectedVideoIds.size})", color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
             }
         }
     ) { innerPadding ->

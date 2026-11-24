@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import moe.zako.viewer.core.permission.StoragePermissionHelper
 import moe.zako.viewer.data.local.entities.DownloadEntity
+import moe.zako.viewer.ui.components.BatchMenuAction
 import moe.zako.viewer.ui.components.FolderBrowserDialog
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.LocalFileInfo
@@ -40,6 +41,7 @@ import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MigrationProgressDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
 import moe.zako.viewer.ui.components.ObserveStoragePermissionOnResume
+import moe.zako.viewer.ui.components.StandardBatchActionMenu
 import moe.zako.viewer.ui.components.ZakoToast
 import moe.zako.viewer.ui.theme.AppIcons
 import moe.zako.viewer.ui.theme.IconSize
@@ -116,28 +118,32 @@ fun DownloadsScreen(
     Scaffold(
         topBar = {
             if (state.isMultiSelectMode) {
+                val destructiveTitle = if (state.selectedTab == 0) "删除文件" else "删除任务"
                 MultiSelectTopBar(
                     selectedCount = state.selectedIds.size,
                     onExitSelection = { viewModel.exitMultiSelect() },
                     allSelected = allSelected,
                     onToggleSelectAll = { viewModel.toggleSelectAll() },
-                    actions = {
-                        IconButton(
-                            onClick = {
-                                if (state.selectedIds.isNotEmpty()) {
-                                    showBatchDeleteConfirmDialog = true
-                                } else {
-                                    ZakoToast.show("请先勾选需要删除的任务")
-                                }
+                    menuContent = { expanded, onDismissRequest ->
+                        StandardBatchActionMenu(
+                            expanded = expanded,
+                            onDismissRequest = onDismissRequest,
+                            excluded = emptySet(),
+                            onAddToFavorite = {
+                                viewModel.showAddToFavoritesForSelection()
                             },
-                            enabled = state.selectedIds.isNotEmpty()
-                        ) {
-                            Icon(
-                                imageVector = AppIcons.Delete,
-                                contentDescription = "批量删除",
-                                tint = if (state.selectedIds.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            onAddToWatchLater = {
+                                viewModel.batchAddToWatchLater()
+                            },
+                            extraActions = emptyList(),
+                            destructiveAction = BatchMenuAction(
+                                id = "delete",
+                                title = destructiveTitle,
+                                icon = AppIcons.Delete,
+                                isDangerous = true,
+                                onClick = { showBatchDeleteConfirmDialog = true }
                             )
-                        }
+                        )
                     }
                 )
             } else {

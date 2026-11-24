@@ -193,6 +193,32 @@ class HistoryViewModel(
         }
     }
 
+    fun batchAddToWatchLater() {
+        viewModelScope.launch {
+            val selected = _uiState.value.historyList.filter {
+                _uiState.value.selectedVideoIds.contains(it.videoId)
+            }
+            if (selected.isNotEmpty()) {
+                for (item in selected) {
+                    historyRepository.addToWatchLater(
+                        videoId = item.videoId,
+                        title = item.title,
+                        coverUrl = item.coverUrl,
+                        duration = item.duration,
+                        isVip = item.isVip
+                    )
+                }
+                ZakoToast.show("已将 ${selected.size} 个视频加入稍后再看")
+                _uiState.update {
+                    it.copy(
+                        selectedVideoIds = emptySet(),
+                        isSelectionMode = false
+                    )
+                }
+            }
+        }
+    }
+
     fun deleteHistory(videoId: String) {
         viewModelScope.launch {
             historyRepository.deleteHistory(videoId)

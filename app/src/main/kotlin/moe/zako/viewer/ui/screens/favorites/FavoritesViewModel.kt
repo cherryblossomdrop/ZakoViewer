@@ -445,4 +445,29 @@ class FavoritesViewModel(
             ZakoToast.show("已加入稍后再看")
         }
     }
+
+    fun batchAddToWatchLater() {
+        viewModelScope.launch {
+            val selected = _uiState.value.items.filter { _uiState.value.selectedItemIds.contains(it.id) }
+            if (selected.isNotEmpty()) {
+                for (item in selected) {
+                    historyRepository.addToWatchLater(
+                        videoId = item.videoId,
+                        title = item.title,
+                        coverUrl = item.coverUrl,
+                        duration = item.duration,
+                        isVip = item.isVip
+                    )
+                }
+                ZakoToast.show("已将 ${selected.size} 个视频加入稍后再看")
+                _uiState.update {
+                    it.copy(
+                        selectedItemIds = emptySet(),
+                        selectedFolderIds = emptySet(),
+                        isSelectionMode = false
+                    )
+                }
+            }
+        }
+    }
 }

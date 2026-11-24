@@ -21,6 +21,7 @@ object MenuTokens {
     // 菜单容器形状与圆角
     val ContainerShape: Shape = RoundedCornerShape(topStart = CornerRadius.Lg, topEnd = CornerRadius.Lg)
     val ItemShape: Shape = RoundedCornerShape(CornerRadius.Sm)
+    val DropdownShape: Shape = RoundedCornerShape(CornerRadius.Md)
 
     // 阴影与色调标高
     val TonalElevation: Dp = Elevation.Level1

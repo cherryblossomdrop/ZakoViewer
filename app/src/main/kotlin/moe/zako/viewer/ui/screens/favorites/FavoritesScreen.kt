@@ -3,17 +3,13 @@
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,10 +33,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import moe.zako.viewer.data.local.entities.FavoriteFolderEntity
 import moe.zako.viewer.data.local.entities.FavoriteItemEntity
+import moe.zako.viewer.ui.components.BaseBatchMenuAction
+import moe.zako.viewer.ui.components.BatchMenuAction
 import moe.zako.viewer.ui.components.FolderTreeDialog
 import moe.zako.viewer.ui.components.LocalFileInfo
 import moe.zako.viewer.ui.components.LocalFileInfoDialog
 import moe.zako.viewer.ui.components.MultiSelectTopBar
+import moe.zako.viewer.ui.components.StandardBatchActionMenu
 import moe.zako.viewer.ui.components.ZakoSearchBar
 import moe.zako.viewer.ui.components.clearFocusOnScroll
 import moe.zako.viewer.ui.components.clearFocusOnTap
@@ -92,7 +91,83 @@ fun FavoritesScreen(
                     selectedCount = state.totalSelectedCount,
                     onExitSelection = { viewModel.toggleSelectionMode() },
                     allSelected = isAllSelected,
-                    onToggleSelectAll = { viewModel.toggleSelectAll() }
+                    onToggleSelectAll = { viewModel.toggleSelectAll() },
+                    menuContent = { expanded, onDismissRequest ->
+                        when {
+                            state.selectedFolderIds.isEmpty() && state.selectedItemIds.isNotEmpty() -> {
+                                StandardBatchActionMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = onDismissRequest,
+                                    excluded = setOf(BaseBatchMenuAction.ADD_TO_FAVORITE),
+                                    onAddToWatchLater = { viewModel.batchAddToWatchLater() },
+                                    extraActions = listOf(
+                                        BatchMenuAction(
+                                            id = "move",
+                                            title = "移动视频",
+                                            icon = AppIcons.Move,
+                                            onClick = { viewModel.showMoveDialogForSelection() }
+                                        ),
+                                        BatchMenuAction(
+                                            id = "copy",
+                                            title = "复制视频",
+                                            icon = AppIcons.Copy,
+                                            onClick = { viewModel.showCopyDialogForSelection() }
+                                        )
+                                    ),
+                                    destructiveAction = BatchMenuAction(
+                                        id = "delete",
+                                        title = "移出收藏",
+                                        icon = AppIcons.Delete,
+                                        isDangerous = true,
+                                        onClick = { showBatchDeleteConfirmDialog = true }
+                                    )
+                                )
+                            }
+                            state.selectedFolderIds.isNotEmpty() && state.selectedItemIds.isEmpty() -> {
+                                StandardBatchActionMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = onDismissRequest,
+                                    excluded = setOf(
+                                        BaseBatchMenuAction.ADD_TO_FAVORITE,
+                                        BaseBatchMenuAction.ADD_TO_WATCH_LATER
+                                    ),
+                                    extraActions = listOf(
+                                        BatchMenuAction(
+                                            id = "move",
+                                            title = "移动目录",
+                                            icon = AppIcons.Move,
+                                            onClick = { viewModel.showMoveDialogForSelection() }
+                                        )
+                                    ),
+                                    destructiveAction = BatchMenuAction(
+                                        id = "delete",
+                                        title = "删除目录",
+                                        icon = AppIcons.Delete,
+                                        isDangerous = true,
+                                        onClick = { showBatchDeleteConfirmDialog = true }
+                                    )
+                                )
+                            }
+                            else -> {
+                                StandardBatchActionMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = onDismissRequest,
+                                    excluded = setOf(
+                                        BaseBatchMenuAction.ADD_TO_FAVORITE,
+                                        BaseBatchMenuAction.ADD_TO_WATCH_LATER
+                                    ),
+                                    extraActions = emptyList(),
+                                    destructiveAction = BatchMenuAction(
+                                        id = "delete",
+                                        title = "批量删除",
+                                        icon = AppIcons.Delete,
+                                        isDangerous = true,
+                                        onClick = { showBatchDeleteConfirmDialog = true }
+                                    )
+                                )
+                            }
+                        }
+                    }
                 )
             } else {
                 TopAppBar(
@@ -118,45 +193,6 @@ fun FavoritesScreen(
                         }
                     }
                 )
-            }
-        },
-        bottomBar = {
-            // Batch Action Bottom Bar
-            if (state.isSelectionMode && state.totalSelectedCount > 0) {
-                BottomAppBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(onClick = { viewModel.showMoveDialogForSelection() }) {
-                            Icon(imageVector = AppIcons.Move, contentDescription = null)
-                            Spacer(modifier = Modifier.width(Spacing.Xs))
-                            Text("移动 (${state.totalSelectedCount})")
-                        }
-
-                        TextButton(
-                            onClick = { viewModel.showCopyDialogForSelection() },
-                            enabled = state.selectedItemIds.isNotEmpty()
-                        ) {
-                            Icon(imageVector = AppIcons.Copy, contentDescription = null)
-                            Spacer(modifier = Modifier.width(Spacing.Xs))
-                            Text("复制 (${state.selectedItemIds.size})")
-                        }
-
-                        TextButton(onClick = { showBatchDeleteConfirmDialog = true }) {
-                            Icon(
-                                imageVector = AppIcons.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                            Spacer(modifier = Modifier.width(Spacing.Xs))
-                            Text("删除 (${state.totalSelectedCount})", color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
             }
         }
     ) { innerPadding ->
@@ -206,7 +242,8 @@ fun FavoritesScreen(
                         isSelected = state.selectedFolderIds.contains(folder.id),
                         onFolderClick = { viewModel.openFolder(folder) },
                         onSelectToggle = { viewModel.toggleFolderSelection(folder.id) },
-                        onMenuClick = { folderMenuTarget = folder }
+                        onMenuClick = { folderMenuTarget = folder },
+                        onDeleteClick = { folderToDelete = folder }
                     )
                 }
             }

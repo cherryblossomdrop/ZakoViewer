@@ -179,7 +179,7 @@ app/src/main/
 
 ```powershell
 # 验证 Debug 与 Release 双版本自动化编译通过
-.\gradlew.bat assemble --no-daemon --console=plain
+.\gradlew.bat assemble --console=plain
 ```
 
 ---

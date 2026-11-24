@@ -59,10 +59,10 @@
 - **APK 产物命名红线**：严禁输出或引用默认的 `app-release.apk` / `app-debug.apk` 文件名。由于项目原生库仅包含 `arm64-v8a` 架构，所有构建产物必须严格遵循 `ZakoViewer-${versionName}-arm64-v8a-${buildType}.apk` 格式，且 `versionName` 必须从 Gradle 配置动态读取，绝对禁止在构建脚本或 CI 配置中硬编码版本号。
 
 ### 3. 双版本编译与止损验收
-- **双版本编译**：当且仅当改动源码且递增版本号后，必须执行以下命令验证 Debug 与 Release 双版本编译通过，确认 `:app:assembleDebug` 与 `:app:assembleRelease` 均 `BUILD SUCCESSFUL`（**严禁**添加 `--stacktrace` 参数）：
-  ```powershell
-  .\gradlew.bat assemble --no-daemon --console=plain
-  ```
+- **双版本编译与 Gradle Daemon 规范**：
+  - **本地构建严禁 `--no-daemon`**：在本地 Windows 环境执行编译验证时，**严禁附加 `--no-daemon`**，统一改为使用常驻 Gradle Daemon 执行（例如：`.\gradlew.bat assemble --console=plain`），以复用 JVM 热缓存与 JIT 加速，缩短编译耗时（**严禁**添加 `--stacktrace` 参数）。
+  - **环境隔离与异常清理**：`--no-daemon` 仅允许在 GitHub Actions 等 CI/CD 云端流水线（`.github/workflows/`）中使用，本地构建默认保持 Daemon 开启；仅当本地遇到罕见的 Windows 文件占用锁死或内存异常时，再手动执行 `.\gradlew.bat --stop` 清理后台常驻进程。
+  - **双版本验收门禁**：当且仅当改动源码且递增版本号后，必须执行上述命令验证 Debug 与 Release 双版本编译通过，确认 `:app:assembleDebug` 与 `:app:assembleRelease` 均 `BUILD SUCCESSFUL`。
 - **编译止损机制**：双版本编译失败自修复不超过 3 轮；若 3 轮仍未通过，必须立即停止修改并向用户汇报具体的编译阻塞点与日志。
 - **R8 与混淆规则**：新增 JSON 模型、Room Entity 或 JNI 桥接时，须同步检查并维护 `proguard-rules.pro`，并运行相关核心单元测试验证。
 
